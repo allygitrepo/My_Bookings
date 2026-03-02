@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SaaS Booking Widget Demo</title>
+</head>
+
+<body style="margin: 0; background-color: #f7fafc;">
+    <div style="padding: 100px 50px; font-family: sans-serif; text-align: center; max-width: 800px; margin: 0 auto;">
+        <h1 style="color: #1a202c; font-size: 3rem;">My Awesome Business</h1>
+        <p style="color: #4a5568; font-size: 1.2rem; line-height: 1.6;">
+            This is my external website. I have integrated the SaaS booking widget so you can book an appointment with
+            me using the floating button in the bottom right corner!
+        </p>
+    </div>
+
+    <!-- DEVELOPMENT SCRIPT: Loads the widget from the running Vite dev server -->
+    <!-- Note: Dev server module loading often fails due to strict CORS rules on file:// paths. -->
+    <!-- <script type="module" src="http://localhost:5173/@vite/client"></script> -->
+    <!-- <script type="module" src="http://localhost:5173/src/widget-entry.jsx"
+        data-business-id="pk_live_958124cf43b944c28e25b11401fd939c"></script> -->
+
+    <!-- PRODUCTION SCRIPT: Works properly across file:// protocols and local networks -->
+    <script type="module" src="./client/dist/widget.js" data-business-id="pk_live_958124cf43b944c28e25b11401fd939c"
+        async></script>
+</body>
+
+</html>
