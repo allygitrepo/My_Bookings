@@ -4,8 +4,8 @@ import { ThemeProvider, CssBaseline } from '@mui/material';
 import { Toaster } from 'react-hot-toast';
 import theme from './theme';
 import MainLayout from './layout/MainLayout';
+import AuthGuard from './components/AuthGuard';
 
-// Lazy load pages for better performance (if needed) or just import them directly for now
 import Dashboard from './pages/Dashboard';
 import Businesses from './pages/Businesses';
 import Locations from './pages/Locations';
@@ -19,6 +19,9 @@ import Payments from './pages/Payments';
 import ApiKeys from './pages/ApiKeys';
 import WidgetScript from './pages/WidgetScript';
 import LandingPage from './pages/LandingPage';
+import Login from './pages/Login';
+import Register from './pages/Register';
+import Profile from './pages/Profile';
 
 function App() {
   return (
@@ -27,11 +30,13 @@ function App() {
       <Toaster position="top-right" />
       <Router>
         <Routes>
-          {/* Landing Page Route */}
+          {/* Public Routes */}
           <Route path="/" element={<LandingPage />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/register" element={<Register />} />
 
-          {/* Dashboard/Admin Routes */}
-          <Route element={<MainLayout />}>
+          {/* Protected Dashboard Routes */}
+          <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
             <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/businesses" element={<Businesses />} />
             <Route path="/locations" element={<Locations />} />
@@ -44,10 +49,10 @@ function App() {
             <Route path="/payments" element={<Payments />} />
             <Route path="/api-keys" element={<ApiKeys />} />
             <Route path="/widget-script" element={<WidgetScript />} />
+            <Route path="/profile" element={<Profile />} />
           </Route>
 
-          {/* Redirect any other route to dashboard for now */}
-          <Route path="*" element={<Navigate to="/dashboard" replace />} />
+          <Route path="*" element={<Navigate to="/login" replace />} />
         </Routes>
       </Router>
     </ThemeProvider>

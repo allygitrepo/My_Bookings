@@ -29,15 +29,18 @@ const MainLayout = () => {
                 sx={{
                     flexGrow: 1,
                     p: 3,
-                    width: { md: `calc(100% - ${isSidebarOpen ? DRAWER_WIDTH : 0}px)` },
-                    ml: { md: isSidebarOpen ? `${DRAWER_WIDTH}px` : 0 },
+                    width: { md: `calc(100% - ${isSidebarOpen && !isMobile ? DRAWER_WIDTH : 0}px)` },
                     transition: theme.transitions.create(['margin', 'width'], {
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
                     }),
                 }}
             >
-                <Navbar onToggleSidebar={toggleSidebar} />
+                <Navbar
+                    onToggleSidebar={toggleSidebar}
+                    isSidebarOpen={isSidebarOpen && !isMobile}
+                    drawerWidth={DRAWER_WIDTH}
+                />
                 <Box sx={{ mt: 10 }}>
                     <Outlet />
                 </Box>

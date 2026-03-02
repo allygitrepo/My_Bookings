@@ -53,13 +53,13 @@ const LandingPage = () => {
                 <Container maxWidth="lg">
                     <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
                         <Typography variant="h5" color="primary" fontWeight={800}>
-                            BookingApp
+                            MyBookings
                         </Typography>
                         <Stack direction="row" spacing={2}>
                             <Button color="inherit">Features</Button>
                             <Button color="inherit">Pricing</Button>
                             <Button variant="contained" component={NavLink} to="/dashboard">
-                                Go to Dashboard
+                                Get Started
                             </Button>
                         </Stack>
                     </Toolbar>
@@ -144,7 +144,7 @@ const LandingPage = () => {
                         Ready to grow?
                     </Typography>
                     <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-                        Join 5,000+ businesses using BookingApp to streamline their operations.
+                        Join 5,000+ businesses using MyBookings to streamline their operations.
                     </Typography>
                     <Button variant="contained" color="secondary" size="large" sx={{ px: 6, py: 2 }} component={NavLink} to="/dashboard">
                         Start Your 14-Day Free Trial
@@ -156,7 +156,7 @@ const LandingPage = () => {
             <Box sx={{ py: 6, borderTop: '1px solid #e2e8f0' }}>
                 <Container maxWidth="lg">
                     <Typography align="center" color="text.secondary" variant="body2">
-                        © 2025 BookingApp SaaS. Built with React & MUI.
+                        © 2025 MyBookings SaaS. Built with React & MUI.
                     </Typography>
                 </Container>
             </Box>

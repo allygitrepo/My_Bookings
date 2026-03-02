@@ -1,141 +1,83 @@
 import React, { useState } from 'react';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    IconButton,
-    Chip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    TextField,
-    Grid,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
+    Box, Typography, Divider,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, LocationOn as LocationIcon } from '@mui/icons-material';
+import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
+import FormDrawer from '../components/FormDrawer';
+import PageTransition from '../components/PageTransition';
 import { useLocations, useBusinesses } from '../store';
+
+const FieldSection = ({ label, children }) => (
+    <Box sx={{ mb: 3 }}>
+        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5, display: 'block' }}>{label}</Typography>
+        {children}
+    </Box>
+);
 
 const Locations = () => {
     const [locations, setLocations] = useLocations();
     const [businesses] = useBusinesses();
-
     const [open, setOpen] = useState(false);
-    const [currentLocation, setCurrentLocation] = useState(null);
+    const [editId, setEditId] = useState(null);
 
-    const [formData, setFormData] = useState({
-        businessId: '',
-        name: '',
-        address: '',
-        city: '',
-        state: '',
+    const { control, handleSubmit, reset, formState: { errors } } = useForm({
+        defaultValues: { business_id: '', location_name: '', address: '', city: '', state: '' },
     });
 
-    const handleOpen = (location = null) => {
-        setCurrentLocation(location);
-        if (location) {
-            setFormData(location);
-        } else {
-            setFormData({
-                businessId: businesses.length > 0 ? businesses[0].id : '',
-                name: '',
-                address: '',
-                city: '',
-                state: '',
-            });
-        }
+    const handleOpen = (loc = null) => {
+        setEditId(loc?.id || null);
+        reset(loc ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
+            : { business_id: businesses[0]?.id || '', location_name: '', address: '', city: '', state: '' });
         setOpen(true);
     };
 
-    const handleClose = () => {
-        setOpen(false);
-        setCurrentLocation(null);
-    };
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleSave = () => {
-        if (!formData.name || !formData.businessId) return;
-
-        if (currentLocation) {
-            setLocations(locations.map(l => l.id === currentLocation.id ? { ...l, ...formData } : l));
+    const onSubmit = (data) => {
+        if (editId) {
+            setLocations(locations.map(l => l.id === editId ? { ...l, ...data, updated_at: new Date().toISOString() } : l));
         } else {
-            const newLocation = {
-                ...formData,
-                id: Date.now().toString(),
-                status: 'Active'
-            };
-            setLocations([...locations, newLocation]);
+            setLocations([...locations, { ...data, id: Date.now().toString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
         }
-        handleClose();
-    };
-
-    const handleDelete = (id) => {
-        setLocations(locations.filter((l) => l.id !== id));
+        setOpen(false);
     };
 
     return (
-        <>
-            <PageHeader
-                title="Locations"
-                subtitle="Manage business locations and branches."
-                onAddClick={() => handleOpen()}
-                buttonText="Add Location"
-            />
-
+        <PageTransition>
+            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" />
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Location Name</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Address</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>City</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>State</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {locations.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                                    No locations added yet. Click "Add Location" to start.
-                                </TableCell>
-                            </TableRow>
-                        ) : null}
-                        {locations.map((location) => {
-                            const business = businesses.find((b) => b.id === location.businessId);
+                        {locations.length === 0 && (
+                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                <LocationIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
+                                No locations added yet.
+                            </TableCell></TableRow>
+                        )}
+                        {locations.map(loc => {
+                            const biz = businesses.find(b => b.id === loc.business_id);
                             return (
-                                <TableRow key={location.id} hover>
-                                    <TableCell sx={{ fontWeight: 500 }}>{location.name}</TableCell>
-                                    <TableCell>{business?.name || 'Unknown'}</TableCell>
-                                    <TableCell>{location.city}</TableCell>
-                                    <TableCell>{location.state}</TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={location.status}
-                                            size="small"
-                                            color={location.status === 'Active' ? 'success' : 'default'}
-                                        />
-                                    </TableCell>
+                                <TableRow key={loc.id} hover>
+                                    <TableCell sx={{ fontWeight: 500 }}>{loc.location_name}</TableCell>
+                                    <TableCell>{biz?.business_name || '—'}</TableCell>
+                                    <TableCell>{loc.address}</TableCell>
+                                    <TableCell>{loc.city}</TableCell>
+                                    <TableCell>{loc.state}</TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(location)} color="primary" size="small">
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDelete(location.id)} color="error" size="small">
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <IconButton onClick={() => handleOpen(loc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => setLocations(locations.filter(l => l.id !== loc.id))} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -144,81 +86,55 @@ const Locations = () => {
                 </Table>
             </TableContainer>
 
-            {/* Add/Edit Location Dialog */}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{currentLocation ? 'Edit Location' : 'Add New Location'}</DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth variant="outlined">
-                                <InputLabel>Business</InputLabel>
-                                <Select
-                                    label="Business"
-                                    name="businessId"
-                                    value={formData.businessId}
-                                    onChange={handleChange}
-                                >
-                                    {businesses.length === 0 && <MenuItem value=""><em>None Selected</em></MenuItem>}
-                                    {businesses.map((b) => (
-                                        <MenuItem key={b.id} value={b.id}>
-                                            {b.name}
-                                        </MenuItem>
-                                    ))}
+            <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Location' : 'Add New Location'} subtitle="Define where your business operates." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Location' : 'Create Location'}>
+                <FieldSection label="Assignment">
+                    <Controller name="business_id" control={control} rules={{ required: true }}
+                        render={({ field }) => (
+                            <FormControl fullWidth error={!!errors.business_id}>
+                                <InputLabel>Business *</InputLabel>
+                                <Select {...field} label="Business *">
+                                    {businesses.length === 0 && <MenuItem value=""><em>No Businesses Found</em></MenuItem>}
+                                    {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
                                 </Select>
                             </FormControl>
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Location Name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                variant="outlined"
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Address"
-                                name="address"
-                                value={formData.address}
-                                onChange={handleChange}
-                                variant="outlined"
-                                multiline
-                                rows={2}
-                            />
+                        )} />
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Location Details">
+                    <Controller name="location_name" control={control} rules={{ required: 'Location name is required' }}
+                        render={({ field }) => (
+                            <TextField {...field} fullWidth label="Location Name *" placeholder="e.g. Main Branch, City Center" error={!!errors.location_name} helperText={errors.location_name?.message} sx={{ mb: 2.5 }} />
+                        )} />
+                    <Controller name="address" control={control}
+                        render={({ field }) => (
+                            <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" sx={{ mb: 2.5 }} />
+                        )} />
+                    <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                            <Controller name="city" control={control}
+                                render={({ field }) => <TextField {...field} fullWidth label="City" placeholder="Mumbai" />} />
                         </Grid>
                         <Grid item xs={6}>
-                            <TextField
-                                fullWidth
-                                label="City"
-                                name="city"
-                                value={formData.city}
-                                onChange={handleChange}
-                                variant="outlined"
-                            />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <TextField
-                                fullWidth
-                                label="State"
-                                name="state"
-                                value={formData.state}
-                                onChange={handleChange}
-                                variant="outlined"
-                            />
+                            <Controller name="state" control={control}
+                                render={({ field }) => <TextField {...field} fullWidth label="State" placeholder="Maharashtra" />} />
                         </Grid>
                     </Grid>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button variant="contained" onClick={handleSave}>
-                        {currentLocation ? 'Update' : 'Save'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </>
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Status">
+                    <Controller name="status" control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth>
+                                <InputLabel>Status</InputLabel>
+                                <Select {...field} label="Status">
+                                    <MenuItem value="Active">Active</MenuItem>
+                                    <MenuItem value="Inactive">Inactive</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )} />
+                </FieldSection>
+            </FormDrawer>
+        </PageTransition>
     );
 };
 

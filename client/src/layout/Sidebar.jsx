@@ -46,7 +46,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center' }}>
                 <Typography variant="h5" color="primary" fontWeight="bold">
-                    BookingApp
+                    MyBookings
                 </Typography>
             </Box>
             <Divider />
@@ -81,7 +81,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
             <Divider />
             <Box sx={{ p: 2 }}>
                 <Typography variant="caption" color="text.secondary">
-                    © 2025 BookingApp SaaS
+                    © 2025 MyBookings SaaS
                 </Typography>
             </Box>
         </Box>

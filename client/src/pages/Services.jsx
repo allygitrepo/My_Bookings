@@ -1,210 +1,105 @@
 import React, { useState } from 'react';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    Paper,
-    IconButton,
-    Chip,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogActions,
-    Button,
-    TextField,
-    Grid,
-    MenuItem,
-    Select,
-    FormControl,
-    InputLabel,
-    OutlinedInput,
-    Box,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
+    InputLabel, Box, Typography, Divider, InputAdornment,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
+import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
+import FormDrawer from '../components/FormDrawer';
+import PageTransition from '../components/PageTransition';
 import { useServices, useBusinesses, useStaff, useStaffServices } from '../store';
 
-const ITEM_HEIGHT = 48;
-const ITEM_PADDING_TOP = 8;
-const MenuProps = {
-    PaperProps: {
-        style: {
-            maxHeight: ITEM_HEIGHT * 4.5 + ITEM_PADDING_TOP,
-            width: 250,
-        },
-    },
-};
+const FieldSection = ({ label, children }) => (
+    <Box sx={{ mb: 3 }}>
+        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5, display: 'block' }}>{label}</Typography>
+        {children}
+    </Box>
+);
 
 const Services = () => {
     const [servicesList, setServicesList] = useServices();
     const [businesses] = useBusinesses();
     const [staff] = useStaff();
     const [staffServices, setStaffServices] = useStaffServices();
-
     const [open, setOpen] = useState(false);
-    const [currentService, setCurrentService] = useState(null);
+    const [editId, setEditId] = useState(null);
 
-    const [formData, setFormData] = useState({
-        businessId: '',
-        name: '',
-        duration: '',
-        price: '',
-        minCharge: '',
-        assignedStaff: [] // Array of staff IDs
+    const { control, handleSubmit, reset, formState: { errors } } = useForm({
+        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] },
     });
 
-    const handleOpen = (service = null) => {
-        setCurrentService(service);
-        if (service) {
-            const assigned = staffServices
-                .filter(ss => ss.serviceId === service.id)
-                .map(ss => ss.staffId);
-
-            setFormData({
-                ...service,
-                assignedStaff: assigned
-            });
+    const handleOpen = (svc = null) => {
+        setEditId(svc?.id || null);
+        if (svc) {
+            const assigned = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
+            reset({ business_id: svc.business_id || '', service_name: svc.service_name || '', duration_minutes: svc.duration_minutes || '', price: svc.price || '', minimum_booking_charge: svc.minimum_booking_charge || '', assignedStaff: assigned });
         } else {
-            setFormData({
-                businessId: businesses.length > 0 ? businesses[0].id : '',
-                name: '',
-                duration: '',
-                price: '',
-                minCharge: '',
-                assignedStaff: []
-            });
+            reset({ business_id: businesses[0]?.id || '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] });
         }
         setOpen(true);
     };
 
-    const handleClose = () => {
-        setOpen(false);
-        setCurrentService(null);
-    };
-
-    const handleChange = (e) => {
-        setFormData({ ...formData, [e.target.name]: e.target.value });
-    };
-
-    const handleAssignedStaffChange = (event) => {
-        const { target: { value } } = event;
-        setFormData({
-            ...formData,
-            assignedStaff: typeof value === 'string' ? value.split(',') : value,
-        });
-    };
-
-    const handleSave = () => {
-        if (!formData.name || !formData.businessId) return;
-
-        let targetServiceId;
-
-        if (currentService) {
-            targetServiceId = currentService.id;
-            // Update service details
-            setServicesList(servicesList.map(s => s.id === targetServiceId ? {
-                id: targetServiceId,
-                businessId: formData.businessId,
-                name: formData.name,
-                duration: formData.duration,
-                price: formData.price,
-                minCharge: formData.minCharge,
-            } : s));
+    const onSubmit = (data) => {
+        const { assignedStaff, ...svcData } = data;
+        let targetId;
+        if (editId) {
+            targetId = editId;
+            setServicesList(servicesList.map(s => s.id === editId ? { ...s, ...svcData, updated_at: new Date().toISOString() } : s));
         } else {
-            // Create new
-            targetServiceId = Date.now().toString();
-            const newService = {
-                id: targetServiceId,
-                businessId: formData.businessId,
-                name: formData.name,
-                duration: formData.duration,
-                price: formData.price,
-                minCharge: formData.minCharge,
-            };
-            setServicesList([...servicesList, newService]);
+            targetId = Date.now().toString();
+            setServicesList([...servicesList, { ...svcData, id: targetId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
         }
-
-        // Update staff-services mapping
-        // Exclude old mappings for this service
-        let updatedStaffServices = staffServices.filter(ss => ss.serviceId !== targetServiceId);
-
-        // Add new mappings
-        const newMappings = formData.assignedStaff.map(staffId => ({
-            staffId,
-            serviceId: targetServiceId,
-            createdAt: new Date().toISOString().split('T')[0],
-            status: 'Active'
-        }));
-
-        setStaffServices([...updatedStaffServices, ...newMappings]);
-        handleClose();
+        const filtered = staffServices.filter(ss => ss.service_id !== targetId);
+        const newMappings = (assignedStaff || []).map(staffId => ({ id: `${staffId}-${targetId}`, staff_id: staffId, service_id: targetId, status: 'Active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
+        setStaffServices([...filtered, ...newMappings]);
+        setOpen(false);
     };
 
     const handleDelete = (id) => {
-        setServicesList(servicesList.filter((s) => s.id !== id));
-        setStaffServices(staffServices.filter(ss => ss.serviceId !== id)); // Cascade delete mappings
+        setServicesList(servicesList.filter(s => s.id !== id));
+        setStaffServices(staffServices.filter(ss => ss.service_id !== id));
     };
 
     return (
-        <>
-            <PageHeader
-                title="Services"
-                subtitle="Define the services you offer and assign staff."
-                onAddClick={() => handleOpen()}
-                buttonText="Add Service"
-            />
-
+        <PageTransition>
+            <PageHeader title="Services" subtitle="Define the services you offer and assign staff." onAddClick={() => handleOpen()} buttonText="Add Service" />
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Service Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Duration (min)</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Min Charge</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Min. Charge</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Assigned Staff</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {servicesList.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
-                                    No services added yet. Click "Add Service" to start offering packages.
-                                </TableCell>
-                            </TableRow>
-                        ) : null}
-                        {servicesList.map((service) => {
-                            const assignedStaffIds = staffServices
-                                .filter((ss) => ss.serviceId === service.id)
-                                .map((ss) => ss.staffId);
-                            const assignedStaffNames = staff
-                                .filter((s) => assignedStaffIds.includes(s.id))
-                                .map((s) => s.name);
-
+                        {servicesList.length === 0 && (
+                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                <ServiceIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No services added yet.
+                            </TableCell></TableRow>
+                        )}
+                        {servicesList.map(svc => {
+                            const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
+                            const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             return (
-                                <TableRow key={service.id} hover>
-                                    <TableCell sx={{ fontWeight: 500 }}>{service.name}</TableCell>
-                                    <TableCell>{service.duration} mins</TableCell>
-                                    <TableCell>${service.price}</TableCell>
-                                    <TableCell>${service.minCharge}</TableCell>
+                                <TableRow key={svc.id} hover>
+                                    <TableCell sx={{ fontWeight: 500 }}>{svc.service_name}</TableCell>
+                                    <TableCell>{svc.duration_minutes} min</TableCell>
+                                    <TableCell>₹{svc.price}</TableCell>
+                                    <TableCell>₹{svc.minimum_booking_charge}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {assignedStaffNames.length > 0 ? assignedStaffNames.map((name) => (
-                                                <Chip key={name} label={name} size="small" variant="outlined" />
-                                            )) : <Typography variant="caption" color="text.secondary">None</Typography>}
+                                            {assignedNames.length > 0 ? assignedNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" />) : <Typography variant="caption" color="text.disabled">None</Typography>}
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(service)} color="primary" size="small">
-                                            <EditIcon />
-                                        </IconButton>
-                                        <IconButton onClick={() => handleDelete(service.id)} color="error" size="small">
-                                            <DeleteIcon />
-                                        </IconButton>
+                                        <IconButton onClick={() => handleOpen(svc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(svc.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -213,108 +108,76 @@ const Services = () => {
                 </Table>
             </TableContainer>
 
-            {/* Add/Edit Service Dialog */}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>{currentService ? 'Edit Service' : 'Add New Service'}</DialogTitle>
-                <DialogContent sx={{ pt: 2 }}>
+            <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Service' : 'Add New Service'} subtitle="Define a service offering for your business." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Service' : 'Create Service'}>
+                <FieldSection label="Assignment">
+                    <Controller name="business_id" control={control} rules={{ required: true }}
+                        render={({ field }) => (
+                            <FormControl fullWidth>
+                                <InputLabel>Business *</InputLabel>
+                                <Select {...field} label="Business *">
+                                    {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+                        )} />
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Service Details">
+                    <Controller name="service_name" control={control} rules={{ required: 'Service name is required' }}
+                        render={({ field }) => (
+                            <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Full Body Checkup" />
+                        )} />
                     <Grid container spacing={2}>
                         <Grid item xs={12}>
-                            <FormControl fullWidth variant="outlined">
-                                <InputLabel>Business</InputLabel>
-                                <Select
-                                    label="Business"
-                                    name="businessId"
-                                    value={formData.businessId}
-                                    onChange={handleChange}
-                                >
-                                    {businesses.length === 0 && <MenuItem value=""><em>None Selected</em></MenuItem>}
-                                    {businesses.map((b) => (
-                                        <MenuItem key={b.id} value={b.id}>
-                                            {b.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                            <Controller name="duration_minutes" control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Duration (minutes)" type="number" placeholder="30" InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }} />
+                                )} />
                         </Grid>
-                        <Grid item xs={12}>
-                            <TextField
-                                fullWidth
-                                label="Service Name"
-                                name="name"
-                                value={formData.name}
-                                onChange={handleChange}
-                                variant="outlined"
-                            />
+                        <Grid item xs={6}>
+                            <Controller name="price" control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Price" type="number" placeholder="500" InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                )} />
                         </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                label="Duration (mins)"
-                                name="duration"
-                                value={formData.duration}
-                                onChange={handleChange}
-                                variant="outlined"
-                                type="number"
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                label="Price ($)"
-                                name="price"
-                                value={formData.price}
-                                onChange={handleChange}
-                                variant="outlined"
-                                type="number"
-                            />
-                        </Grid>
-                        <Grid item xs={4}>
-                            <TextField
-                                fullWidth
-                                label="Min Charge ($)"
-                                name="minCharge"
-                                value={formData.minCharge}
-                                onChange={handleChange}
-                                variant="outlined"
-                                type="number"
-                            />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <FormControl fullWidth>
-                                <InputLabel id="staff-label">Assigned Staff</InputLabel>
-                                <Select
-                                    labelId="staff-label"
-                                    multiple
-                                    value={formData.assignedStaff}
-                                    onChange={handleAssignedStaffChange}
-                                    input={<OutlinedInput label="Assigned Staff" />}
-                                    renderValue={(selected) => (
-                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {selected.map((value) => (
-                                                <Chip key={value} label={staff.find(s => s.id === value)?.name || 'Unknown'} />
-                                            ))}
-                                        </Box>
-                                    )}
-                                    MenuProps={MenuProps}
-                                >
-                                    {staff.map((s) => (
-                                        <MenuItem key={s.id} value={s.id}>
-                                            {s.name}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
+                        <Grid item xs={6}>
+                            <Controller name="minimum_booking_charge" control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                )} />
                         </Grid>
                     </Grid>
-                </DialogContent>
-                <DialogActions sx={{ px: 3, pb: 2 }}>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button variant="contained" onClick={handleSave}>
-                        {currentService ? 'Update' : 'Save'}
-                    </Button>
-                </DialogActions>
-            </Dialog>
-        </>
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Assign Staff">
+                    <Controller name="assignedStaff" control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth>
+                                <InputLabel>Assigned Staff</InputLabel>
+                                <Select {...field} multiple label="Assigned Staff" renderValue={(selected) => (
+                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                        {selected.map(v => <Chip key={v} label={staff.find(s => s.id === v)?.staff_name || v} size="small" />)}
+                                    </Box>
+                                )}>
+                                    {staff.map(s => <MenuItem key={s.id} value={s.id}>{s.staff_name} — {s.role}</MenuItem>)}
+                                </Select>
+                            </FormControl>
+                        )} />
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Status">
+                    <Controller name="status" control={control}
+                        render={({ field }) => (
+                            <FormControl fullWidth>
+                                <InputLabel>Status</InputLabel>
+                                <Select {...field} label="Status">
+                                    <MenuItem value="Active">Active</MenuItem>
+                                    <MenuItem value="Inactive">Inactive</MenuItem>
+                                </Select>
+                            </FormControl>
+                        )} />
+                </FieldSection>
+            </FormDrawer>
+        </PageTransition>
     );
 };
 
