@@ -133,7 +133,7 @@ const Bookings = () => {
                                     <TableCell>{service?.service_name || '—'}</TableCell>
                                     <TableCell>{staffMember?.staff_name || '—'}</TableCell>
                                     <TableCell>{b.booking_date || '—'}</TableCell>
-                                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{b.start_time}{b.end_time ? ` – ${b.end_time}` : ''}</TableCell>
+                                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={600}>₹{totalAmount}</Typography>
                                     </TableCell>

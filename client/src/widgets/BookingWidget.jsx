@@ -319,11 +319,12 @@ const BookingWidget = ({ businessId }) => {
             case 0:
                 return (
                     <Box>
-                        <Typography variant="h6" fontWeight={700} gutterBottom>Choose a Service</Typography>
-                        <Typography variant="body2" color="text.secondary" mb={2}>Select the service you'd like to book.</Typography>
+                        <Typography variant="body2" color="text.secondary" mb={2}>
+                            Select the service you'd like to book.
+                        </Typography>
                         {loading ? (
                             <Box sx={{ textAlign: 'center', py: 4 }}>
-                                <LinearProgress sx={{ borderRadius: 2, height: 6, mb: 1.5 }} />
+                                <LinearProgress sx={{ borderRadius: 2, height: 6, mb: 1.5, bgcolor: 'rgba(99,102,241,0.1)', '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg,#6366f1,#8b5cf6)' } }} />
                                 <Typography variant="caption" color="text.secondary">Loading services...</Typography>
                             </Box>
                         ) : services.length === 0 ? (
@@ -331,41 +332,40 @@ const BookingWidget = ({ businessId }) => {
                                 <Typography variant="body2">No services available yet.</Typography>
                             </Box>
                         ) : (
-                            <List disablePadding>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                 {services.map(service => (
-                                    <ListItem key={service.id} disablePadding sx={{ mb: 1.5 }}>
-                                        <ListItemButton
-                                            onClick={() => {
-                                                setBookingData({
-                                                    ...bookingData,
-                                                    service,
-                                                    staff: null,
-                                                    slot: '',
-                                                    paidAmount: Number(service.minimum_booking_charge) || Number(service.price)
-                                                });
-                                                handleNext();
-                                            }}
-                                            sx={{ border: '1.5px solid', borderColor: 'divider', borderRadius: 2.5, p: 2, '&:hover': { borderColor: 'primary.main', bgcolor: 'primary.50' } }}
-                                        >
-                                            <ListItemText
-                                                primary={<Typography fontWeight={700}>{service.service_name}</Typography>}
-                                                secondary={
-                                                    <Box sx={{ display: 'flex', gap: 2, mt: 0.5 }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <TimeIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                                                            <Typography variant="caption" color="text.secondary">{service.duration_minutes} min</Typography>
-                                                        </Box>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                            <PriceIcon sx={{ fontSize: 13, color: 'text.disabled' }} />
-                                                            <Typography variant="caption" color="text.secondary">₹{service.price}</Typography>
-                                                        </Box>
-                                                    </Box>
-                                                }
-                                            />
-                                        </ListItemButton>
-                                    </ListItem>
+                                    <Box key={service.id}
+                                        onClick={() => {
+                                            setBookingData({ ...bookingData, service, staff: null, slot: '', paidAmount: Number(service.minimum_booking_charge) || Number(service.price) });
+                                            handleNext();
+                                        }}
+                                        sx={{
+                                            p: 2, borderRadius: 3, cursor: 'pointer',
+                                            border: '1.5px solid', borderColor: 'rgba(99,102,241,0.15)',
+                                            bgcolor: 'white',
+                                            boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
+                                            transition: 'all 0.18s',
+                                            '&:hover': {
+                                                borderColor: '#6366f1',
+                                                boxShadow: '0 4px 20px rgba(99,102,241,0.15)',
+                                                transform: 'translateY(-2px)',
+                                            },
+                                        }}
+                                    >
+                                        <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
+                                        <Box sx={{ display: 'flex', gap: 2, mt: 0.8 }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <TimeIcon sx={{ fontSize: 13, color: '#6366f1' }} />
+                                                <Typography variant="caption" color="text.secondary" fontWeight={500}>{service.duration_minutes} min</Typography>
+                                            </Box>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <PriceIcon sx={{ fontSize: 13, color: '#10b981' }} />
+                                                <Typography variant="caption" fontWeight={700} color="success.main">₹{service.price}</Typography>
+                                            </Box>
+                                        </Box>
+                                    </Box>
                                 ))}
-                            </List>
+                            </Box>
                         )}
                     </Box>
                 );
@@ -374,11 +374,11 @@ const BookingWidget = ({ businessId }) => {
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
-                            <IconButton size="small" onClick={handleBack}><BackIcon fontSize="small" /></IconButton>
-                            <Box>
-                                <Typography variant="h6" fontWeight={700}>Select Staff</Typography>
-                                <Typography variant="caption" color="text.secondary">Professionals who offer {bookingData.service?.service_name}</Typography>
-                            </Box>
+                            <IconButton size="small" onClick={handleBack}
+                                sx={{ bgcolor: 'rgba(99,102,241,0.08)', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' } }}>
+                                <BackIcon fontSize="small" sx={{ color: '#6366f1' }} />
+                            </IconButton>
+                            <Typography variant="caption" color="text.secondary">Professionals who offer <strong>{bookingData.service?.service_name}</strong></Typography>
                         </Box>
                         {availableStaff.length === 0 ? (
                             <Box sx={{ textAlign: 'center', py: 4, color: 'text.disabled' }}>
@@ -388,14 +388,29 @@ const BookingWidget = ({ businessId }) => {
                             <Grid container spacing={1.5}>
                                 {availableStaff.map(s => (
                                     <Grid item xs={6} key={s.id}>
-                                        <Card variant="outlined" onClick={() => { setBookingData({ ...bookingData, staff: s, slot: '' }); handleNext(); }}
-                                            sx={{ p: 2, textAlign: 'center', cursor: 'pointer', borderRadius: 2.5, transition: 'all 0.15s', '&:hover': { borderColor: 'primary.main', bgcolor: 'primary.50', boxShadow: 2 } }}>
-                                            <Avatar sx={{ mx: 'auto', mb: 1, bgcolor: 'primary.main', width: 44, height: 44, fontSize: '1.1rem' }}>
+                                        <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slot: '' }); handleNext(); }}
+                                            sx={{
+                                                p: 2, textAlign: 'center', cursor: 'pointer',
+                                                borderRadius: 3, bgcolor: 'white',
+                                                border: '1.5px solid', borderColor: 'rgba(99,102,241,0.15)',
+                                                boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
+                                                transition: 'all 0.18s',
+                                                '&:hover': {
+                                                    borderColor: '#6366f1',
+                                                    boxShadow: '0 4px 20px rgba(99,102,241,0.15)',
+                                                    transform: 'translateY(-2px)',
+                                                },
+                                            }}
+                                        >
+                                            <Avatar sx={{
+                                                mx: 'auto', mb: 1, width: 44, height: 44, fontSize: '1.1rem',
+                                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                            }}>
                                                 {s.staff_name?.charAt(0)}
                                             </Avatar>
                                             <Typography variant="body2" fontWeight={700}>{s.staff_name}</Typography>
                                             <Typography variant="caption" color="text.secondary">{s.role}</Typography>
-                                        </Card>
+                                        </Box>
                                     </Grid>
                                 ))}
                             </Grid>
@@ -520,11 +535,11 @@ const BookingWidget = ({ businessId }) => {
                         {/* Time slots */}
                         {bookingData.date && (
                             <>
-                                <Typography variant="subtitle2" fontWeight={600} gutterBottom>
+                                <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#6366f1' }}>
                                     Available Slots — {getDayNameDisplay(bookingData.date)}
                                 </Typography>
                                 {availableSlots.length === 0 ? (
-                                    <Box sx={{ py: 2, textAlign: 'center' }}>
+                                    <Box sx={{ py: 2, textAlign: 'center', bgcolor: 'rgba(239,68,68,0.05)', borderRadius: 2, px: 2 }}>
                                         <Typography variant="body2" color="text.secondary">
                                             {matchingRecs.length > 0
                                                 ? `No available time slots left for ${bookingData.staff?.staff_name} on this day.`
@@ -536,21 +551,50 @@ const BookingWidget = ({ businessId }) => {
                                     <Grid container spacing={1}>
                                         {availableSlots.map(slot => (
                                             <Grid item xs={6} key={slot}>
-                                                <Button
-                                                    fullWidth size="small"
-                                                    variant={bookingData.slot === slot ? 'contained' : 'outlined'}
+                                                <Box
                                                     onClick={() => setBookingData({ ...bookingData, slot })}
-                                                    sx={{ borderRadius: 2, fontSize: '0.72rem', whiteSpace: 'nowrap', px: 0.5 }}
+                                                    sx={{
+                                                        textAlign: 'center', py: 1, px: 0.5,
+                                                        borderRadius: 2.5, cursor: 'pointer',
+                                                        border: '1.5px solid',
+                                                        borderColor: bookingData.slot === slot ? '#6366f1' : 'rgba(99,102,241,0.2)',
+                                                        bgcolor: bookingData.slot === slot
+                                                            ? 'linear-gradient(135deg,#6366f1,#8b5cf6)'
+                                                            : 'white',
+                                                        background: bookingData.slot === slot
+                                                            ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
+                                                            : 'white',
+                                                        boxShadow: bookingData.slot === slot
+                                                            ? '0 4px 12px rgba(99,102,241,0.3)'
+                                                            : 'none',
+                                                        transition: 'all 0.15s',
+                                                        '&:hover': {
+                                                            borderColor: '#6366f1',
+                                                            bgcolor: bookingData.slot === slot ? undefined : 'rgba(99,102,241,0.06)',
+                                                        },
+                                                    }}
                                                 >
-                                                    {formatSlotLabel(slot, slotDurationMin)}
-                                                </Button>
+                                                    <Typography
+                                                        variant="caption"
+                                                        fontWeight={700}
+                                                        sx={{ color: bookingData.slot === slot ? 'white' : '#6366f1', fontSize: '0.72rem' }}
+                                                    >
+                                                        {formatSlotLabel(slot, slotDurationMin)}
+                                                    </Typography>
+                                                </Box>
                                             </Grid>
                                         ))}
                                     </Grid>
                                 )}
                             </>
                         )}
-                        <Button fullWidth variant="contained" sx={{ mt: 3, borderRadius: 2 }}
+                        <Button fullWidth variant="contained" sx={{
+                            mt: 3, borderRadius: 2.5, fontWeight: 700, py: 1.3,
+                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                            '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
+                            '&:disabled': { background: '#e2e8f0', color: '#94a3b8', boxShadow: 'none' },
+                        }}
                             disabled={!bookingData.date || !bookingData.slot} onClick={handleNext}>
                             Continue
                         </Button>
@@ -613,7 +657,12 @@ const BookingWidget = ({ businessId }) => {
                                     }} />
                             </Grid>
                         </Grid>
-                        <Button fullWidth variant="contained" sx={{ mt: 3, borderRadius: 2 }} onClick={validateAndNext}>
+                        <Button fullWidth variant="contained" sx={{
+                            mt: 3, borderRadius: 2.5, fontWeight: 700, py: 1.3,
+                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                            '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
+                        }} onClick={validateAndNext}>
                             Review &amp; Pay
                         </Button>
                     </Box>
@@ -734,31 +783,67 @@ const BookingWidget = ({ businessId }) => {
     return (
         <>
             <Fab color="primary" aria-label="book-now" variant="extended"
-                sx={{ position: 'fixed', bottom: 32, right: 32, zIndex: 1050, boxShadow: 6, borderRadius: 3, fontWeight: 700 }}
+                sx={{
+                    position: 'fixed', bottom: 32, right: 32, zIndex: 1050,
+                    boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
+                    borderRadius: 3, fontWeight: 700, px: 3,
+                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                    '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
+                }}
                 onClick={() => setOpen(true)}>
                 <BookIcon sx={{ mr: 1 }} />
                 Book Now
             </Fab>
 
             <Dialog open={open} onClose={resetBooking} maxWidth="xs" fullWidth
-                PaperProps={{ sx: { borderRadius: 4, overflow: 'hidden' } }}>
-                <Box sx={{ px: 3, pt: 2.5, pb: 0 }}>
-                    {activeStep < 5 && (
-                        <Box sx={{ mb: 2 }}>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
-                                <Typography variant="caption" color="text.secondary">Step {activeStep + 1} of {steps.length}</Typography>
-                                <Typography variant="caption" color="primary.main" fontWeight={600}>{steps[activeStep]}</Typography>
+                PaperProps={{
+                    sx: {
+                        borderRadius: 4, overflow: 'hidden',
+                        boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
+                    }
+                }}>
+
+                {/* ── Gradient Header ── */}
+                {activeStep < 5 && (
+                    <Box sx={{
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        px: 3, pt: 2.5, pb: 2,
+                    }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                            <Box>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+                                    Step {activeStep + 1} of {steps.length}
+                                </Typography>
+                                <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2}>
+                                    {steps[activeStep]}
+                                </Typography>
                             </Box>
-                            <LinearProgress variant="determinate" value={((activeStep + 1) / steps.length) * 100} sx={{ borderRadius: 2, height: 4 }} />
+                            <IconButton onClick={resetBooking} size="small"
+                                sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
+                                <CloseIcon fontSize="small" />
+                            </IconButton>
                         </Box>
-                    )}
-                </Box>
-                <IconButton sx={{ position: 'absolute', top: 10, right: 10, zIndex: 1 }} onClick={resetBooking} size="small">
-                    <CloseIcon fontSize="small" />
-                </IconButton>
-                <DialogContent sx={{ px: 3, pb: 3, pt: 1 }}>
+
+                        {/* Pill step dots */}
+                        <Box sx={{ display: 'flex', gap: 0.6 }}>
+                            {steps.map((_, i) => (
+                                <Box key={i} sx={{
+                                    height: 4, flex: 1, borderRadius: 10,
+                                    bgcolor: i <= activeStep ? 'white' : 'rgba(255,255,255,0.25)',
+                                    transition: 'background 0.3s',
+                                }} />
+                            ))}
+                        </Box>
+                    </Box>
+                )}
+
+                <DialogContent sx={{ px: 3, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
                     <AnimatePresence mode="wait">
-                        <motion.div key={activeStep} initial={{ opacity: 0, x: 16 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -16 }} transition={{ duration: 0.18 }}>
+                        <motion.div key={activeStep}
+                            initial={{ opacity: 0, y: 12 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -12 }}
+                            transition={{ duration: 0.2 }}>
                             {renderStep()}
                         </motion.div>
                     </AnimatePresence>

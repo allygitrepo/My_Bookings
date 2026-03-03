@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment,
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -244,18 +244,42 @@ const Services = () => {
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Assign Staff">
                     <Controller name="assignedStaff" control={control}
-                        render={({ field }) => (
-                            <FormControl fullWidth>
-                                <InputLabel>Assigned Staff</InputLabel>
-                                <Select {...field} multiple label="Assigned Staff" renderValue={(selected) => (
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {selected.map(v => <Chip key={v} label={staff.find(s => s.id === v)?.staff_name || v} size="small" />)}
-                                    </Box>
-                                )}>
-                                    {staff.map(s => <MenuItem key={s.id} value={s.id}>{s.staff_name} — {s.role}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        )} />
+                        render={({ field }) => {
+                            const selectedIds = field.value || [];
+                            const selectedStaff = staff.filter(s => selectedIds.includes(s.id));
+                            // Only show staff NOT yet selected
+                            const availableOptions = staff.filter(s => !selectedIds.includes(s.id));
+                            return (
+                                <Autocomplete
+                                    multiple
+                                    options={availableOptions}
+                                    getOptionLabel={(o) => `${o.staff_name}${o.role ? ` — ${o.role}` : ''}`}
+                                    isOptionEqualToValue={(o, v) => o.id === v.id}
+                                    value={selectedStaff}
+                                    onChange={(_, newVal) => field.onChange(newVal.map(s => s.id))}
+                                    filterSelectedOptions
+                                    renderTags={(value, getTagProps) =>
+                                        value.map((option, index) => (
+                                            <Chip
+                                                key={option.id}
+                                                label={option.staff_name}
+                                                size="small"
+                                                color="primary"
+                                                variant="outlined"
+                                                {...getTagProps({ index })}
+                                            />
+                                        ))
+                                    }
+                                    renderInput={(params) => (
+                                        <TextField
+                                            {...params}
+                                            label="Assign Staff"
+                                            placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''}
+                                        />
+                                    )}
+                                />
+                            );
+                        }} />
                 </FieldSection>
             </FormDrawer>
         </PageTransition>
