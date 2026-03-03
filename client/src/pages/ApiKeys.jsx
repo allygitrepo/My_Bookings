@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card, Typography, Box, Button, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Paper, IconButton, Chip, Tooltip,
@@ -12,16 +12,35 @@ import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import toast from 'react-hot-toast';
+import { getApiKeys, createApiKey, updateApiKey, deleteApiKey } from '../api/apiKey.api';
+import { getBusinesses } from '../api/business.api';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { useApiKeys, useBusinesses } from '../store';
+import toast from 'react-hot-toast';
 
 const ApiKeys = () => {
-    const [apiKeys, setApiKeys] = useApiKeys();
-    const [businesses] = useBusinesses();
+    const [apiKeys, setApiKeys] = useState([]);
+    const [businesses, setBusinesses] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
     const [visibleKeys, setVisibleKeys] = useState({});
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [keyRes, bizRes] = await Promise.all([getApiKeys(), getBusinesses()]);
+            if (keyRes.success) setApiKeys(keyRes.data);
+            if (bizRes.success) setBusinesses(bizRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch API keys');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     const { control, handleSubmit, reset } = useForm({
         defaultValues: { business_id: '' },
@@ -33,22 +52,43 @@ const ApiKeys = () => {
         setOpen(true);
     };
 
-    const onSubmit = (data) => {
-        const now = new Date().toISOString();
-        if (editId) {
-            setApiKeys(apiKeys.map(k => k.id === editId ? { ...k, ...data, updated_at: now } : k));
-        } else {
-            const newKey = {
-                id: Date.now().toString(),
-                business_id: data.business_id,
-                api_key: 'pk_live_' + crypto.randomUUID().replace(/-/g, ''),
-                created_at: now,
-                updated_at: now,
-            };
-            setApiKeys([...apiKeys, newKey]);
-            toast.success('New API Key generated!');
+    const onSubmit = async (data) => {
+        try {
+            if (editId) {
+                const response = await updateApiKey(editId, data);
+                if (response.success) {
+                    toast.success('API Key updated');
+                    fetchData();
+                }
+            } else {
+                const newKeyData = {
+                    business_id: data.business_id,
+                    api_key: 'pk_live_' + crypto.randomUUID().replace(/-/g, ''),
+                };
+                const response = await createApiKey(newKeyData);
+                if (response.success) {
+                    toast.success('New API Key generated!');
+                    fetchData();
+                }
+            }
+            setOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Operation failed');
         }
-        setOpen(false);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this API Key?')) {
+            try {
+                const response = await deleteApiKey(id);
+                if (response.success) {
+                    toast.success('API Key deleted');
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error('Failed to delete API Key');
+            }
+        }
     };
 
     const toggleVisibility = (id) => setVisibleKeys(prev => ({ ...prev, [id]: !prev[id] }));
@@ -85,12 +125,17 @@ const ApiKeys = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {apiKeys.length === 0 && (
-                            <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+                                    <Typography color="text.secondary">Loading API keys...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : apiKeys.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 No API Keys generated yet. Click "Generate New Key" to create one.
                             </TableCell></TableRow>
-                        )}
-                        {apiKeys.map(k => {
+                        ) : apiKeys.map(k => {
                             const biz = businesses.find(b => b.id === k.business_id);
                             const isVisible = visibleKeys[k.id];
                             return (
@@ -117,7 +162,7 @@ const ApiKeys = () => {
                                                 </IconButton>
                                             </Tooltip>
                                         </CopyToClipboard>
-                                        <IconButton size="small" color="error" onClick={() => setApiKeys(apiKeys.filter(x => x.id !== k.id))}>
+                                        <IconButton size="small" color="error" onClick={() => handleDelete(k.id)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
@@ -137,20 +182,6 @@ const ApiKeys = () => {
                                 <InputLabel>Business *</InputLabel>
                                 <Select {...field} label="Business *">
                                     {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        )} />
-                </Box>
-                <Divider sx={{ my: 2.5 }} />
-                <Box>
-                    <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5, display: 'block' }}>Status</Typography>
-                    <Controller name="status" control={control}
-                        render={({ field }) => (
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select {...field} label="Status">
-                                    <MenuItem value="Active">Active</MenuItem>
-                                    <MenuItem value="Inactive">Inactive</MenuItem>
                                 </Select>
                             </FormControl>
                         )} />

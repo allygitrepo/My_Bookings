@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, Grid, MenuItem, Select, FormControl, InputLabel, Box, Typography, Divider,
@@ -8,7 +8,10 @@ import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import { useStaffServices, useStaff, useServices } from '../store';
+import { getStaffServices, createStaffService, updateStaffService, deleteStaffService } from '../api/staffService.api';
+import { getStaff } from '../api/staff.api';
+import { getServices } from '../api/service.api';
+import toast from 'react-hot-toast';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -18,11 +21,32 @@ const FieldSection = ({ label, children }) => (
 );
 
 const StaffServices = () => {
-    const [staffServices, setStaffServices] = useStaffServices();
-    const [staff] = useStaff();
-    const [services] = useServices();
+    const [staffServices, setStaffServices] = useState([]);
+    const [staff, setStaff] = useState([]);
+    const [services, setServices] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [ssRes, staffRes, svcRes] = await Promise.all([
+                getStaffServices(), getStaff(), getServices()
+            ]);
+            if (ssRes.success) setStaffServices(ssRes.data);
+            if (staffRes.success) setStaff(staffRes.data);
+            if (svcRes.success) setServices(svcRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     const { control, handleSubmit, reset } = useForm({
         defaultValues: { staff_id: '', service_id: '' },
@@ -35,17 +59,45 @@ const StaffServices = () => {
         setOpen(true);
     };
 
-    const onSubmit = (data) => {
-        const now = new Date().toISOString();
-        if (editId) {
-            setStaffServices(staffServices.map(ss => ss.id === editId ? { ...ss, ...data, updated_at: now } : ss));
-        } else {
-            // Avoid duplicates
-            const exists = staffServices.find(ss => ss.staff_id === data.staff_id && ss.service_id === data.service_id);
-            if (exists) return;
-            setStaffServices([...staffServices, { ...data, id: Date.now().toString(), created_at: now, updated_at: now }]);
+    const onSubmit = async (data) => {
+        try {
+            if (editId) {
+                const response = await updateStaffService(editId, data);
+                if (response.success) {
+                    toast.success('Assignment updated');
+                    fetchData();
+                }
+            } else {
+                // Avoid duplicates
+                const exists = staffServices.find(ss => ss.staff_id === data.staff_id && ss.service_id === data.service_id);
+                if (exists) {
+                    toast.error('This assignment already exists');
+                    return;
+                }
+                const response = await createStaffService(data);
+                if (response.success) {
+                    toast.success('Service assigned to staff');
+                    fetchData();
+                }
+            }
+            setOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Operation failed');
         }
-        setOpen(false);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to remove this assignment?')) {
+            try {
+                const response = await deleteStaffService(id);
+                if (response.success) {
+                    toast.success('Assignment removed');
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error('Failed to remove assignment');
+            }
+        }
     };
 
     return (
@@ -62,12 +114,17 @@ const StaffServices = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {staffServices.length === 0 && (
-                            <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+                                    <Typography color="text.secondary">Loading assignments...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : staffServices.length === 0 ? (
+                            <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 <LinkIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No staff-service assignments yet.
                             </TableCell></TableRow>
-                        )}
-                        {staffServices.map(ss => {
+                        ) : staffServices.map(ss => {
                             const staffMember = staff.find(s => s.id === ss.staff_id);
                             const service = services.find(s => s.id === ss.service_id);
                             return (
@@ -77,7 +134,7 @@ const StaffServices = () => {
                                     <TableCell>{ss.created_at ? new Date(ss.created_at).toLocaleDateString() : '—'}</TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(ss)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => setStaffServices(staffServices.filter(x => x.id !== ss.id))} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(ss.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -112,19 +169,6 @@ const StaffServices = () => {
                                 )} />
                         </Grid>
                     </Grid>
-                </FieldSection>
-                <Divider sx={{ my: 2.5 }} />
-                <FieldSection label="Status">
-                    <Controller name="status" control={control}
-                        render={({ field }) => (
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select {...field} label="Status">
-                                    <MenuItem value="Active">Active</MenuItem>
-                                    <MenuItem value="Inactive">Inactive</MenuItem>
-                                </Select>
-                            </FormControl>
-                        )} />
                 </FieldSection>
             </FormDrawer>
         </PageTransition>

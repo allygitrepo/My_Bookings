@@ -1,10 +1,13 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
+import { LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { Toaster } from 'react-hot-toast';
 import theme from './theme';
 import MainLayout from './layout/MainLayout';
 import AuthGuard from './components/AuthGuard';
+import { SearchProvider } from './context/SearchContext';
 
 import Dashboard from './pages/Dashboard';
 import Businesses from './pages/Businesses';
@@ -27,34 +30,38 @@ function App() {
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />
-      <Toaster position="top-right" />
-      <Router>
-        <Routes>
-          {/* Public Routes */}
-          <Route path="/" element={<LandingPage />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <SearchProvider>
+          <Router>
+            <Toaster position="top-right" />
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/login" element={<Login />} />
+              <Route path="/register" element={<Register />} />
 
-          {/* Protected Dashboard Routes */}
-          <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
-            <Route path="/dashboard" element={<Dashboard />} />
-            <Route path="/businesses" element={<Businesses />} />
-            <Route path="/locations" element={<Locations />} />
-            <Route path="/staff" element={<Staff />} />
-            <Route path="/services" element={<Services />} />
-            <Route path="/staff-services" element={<StaffServices />} />
-            <Route path="/availability" element={<Availability />} />
-            <Route path="/customers" element={<Customers />} />
-            <Route path="/bookings" element={<Bookings />} />
-            <Route path="/payments" element={<Payments />} />
-            <Route path="/api-keys" element={<ApiKeys />} />
-            <Route path="/widget-script" element={<WidgetScript />} />
-            <Route path="/profile" element={<Profile />} />
-          </Route>
+              {/* Protected Dashboard Routes */}
+              <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/businesses" element={<Businesses />} />
+                <Route path="/locations" element={<Locations />} />
+                <Route path="/staff" element={<Staff />} />
+                <Route path="/services" element={<Services />} />
+                <Route path="/staff-services" element={<StaffServices />} />
+                <Route path="/availability" element={<Availability />} />
+                <Route path="/customers" element={<Customers />} />
+                <Route path="/bookings" element={<Bookings />} />
+                <Route path="/payments" element={<Payments />} />
+                <Route path="/api-keys" element={<ApiKeys />} />
+                <Route path="/widget-script" element={<WidgetScript />} />
+                <Route path="/profile" element={<Profile />} />
+              </Route>
 
-          <Route path="*" element={<Navigate to="/login" replace />} />
-        </Routes>
-      </Router>
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Router>
+        </SearchProvider>
+      </LocalizationProvider>
     </ThemeProvider>
   );
 }

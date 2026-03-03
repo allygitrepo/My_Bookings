@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Card, Typography, Box, Button, FormControl, InputLabel, Select,
     MenuItem, Grid, Alert, Chip,
@@ -8,17 +8,36 @@ import {
 } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import toast from 'react-hot-toast';
+import { getBusinesses } from '../api/business.api';
+import { getApiKeys } from '../api/apiKey.api';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
-import { useBusinesses, useApiKeys } from '../store';
+import toast from 'react-hot-toast';
 
 const WidgetScript = () => {
-    const [businesses] = useBusinesses();
-    const [apiKeys] = useApiKeys();
+    const [businesses, setBusinesses] = useState([]);
+    const [apiKeys, setApiKeys] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [selectedBusinessId, setSelectedBusinessId] = useState('');
 
-    const [selectedBusinessId, setSelectedBusinessId] = useState(
-        businesses.length > 0 ? businesses[0].id : ''
-    );
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [bizRes, keyRes] = await Promise.all([getBusinesses(), getApiKeys()]);
+            if (bizRes.success) {
+                setBusinesses(bizRes.data);
+                if (bizRes.data.length > 0) setSelectedBusinessId(bizRes.data[0].id);
+            }
+            if (keyRes.success) setApiKeys(keyRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     // Find the active API key for the selected business
     const matchedKey = apiKeys.find(k => k.business_id === selectedBusinessId);
@@ -56,8 +75,9 @@ const WidgetScript = () => {
                                 value={selectedBusinessId}
                                 label="Business"
                                 onChange={e => setSelectedBusinessId(e.target.value)}
+                                disabled={loading}
                             >
-                                {businesses.length === 0 && <MenuItem value=""><em>No businesses added yet</em></MenuItem>}
+                                {loading ? <MenuItem value=""><em>Loading businesses...</em></MenuItem> : businesses.length === 0 ? <MenuItem value=""><em>No businesses added yet</em></MenuItem> : null}
                                 {businesses.map(b => (
                                     <MenuItem key={b.id} value={b.id}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>

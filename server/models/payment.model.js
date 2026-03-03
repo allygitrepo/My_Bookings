@@ -17,6 +17,10 @@ const Payment = sequelize.define(
             type: DataTypes.DOUBLE,
             allowNull: false
         },
+        paid_amount: {
+            type: DataTypes.DOUBLE,
+            allowNull: true
+        },
         payment_method: {
             type: DataTypes.STRING,
             allowNull: true

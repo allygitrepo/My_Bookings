@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Typography,
@@ -6,13 +6,42 @@ import {
 import { Payments as PayIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import { usePayments, useBookings } from '../store';
+import { getPayments } from '../api/payment.api';
+import { getBookings } from '../api/booking.api';
+import { useSearch } from '../context/SearchContext';
+import toast from 'react-hot-toast';
 
 const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error', Refunded: 'default' };
 
 const Payments = () => {
-    const [payments] = usePayments();
-    const [bookings] = useBookings();
+    const { searchQuery } = useSearch();
+    const [payments, setPayments] = useState([]);
+    const [bookings, setBookings] = useState([]);
+    const [loading, setLoading] = useState(true);
+
+    const filteredPayments = payments.filter(p =>
+        p.amount?.toString().includes(searchQuery) ||
+        p.paid_amount?.toString().includes(searchQuery) ||
+        p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [payRes, bookRes] = await Promise.all([getPayments(), getBookings()]);
+            if (payRes.success) setPayments(payRes.data);
+            if (bookRes.success) setBookings(bookRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch payments data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     return (
         <PageTransition>
@@ -24,31 +53,49 @@ const Payments = () => {
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Payment ID</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Booking ID</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Payment Method</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Paid Amount</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Transaction ID</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Payment Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {payments.length === 0 && (
-                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
+                                    <Typography color="text.secondary">Loading payments...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredPayments.length === 0 ? (
+                            <TableRow><TableCell colSpan={8} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                 <PayIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
-                                <Typography variant="body2" color="text.secondary">No payment records yet.</Typography>
+                                <Typography variant="body2" color="text.secondary">
+                                    {searchQuery ? 'No payments match your search.' : 'No payment records yet.'}
+                                </Typography>
                                 <Typography variant="caption" color="text.disabled">Payments are recorded automatically when customers complete a booking via the widget.</Typography>
                             </TableCell></TableRow>
-                        )}
-                        {[...payments].reverse().map(p => (
+                        ) : filteredPayments.map((p, index) => (
                             <TableRow key={p.id} hover>
-                                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.id}</TableCell>
-                                <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.booking_id}</TableCell>
-                                <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{p.amount}</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>₹{p.amount}</TableCell>
+                                <TableCell sx={{ fontWeight: 800, color: 'success.main' }}>₹{p.paid_amount || p.amount}</TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
+                                    ₹{(Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(2)}
+                                </TableCell>
                                 <TableCell>{p.payment_method}</TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_id || '—'}</TableCell>
-                                <TableCell><Chip label={p.payment_status} size="small" color={statusColors[p.payment_status] || 'default'} /></TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={(p.payment_status === true || p.payment_status === 1) ? 'Paid' : 'Pending'}
+                                        size="small"
+                                        color={(p.payment_status === true || p.payment_status === 1) ? 'success' : 'warning'}
+                                        variant="outlined"
+                                    />
+                                </TableCell>
                                 <TableCell>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</TableCell>
                             </TableRow>
                         ))}

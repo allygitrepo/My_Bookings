@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, IconButton, Chip, TextField, Grid, MenuItem, Select,
@@ -9,9 +9,21 @@ import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import { useBusinesses } from '../store';
+import { getBusinesses, createBusiness, updateBusiness, deleteBusiness } from '../api/business.api';
+import { useNavigate } from 'react-router-dom';
+import { useSearch } from '../context/SearchContext';
+import toast from 'react-hot-toast';
 
-const STATUS_OPTIONS = ['Active', 'Inactive'];
+const INDUSTRY_OPTIONS = [
+    'Healthcare / Hospital',
+    'Corporate',
+    'Salon / Beauty',
+    'Gym / Fitness',
+    'Spa / Wellness',
+    'Education / Coaching',
+    'Professional Services',
+    'Other'
+];
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -23,13 +35,43 @@ const FieldSection = ({ label, children }) => (
 );
 
 const Businesses = () => {
-    const [businesses, setBusinesses] = useBusinesses();
+    const { searchQuery } = useSearch();
+    const [businesses, setBusinesses] = useState([]);
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+
+    const filteredBusinesses = businesses.filter(biz =>
+        biz.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        biz.business_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        biz.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        biz.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        biz.upi_id?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
         defaultValues: { business_name: '', business_type: '', email: '', phone: '', upi_id: '' },
     });
+
+    const fetchBusinesses = async () => {
+        setLoading(true);
+        try {
+            const response = await getBusinesses();
+            if (response.success) {
+                setBusinesses(response.data);
+            }
+        } catch (error) {
+            toast.error('Failed to fetch businesses');
+            console.error(error);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchBusinesses();
+    }, []);
 
     const handleOpen = (biz = null) => {
         setEditId(biz?.id || null);
@@ -43,16 +85,45 @@ const Businesses = () => {
         setOpen(true);
     };
 
-    const onSubmit = (data) => {
-        if (editId) {
-            setBusinesses(businesses.map(b => b.id === editId ? { ...b, ...data, updated_at: new Date().toISOString() } : b));
-        } else {
-            setBusinesses([...businesses, { ...data, id: Date.now().toString(), created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+    const onSubmit = async (data) => {
+        try {
+            if (editId) {
+                const response = await updateBusiness(editId, data);
+                if (response.success) {
+                    toast.success('Business updated successfully');
+                    fetchBusinesses();
+                }
+            } else {
+                // Ensure user_id is included for creation
+                const payload = {
+                    ...data,
+                    user_id: currentUser?.id
+                };
+                const response = await createBusiness(payload);
+                if (response.success) {
+                    toast.success('Business created successfully');
+                    fetchBusinesses();
+                }
+            }
+            setOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Operation failed');
         }
-        setOpen(false);
     };
 
-    const handleDelete = (id) => setBusinesses(businesses.filter(b => b.id !== id));
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this business?')) {
+            try {
+                const response = await deleteBusiness(id);
+                if (response.success) {
+                    toast.success('Business deleted successfully');
+                    fetchBusinesses();
+                }
+            } catch (error) {
+                toast.error('Failed to delete business');
+            }
+        }
+    };
 
     return (
         <PageTransition>
@@ -67,6 +138,7 @@ const Businesses = () => {
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business Name</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
@@ -76,16 +148,27 @@ const Businesses = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {businesses.length === 0 && (
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                    <Typography color="text.secondary">Loading businesses...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredBusinesses.length === 0 && (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                    <BusinessIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
-                                    No businesses added yet. Click "Add Business" to get started.
+                                    {searchQuery ? 'No businesses match your search.' : (
+                                        <>
+                                            <BusinessIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
+                                            No businesses added yet. Click "Add Business" to get started.
+                                        </>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         )}
-                        {businesses.map((biz) => (
+                        {filteredBusinesses.map((biz, index) => (
                             <TableRow key={biz.id} hover>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
                                 <TableCell sx={{ fontWeight: 500 }}>{biz.business_name}</TableCell>
                                 <TableCell>{biz.business_type}</TableCell>
                                 <TableCell>{biz.phone}</TableCell>
@@ -119,9 +202,25 @@ const Businesses = () => {
                                 )} />
                         </Grid>
                         <Grid item xs={12}>
-                            <Controller name="business_type" control={control}
+                            <Controller name="business_type" control={control} rules={{ required: 'Business type is required' }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Business Type" placeholder="e.g. Clinic, Salon, Gym, Spa" />
+                                    <FormControl fullWidth error={!!errors.business_type} variant="outlined">
+                                        <InputLabel id="business-type-label">Business Type *</InputLabel>
+                                        <Select
+                                            {...field}
+                                            labelId="business-type-label"
+                                            label="Business Type *"
+                                        >
+                                            {INDUSTRY_OPTIONS.map(opt => (
+                                                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
+                                            ))}
+                                        </Select>
+                                        {errors.business_type && (
+                                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                                                {errors.business_type.message}
+                                            </Typography>
+                                        )}
+                                    </FormControl>
                                 )} />
                         </Grid>
                     </Grid>

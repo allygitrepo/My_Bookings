@@ -2,30 +2,72 @@ import React, { useState } from 'react';
 import { Box, Card, Typography, TextField, Button, Alert, Link as MuiLink, InputAdornment, IconButton } from '@mui/material';
 import { Visibility, VisibilityOff, LockOutlined } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
-import { useRegisteredUsers, useCurrentUser } from '../store';
+import { login, getUserById } from '../api/user.api';
 
 const Login = () => {
-    const [users] = useRegisteredUsers();
-    const [, setCurrentUser] = useCurrentUser();
     const navigate = useNavigate();
 
     const [form, setForm] = useState({ email: '', password: '' });
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-    const handleLogin = (e) => {
+    const decodeToken = (token) => {
+        try {
+            const base64Url = token.split('.')[1];
+            const base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            const jsonPayload = decodeURIComponent(atob(base64).split('').map(function (c) {
+                return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+            }).join(''));
+            return JSON.parse(jsonPayload);
+        } catch (e) {
+            return null;
+        }
+    };
+
+    const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
-        const user = users.find(u => u.email.toLowerCase() === form.email.toLowerCase() && u.password === form.password);
-        if (!user) {
-            setError('Invalid email or password. Please try again.');
-            return;
+        setLoading(true);
+
+        try {
+            const response = await login(form);
+            if (response.success) {
+                const token = response.data.token;
+
+                // 1. Temporarily store token to allow authorized API calls
+                localStorage.setItem('currentUser', JSON.stringify({ token }));
+
+                // 2. Decode token to get user ID
+                const decoded = decodeToken(token);
+                if (!decoded || !decoded.id) {
+                    throw new Error('Invalid token received');
+                }
+
+                // 3. Fetch full user details using the ID from decoded token
+                const userResponse = await getUserById(decoded.id);
+                if (userResponse.success) {
+                    const userData = {
+                        ...userResponse.data,
+                        token: token,
+                    };
+                    // 4. Store complete user data
+                    localStorage.setItem('currentUser', JSON.stringify(userData));
+                    navigate('/dashboard');
+                } else {
+                    setError('Failed to fetch user profile');
+                }
+            } else {
+                setError(response.message || 'Login failed');
+            }
+        } catch (err) {
+            console.error('Login Error:', err);
+            setError(err.response?.data?.message || err.message || 'Invalid email or password. Please try again.');
+        } finally {
+            setLoading(false);
         }
-        const { password: _, ...safeUser } = user;
-        setCurrentUser(safeUser);
-        navigate('/dashboard');
     };
 
     return (
@@ -74,8 +116,15 @@ const Login = () => {
                                 ),
                             }}
                         />
-                        <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2, py: 1.5, fontWeight: 700, fontSize: '1rem' }}>
-                            Sign In
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            fullWidth
+                            size="large"
+                            disabled={loading}
+                            sx={{ borderRadius: 2, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+                        >
+                            {loading ? 'Signing In...' : 'Sign In'}
                         </Button>
                     </form>
 

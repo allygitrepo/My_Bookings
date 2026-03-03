@@ -5,13 +5,11 @@ import {
 } from '@mui/material';
 import { Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
-import { useCurrentUser, useRegisteredUsers } from '../store';
+import { updateUser, getUsers } from '../api/user.api';
 import toast from 'react-hot-toast';
 
 const Profile = () => {
-    const [currentUser, setCurrentUser] = useCurrentUser();
-    const [users, setUsers] = useRegisteredUsers();
-
+    const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
     const [profileForm, setProfileForm] = useState({
         name: currentUser?.name || '',
         email: currentUser?.email || '',
@@ -30,28 +28,30 @@ const Profile = () => {
         ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
         : 'AD';
 
-    const handleProfileSave = (e) => {
+    const handleProfileSave = async (e) => {
         e.preventDefault();
         setProfileError('');
         if (!profileForm.name.trim()) { setProfileError('Name cannot be empty.'); return; }
 
-        // Update in registered users list
-        const updated = users.map(u => u.id === currentUser.id ? { ...u, name: profileForm.name, email: profileForm.email } : u);
-        setUsers(updated);
-
-        // Update current session
-        setCurrentUser({ ...currentUser, name: profileForm.name, email: profileForm.email });
-        toast.success('Profile updated successfully!');
+        try {
+            const response = await updateUser(currentUser.id, {
+                name: profileForm.name,
+                email: profileForm.email
+            });
+            if (response.success) {
+                const updatedUser = { ...currentUser, name: profileForm.name, email: profileForm.email };
+                localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                toast.success('Profile updated successfully!');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update profile');
+        }
     };
 
-    const handlePasswordChange = (e) => {
+    const handlePasswordChange = async (e) => {
         e.preventDefault();
         setPasswordError('');
 
-        const user = users.find(u => u.id === currentUser.id);
-        if (!user || user.password !== passwordForm.currentPassword) {
-            setPasswordError('Current password is incorrect.'); return;
-        }
         if (passwordForm.newPassword.length < 6) {
             setPasswordError('New password must be at least 6 characters.'); return;
         }
@@ -59,10 +59,18 @@ const Profile = () => {
             setPasswordError('New passwords do not match.'); return;
         }
 
-        const updated = users.map(u => u.id === currentUser.id ? { ...u, password: passwordForm.newPassword } : u);
-        setUsers(updated);
-        setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
-        toast.success('Password changed successfully!');
+        try {
+            const response = await updateUser(currentUser.id, {
+                password: passwordForm.newPassword,
+                currentPassword: passwordForm.currentPassword
+            });
+            if (response.success) {
+                setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
+                toast.success('Password changed successfully!');
+            }
+        } catch (error) {
+            setPasswordError(error.response?.data?.message || 'Failed to change password');
+        }
     };
 
     return (

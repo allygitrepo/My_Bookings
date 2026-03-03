@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
@@ -9,7 +9,12 @@ import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import { useServices, useBusinesses, useStaff, useStaffServices } from '../store';
+import { getServices, createService, updateService, deleteService } from '../api/service.api';
+import { getBusinesses } from '../api/business.api';
+import { getStaff } from '../api/staff.api';
+import { getStaffServices, createStaffService, deleteStaffService } from '../api/staffService.api';
+import { useSearch } from '../context/SearchContext';
+import toast from 'react-hot-toast';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -19,12 +24,41 @@ const FieldSection = ({ label, children }) => (
 );
 
 const Services = () => {
-    const [servicesList, setServicesList] = useServices();
-    const [businesses] = useBusinesses();
-    const [staff] = useStaff();
-    const [staffServices, setStaffServices] = useStaffServices();
+    const { searchQuery } = useSearch();
+    const [servicesList, setServicesList] = useState([]);
+    const [businesses, setBusinesses] = useState([]);
+    const [staff, setStaff] = useState([]);
+    const [staffServices, setStaffServices] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+
+    const filteredServices = servicesList.filter(svc =>
+        svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        svc.price?.toString().includes(searchQuery) ||
+        svc.duration_minutes?.toString().includes(searchQuery)
+    );
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [svcRes, bizRes, staffRes, ssRes] = await Promise.all([
+                getServices(), getBusinesses(), getStaff(), getStaffServices()
+            ]);
+            if (svcRes.success) setServicesList(svcRes.data);
+            if (bizRes.success) setBusinesses(bizRes.data);
+            if (staffRes.success) setStaff(staffRes.data);
+            if (ssRes.success) setStaffServices(ssRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
         defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] },
@@ -41,25 +75,64 @@ const Services = () => {
         setOpen(true);
     };
 
-    const onSubmit = (data) => {
+    const onSubmit = async (data) => {
         const { assignedStaff, ...svcData } = data;
-        let targetId;
-        if (editId) {
-            targetId = editId;
-            setServicesList(servicesList.map(s => s.id === editId ? { ...s, ...svcData, updated_at: new Date().toISOString() } : s));
-        } else {
-            targetId = Date.now().toString();
-            setServicesList([...servicesList, { ...svcData, id: targetId, created_at: new Date().toISOString(), updated_at: new Date().toISOString() }]);
+        try {
+            let targetId;
+            if (editId) {
+                targetId = editId;
+                const response = await updateService(editId, svcData);
+                if (response.success) {
+                    await updateStaffAssignments(targetId, assignedStaff);
+                    toast.success('Service updated successfully');
+                    fetchData();
+                }
+            } else {
+                const response = await createService(svcData);
+                if (response.success) {
+                    targetId = response.data.id;
+                    await updateStaffAssignments(targetId, assignedStaff);
+                    toast.success('Service created successfully');
+                    fetchData();
+                }
+            }
+            setOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Operation failed');
         }
-        const filtered = staffServices.filter(ss => ss.service_id !== targetId);
-        const newMappings = (assignedStaff || []).map(staffId => ({ id: `${staffId}-${targetId}`, staff_id: staffId, service_id: targetId, status: 'Active', created_at: new Date().toISOString(), updated_at: new Date().toISOString() }));
-        setStaffServices([...filtered, ...newMappings]);
-        setOpen(false);
     };
 
-    const handleDelete = (id) => {
-        setServicesList(servicesList.filter(s => s.id !== id));
-        setStaffServices(staffServices.filter(ss => ss.service_id !== id));
+    const updateStaffAssignments = async (serviceId, assignedStaffIds) => {
+        const currentAssigned = staffServices.filter(ss => ss.service_id === serviceId);
+        const currentIds = currentAssigned.map(ss => ss.staff_id);
+
+        // To remove
+        const toRemove = currentAssigned.filter(ss => !assignedStaffIds.includes(ss.staff_id));
+        // To add
+        const toAdd = assignedStaffIds.filter(id => !currentIds.includes(id));
+
+        await Promise.all([
+            ...toRemove.map(ss => deleteStaffService(ss.id)),
+            ...toAdd.map(staffId => createStaffService({ staff_id: staffId, service_id: serviceId }))
+        ]);
+    };
+
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this service?')) {
+            try {
+                // Delete associated staff assignments
+                const associatedSS = staffServices.filter(ss => ss.service_id === id);
+                await Promise.all(associatedSS.map(ss => deleteStaffService(ss.id)));
+
+                const response = await deleteService(id);
+                if (response.success) {
+                    toast.success('Service deleted successfully');
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error('Failed to delete service');
+            }
+        }
     };
 
     return (
@@ -69,6 +142,7 @@ const Services = () => {
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Service Name</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Duration (min)</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
@@ -78,16 +152,27 @@ const Services = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {servicesList.length === 0 && (
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                    <Typography color="text.secondary">Loading services...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredServices.length === 0 && (
                             <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                <ServiceIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No services added yet.
+                                {searchQuery ? 'No services match your search.' : (
+                                    <>
+                                        <ServiceIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No services added yet.
+                                    </>
+                                )}
                             </TableCell></TableRow>
                         )}
-                        {servicesList.map(svc => {
+                        {filteredServices.map((svc, index) => {
                             const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             return (
                                 <TableRow key={svc.id} hover>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{svc.service_name}</TableCell>
                                     <TableCell>{svc.duration_minutes} min</TableCell>
                                     <TableCell>₹{svc.price}</TableCell>
@@ -159,19 +244,6 @@ const Services = () => {
                                     </Box>
                                 )}>
                                     {staff.map(s => <MenuItem key={s.id} value={s.id}>{s.staff_name} — {s.role}</MenuItem>)}
-                                </Select>
-                            </FormControl>
-                        )} />
-                </FieldSection>
-                <Divider sx={{ my: 2.5 }} />
-                <FieldSection label="Status">
-                    <Controller name="status" control={control}
-                        render={({ field }) => (
-                            <FormControl fullWidth>
-                                <InputLabel>Status</InputLabel>
-                                <Select {...field} label="Status">
-                                    <MenuItem value="Active">Active</MenuItem>
-                                    <MenuItem value="Inactive">Inactive</MenuItem>
                                 </Select>
                             </FormControl>
                         )} />

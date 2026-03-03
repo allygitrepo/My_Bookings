@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
@@ -12,7 +12,13 @@ import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import { useStaff, useBusinesses, useLocations, useAvailability } from '../store';
+import { getStaff, createStaff, updateStaff, deleteStaff } from '../api/staff.api';
+import { getBusinesses } from '../api/business.api';
+import { getLocations } from '../api/location.api';
+import { getStaffAvailability, createStaffAvailability, updateStaffAvailability, deleteStaffAvailability } from '../api/staffAvailability.api';
+import { useNavigate } from 'react-router-dom';
+import { useSearch } from '../context/SearchContext';
+import toast from 'react-hot-toast';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 
@@ -27,15 +33,45 @@ const FieldSection = ({ label, children }) => (
 );
 
 const Staff = () => {
-    const [staffList, setStaffList] = useStaff();
-    const [businesses] = useBusinesses();
-    const [locations] = useLocations();
-    const [availability, setAvailability] = useAvailability();
+    const { searchQuery } = useSearch();
+    const [staffList, setStaffList] = useState([]);
+    const [businesses, setBusinesses] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [availability, setAvailability] = useState([]);
+    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
 
+    const filteredStaff = staffList.filter(s =>
+        s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        s.phone?.toLowerCase().includes(searchQuery.toLowerCase())
+    );
+
     // availability schedule: { [day]: [{ start_time, end_time }] | null }
     const [schedule, setSchedule] = useState({});
+    const [syncTimes, setSyncTimes] = useState(false);
+
+    const fetchData = async () => {
+        setLoading(true);
+        try {
+            const [staffRes, bizRes, locRes, availRes] = await Promise.all([
+                getStaff(), getBusinesses(), getLocations(), getStaffAvailability()
+            ]);
+            if (staffRes.success) setStaffList(staffRes.data);
+            if (bizRes.success) setBusinesses(bizRes.data);
+            if (locRes.success) setLocations(locRes.data);
+            if (availRes.success) setAvailability(availRes.data);
+        } catch (error) {
+            toast.error('Failed to fetch data');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    React.useEffect(() => {
+        fetchData();
+    }, []);
 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
         defaultValues: { business_id: '', location_id: '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30' },
@@ -53,8 +89,11 @@ const Staff = () => {
             const existing = availability.filter(a => a.staff_id === s.id);
             const sched = {};
             existing.forEach(a => {
-                if (!sched[a.day_of_week]) sched[a.day_of_week] = [];
-                sched[a.day_of_week].push({ start_time: a.start_time, end_time: a.end_time });
+                const dayMatch = DAYS.find(d => d.toLowerCase() === a.day_of_week.toLowerCase());
+                if (dayMatch) {
+                    if (!sched[dayMatch]) sched[dayMatch] = [];
+                    sched[dayMatch].push({ start_time: a.start_time, end_time: a.end_time });
+                }
             });
             setSchedule(sched);
         } else {
@@ -94,53 +133,95 @@ const Staff = () => {
     };
 
     const updateSlot = (day, idx, field, value) => {
-        setSchedule(prev => ({
-            ...prev,
-            [day]: prev[day].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot),
-        }));
+        setSchedule(prev => {
+            const updatedDaySlots = prev[day].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
+            const next = { ...prev, [day]: updatedDaySlots };
+
+            if (syncTimes) {
+                // Apply this slot change to all other days that have slots
+                Object.keys(next).forEach(d => {
+                    if (d !== day) {
+                        next[d] = next[d].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
+                    }
+                });
+            }
+            return next;
+        });
     };
 
-    const onSubmit = (data) => {
-        const now = new Date().toISOString();
-        let staffId;
+    const copyToAll = (sourceDay) => {
+        const slotsToCopy = schedule[sourceDay];
+        if (!slotsToCopy) return;
 
-        if (editId) {
-            staffId = editId;
-            setStaffList(staffList.map(s => s.id === editId ? { ...s, ...data, updated_at: now } : s));
-            // Remove old availability records for this staff
-            const withoutOld = availability.filter(a => a.staff_id !== editId);
-            const newRecords = buildAvailabilityRecords(staffId, now);
-            setAvailability([...withoutOld, ...newRecords]);
-        } else {
-            staffId = Date.now().toString();
-            setStaffList([...staffList, { ...data, id: staffId, created_at: now, updated_at: now }]);
-            const newRecords = buildAvailabilityRecords(staffId, now);
-            setAvailability([...availability, ...newRecords]);
+        const newSchedule = { ...schedule };
+        Object.keys(newSchedule).forEach(day => {
+            newSchedule[day] = slotsToCopy.map(s => ({ ...s }));
+        });
+        setSchedule(newSchedule);
+        toast.success(`Copied ${sourceDay}'s schedule to all active days`);
+    };
+
+    const onSubmit = async (data) => {
+        try {
+            let staffId;
+            if (editId) {
+                staffId = editId;
+                const response = await updateStaff(editId, data);
+                if (response.success) {
+                    // Update availability
+                    // The backend might handle this differently, but following the original logic's pattern:
+                    // Remove old records and add new ones (though a real API might have a bulk sync endpoint)
+                    const existingAvails = availability.filter(a => a.staff_id === editId);
+                    await Promise.all(existingAvails.map(a => deleteStaffAvailability(a.id)));
+                    await createNewAvailabilityRecords(staffId);
+                    toast.success('Staff member updated successfully');
+                    fetchData();
+                }
+            } else {
+                const response = await createStaff(data);
+                if (response.success) {
+                    staffId = response.data.id;
+                    await createNewAvailabilityRecords(staffId);
+                    toast.success('Staff member added successfully');
+                    fetchData();
+                }
+            }
+            setOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Operation failed');
         }
-        setOpen(false);
     };
 
-    const buildAvailabilityRecords = (staffId, now) => {
+    const createNewAvailabilityRecords = async (staffId) => {
         const records = [];
         Object.entries(schedule).forEach(([day, slots]) => {
             slots.forEach(slot => {
                 records.push({
-                    id: `${staffId}-${day}-${Date.now()}-${Math.random()}`,
                     staff_id: staffId,
-                    day_of_week: day,
+                    day_of_week: day.toLowerCase(),
                     start_time: slot.start_time,
                     end_time: slot.end_time,
-                    created_at: now,
-                    updated_at: now,
                 });
             });
         });
-        return records;
+        await Promise.all(records.map(r => createStaffAvailability(r)));
     };
 
-    const handleDelete = (id) => {
-        setStaffList(staffList.filter(s => s.id !== id));
-        setAvailability(availability.filter(a => a.staff_id !== id));
+    const handleDelete = async (id) => {
+        if (window.confirm('Are you sure you want to delete this staff member?')) {
+            try {
+                // Also delete their availability
+                const staffAvails = availability.filter(a => a.staff_id === id);
+                await Promise.all(staffAvails.map(a => deleteStaffAvailability(a.id)));
+                const response = await deleteStaff(id);
+                if (response.success) {
+                    toast.success('Staff member deleted successfully');
+                    fetchData();
+                }
+            } catch (error) {
+                toast.error('Failed to delete staff member');
+            }
+        }
     };
 
     return (
@@ -151,6 +232,7 @@ const Staff = () => {
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Staff Name</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>
@@ -162,18 +244,30 @@ const Staff = () => {
                         </TableRow>
                     </TableHead>
                     <TableBody>
-                        {staffList.length === 0 && (
-                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                <PeopleIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
-                                No staff added yet. Click "Add Staff" to get started.
-                            </TableCell></TableRow>
-                        )}
-                        {staffList.map(s => {
+                        {loading ? (
+                            <TableRow>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
+                                    <Typography color="text.secondary">Loading staff members...</Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredStaff.length === 0 ? (
+                            <TableRow>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                    {searchQuery ? 'No staff match your search.' : (
+                                        <>
+                                            <PeopleIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
+                                            No staff added yet. Click "Add Staff" to get started.
+                                        </>
+                                    )}
+                                </TableCell>
+                            </TableRow>
+                        ) : filteredStaff.map((s, index) => {
                             const biz = businesses.find(b => b.id === s.business_id);
                             const loc = locations.find(l => l.id === s.location_id);
                             const workingDays = [...new Set(availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.slice(0, 3)))];
                             return (
                                 <TableRow key={s.id} hover>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{s.staff_name}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'inline-block', px: 1.5, py: 0.3, borderRadius: 1, bgcolor: 'primary.50', color: 'primary.main', fontSize: '0.75rem', fontWeight: 600 }}>
@@ -269,9 +363,21 @@ const Staff = () => {
 
                 {/* --- Availability Schedule --- */}
                 <FieldSection label="Weekly Availability">
-                    <Typography variant="caption" color="text.secondary" mb={2} display="block">
+                    <Typography variant="caption" color="text.secondary" mb={1} display="block">
                         Check the days the staff member works and add time slots for each day.
                     </Typography>
+
+                    <FormControlLabel
+                        sx={{ mb: 2 }}
+                        control={
+                            <Checkbox
+                                size="small"
+                                checked={syncTimes}
+                                onChange={(e) => setSyncTimes(e.target.checked)}
+                            />
+                        }
+                        label={<Typography variant="body2" fontWeight={700} color="primary.main">Same time for all days</Typography>}
+                    />
 
                     {DAYS.map(day => (
                         <Box key={day} sx={{ mb: 1.5 }}>
@@ -284,7 +390,21 @@ const Staff = () => {
                                         color="primary"
                                     />
                                 }
-                                label={<Typography variant="body2" fontWeight={600}>{day}</Typography>}
+                                label={
+                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
+                                        <Typography variant="body2" fontWeight={600}>{day}</Typography>
+                                        {schedule[day] && (
+                                            <Button
+                                                size="small"
+                                                variant="text"
+                                                onClick={() => copyToAll(day)}
+                                                sx={{ fontSize: '0.65rem', py: 0 }}
+                                            >
+                                                Apply to all days
+                                            </Button>
+                                        )}
+                                    </Box>
+                                }
                             />
 
                             {schedule[day] && (

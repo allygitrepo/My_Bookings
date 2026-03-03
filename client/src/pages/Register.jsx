@@ -2,36 +2,49 @@ import React, { useState } from 'react';
 import { Box, Card, Typography, TextField, Button, Alert, Link as MuiLink, InputAdornment, IconButton } from '@mui/material';
 import { Visibility, VisibilityOff, PersonAddOutlined } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
-import { useRegisteredUsers, useCurrentUser } from '../store';
+import { register } from '../api/user.api';
 
 const Register = () => {
-    const [users, setUsers] = useRegisteredUsers();
-    const [, setCurrentUser] = useCurrentUser();
     const navigate = useNavigate();
 
     const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
     const [showPassword, setShowPassword] = useState(false);
+    const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
-    const handleRegister = (e) => {
+    const handleRegister = async (e) => {
         e.preventDefault();
         setError('');
 
         if (!form.name.trim()) { setError('Please enter your full name.'); return; }
         if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return; }
         if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
-        if (users.find(u => u.email.toLowerCase() === form.email.toLowerCase())) {
-            setError('An account with this email already exists.'); return;
+
+        setLoading(true);
+        try {
+            const response = await register({
+                name: form.name,
+                email: form.email,
+                password: form.password
+            });
+
+            if (response.success) {
+                // Backend register doesn't seem to return a token, 
+                // typically we'd redirect to login or the backend would return a token.
+                // Looking at user.controller.js, it returns { success: true, message, data: newUser }
+                // I'll redirect to login for simplicity or just auto-login if the user wants.
+                // The original code tried to auto-login.
+                navigate('/login');
+            } else {
+                setError(response.message || 'Registration failed');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+        } finally {
+            setLoading(false);
         }
-
-        const newUser = { id: Date.now().toString(), name: form.name, email: form.email, password: form.password, createdAt: new Date().toISOString() };
-        setUsers([...users, newUser]);
-
-        const { password: _, ...safeUser } = newUser;
-        setCurrentUser(safeUser);
-        navigate('/dashboard');
     };
 
     return (
@@ -76,8 +89,15 @@ const Register = () => {
                             type={showPassword ? 'text' : 'password'}
                             value={form.confirmPassword} onChange={handleChange} sx={{ mb: 3 }} required
                         />
-                        <Button type="submit" variant="contained" fullWidth size="large" sx={{ borderRadius: 2, py: 1.5, fontWeight: 700, fontSize: '1rem' }}>
-                            Create Account
+                        <Button
+                            type="submit"
+                            variant="contained"
+                            fullWidth
+                            size="large"
+                            disabled={loading}
+                            sx={{ borderRadius: 2, py: 1.5, fontWeight: 700, fontSize: '1rem' }}
+                        >
+                            {loading ? 'Creating Account...' : 'Create Account'}
                         </Button>
                     </form>
 
