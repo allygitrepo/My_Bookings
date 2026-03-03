@@ -101,6 +101,11 @@ const BookingWidget = ({ businessId }) => {
         service: null, staff: null, date: '', slot: '', paidAmount: 0,
         customer: { name: '', email: '', phone: '' },
     });
+    const [detailErrors, setDetailErrors] = useState({});
+    const [calendarMonth, setCalendarMonth] = useState(() => {
+        const now = new Date();
+        return { year: now.getFullYear(), month: now.getMonth() };
+    });
 
     const fetchData = async () => {
         // If it's a public key, set the header for all subsequent Widget requests
@@ -169,6 +174,7 @@ const BookingWidget = ({ businessId }) => {
     const resetBooking = () => {
         setOpen(false);
         setActiveStep(0);
+        setDetailErrors({});
         setBookingData({
             service: null, staff: null, date: '', slot: '', paidAmount: 0,
             customer: { name: '', email: '', phone: '' }
@@ -397,31 +403,121 @@ const BookingWidget = ({ businessId }) => {
                     </Box>
                 );
 
-            case 2:
+            case 2: {
+                // Build calendar grid
+                const today = new Date();
+                today.setHours(0, 0, 0, 0);
+                const { year, month } = calendarMonth;
+                const firstDay = new Date(year, month, 1).getDay();
+                const daysInMonth = new Date(year, month + 1, 0).getDate();
+                const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+                const DAY_LABELS = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+
+                const calCells = [];
+                for (let i = 0; i < firstDay; i++) calCells.push(null);
+                for (let d = 1; d <= daysInMonth; d++) calCells.push(d);
+
+                const handleCalDay = (d) => {
+                    if (!d) return;
+                    const selected = new Date(year, month, d);
+                    selected.setHours(0, 0, 0, 0);
+                    if (selected < today) return;
+                    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    setBookingData(prev => ({ ...prev, date: iso, slot: '' }));
+                };
+
+                const prevMonth = () => setCalendarMonth(prev => {
+                    const d = new Date(prev.year, prev.month - 1, 1);
+                    return { year: d.getFullYear(), month: d.getMonth() };
+                });
+                const nextMonth = () => setCalendarMonth(prev => {
+                    const d = new Date(prev.year, prev.month + 1, 1);
+                    return { year: d.getFullYear(), month: d.getMonth() };
+                });
+                const canGoPrev = new Date(year, month, 1) > new Date(today.getFullYear(), today.getMonth(), 1);
+
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
                             <IconButton size="small" onClick={handleBack}><BackIcon fontSize="small" /></IconButton>
-                            <Typography variant="h6" fontWeight={700}>Pick a Date & Time</Typography>
+                            <Typography variant="h6" fontWeight={700}>Pick a Date &amp; Time</Typography>
                         </Box>
-                        <TextField
-                            fullWidth type="date" label="Select Date"
-                            InputLabelProps={{ shrink: true }}
-                            inputProps={{
-                                min: new Date().toLocaleDateString('en-CA'), // Formats to YYYY-MM-DD in local time
-                            }}
-                            sx={{ mb: 3 }}
-                            value={bookingData.date}
-                            onChange={e => {
-                                const selectedDate = e.target.value;
-                                const today = new Date().toLocaleDateString('en-CA');
-                                if (selectedDate < today) {
-                                    toast.error('Please select a future date');
-                                    return;
-                                }
-                                setBookingData({ ...bookingData, date: selectedDate, slot: '' });
-                            }}
-                        />
+
+                        {/* ── Modern Inline Calendar ── */}
+                        <Box sx={{
+                            border: '1.5px solid', borderColor: 'divider', borderRadius: 3,
+                            overflow: 'hidden', mb: 2.5,
+                            background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)',
+                            boxShadow: '0 2px 12px rgba(99,102,241,0.08)',
+                        }}>
+                            {/* Month nav */}
+                            <Box sx={{
+                                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                px: 2, py: 1.5,
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            }}>
+                                <IconButton size="small" onClick={prevMonth} disabled={!canGoPrev}
+                                    sx={{ color: 'white', opacity: canGoPrev ? 1 : 0.3, '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' } }}>
+                                    <BackIcon fontSize="small" />
+                                </IconButton>
+                                <Typography fontWeight={700} color="white" fontSize="0.95rem">
+                                    {MONTH_NAMES[month]} {year}
+                                </Typography>
+                                <IconButton size="small" onClick={nextMonth}
+                                    sx={{ color: 'white', transform: 'rotate(180deg)', '&:hover': { bgcolor: 'rgba(255,255,255,0.15)' } }}>
+                                    <BackIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+
+                            {/* Day labels */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', px: 1, pt: 1.5 }}>
+                                {DAY_LABELS.map(dl => (
+                                    <Box key={dl} sx={{ textAlign: 'center', pb: 0.5 }}>
+                                        <Typography variant="caption" fontWeight={700} color="text.disabled" fontSize="0.65rem">{dl}</Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+
+                            {/* Date cells */}
+                            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', px: 1, pb: 1.5, gap: 0.3 }}>
+                                {calCells.map((d, i) => {
+                                    if (!d) return <Box key={`e${i}`} />;
+                                    const cellDate = new Date(year, month, d);
+                                    cellDate.setHours(0, 0, 0, 0);
+                                    const isPast = cellDate < today;
+                                    const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                                    const isSelected = bookingData.date === iso;
+                                    const isToday = cellDate.getTime() === today.getTime();
+                                    return (
+                                        <Box key={d}
+                                            onClick={() => handleCalDay(d)}
+                                            sx={{
+                                                textAlign: 'center', py: 0.7,
+                                                borderRadius: 2,
+                                                cursor: isPast ? 'default' : 'pointer',
+                                                bgcolor: isSelected ? '#6366f1' : 'transparent',
+                                                border: isToday && !isSelected ? '1.5px solid #6366f1' : '1.5px solid transparent',
+                                                transition: 'all 0.12s',
+                                                '&:hover': isPast ? {} : {
+                                                    bgcolor: isSelected ? '#6366f1' : 'rgba(99,102,241,0.1)',
+                                                },
+                                            }}
+                                        >
+                                            <Typography
+                                                variant="caption"
+                                                fontWeight={isSelected ? 800 : isToday ? 700 : 400}
+                                                sx={{
+                                                    color: isSelected ? 'white' : isPast ? 'text.disabled' : 'text.primary',
+                                                    fontSize: '0.8rem',
+                                                }}
+                                            >{d}</Typography>
+                                        </Box>
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+
+                        {/* Time slots */}
                         {bookingData.date && (
                             <>
                                 <Typography variant="subtitle2" fontWeight={600} gutterBottom>
@@ -460,8 +556,21 @@ const BookingWidget = ({ businessId }) => {
                         </Button>
                     </Box>
                 );
+            }
 
-            case 3:
+            case 3: {
+                const validateAndNext = () => {
+                    const errs = {};
+                    const { name, phone, email } = bookingData.customer;
+                    if (!name.trim()) errs.name = 'Name is required';
+                    else if (!/^[A-Za-z .\-']+$/.test(name.trim())) errs.name = 'Name can only contain letters and spaces';
+                    if (!phone.trim()) errs.phone = 'Phone number is required';
+                    else if (!/^\d{10}$/.test(phone)) errs.phone = 'Enter exactly 10 digits';
+                    if (!email.trim()) errs.email = 'Email is required';
+                    else if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) errs.email = 'Enter a valid email (e.g. user@example.com)';
+                    setDetailErrors(errs);
+                    if (Object.keys(errs).length === 0) handleNext();
+                };
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
@@ -471,23 +580,45 @@ const BookingWidget = ({ businessId }) => {
                         <Grid container spacing={2}>
                             <Grid item xs={12}>
                                 <TextField fullWidth label="Full Name *" value={bookingData.customer.name}
-                                    onChange={e => setBookingData({ ...bookingData, customer: { ...bookingData.customer, name: e.target.value } })} />
+                                    error={!!detailErrors.name}
+                                    helperText={detailErrors.name}
+                                    onChange={e => {
+                                        // Allow only letters, spaces, hyphens, apostrophes, dots
+                                        const val = e.target.value.replace(/[^A-Za-z .\-']/g, '');
+                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, name: val } });
+                                        if (detailErrors.name) setDetailErrors(p => ({ ...p, name: undefined }));
+                                    }} />
                             </Grid>
                             <Grid item xs={12}>
-                                <TextField fullWidth label="Phone Number" value={bookingData.customer.phone}
-                                    onChange={e => setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: e.target.value } })} />
+                                <TextField fullWidth label="Phone Number *" value={bookingData.customer.phone}
+                                    error={!!detailErrors.phone}
+                                    helperText={detailErrors.phone || '10-digit mobile number'}
+                                    inputProps={{ maxLength: 10, inputMode: 'numeric' }}
+                                    onChange={e => {
+                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
+                                        if (detailErrors.phone) setDetailErrors(p => ({ ...p, phone: undefined }));
+                                    }} />
                             </Grid>
                             <Grid item xs={12}>
                                 <TextField fullWidth label="Email *" value={bookingData.customer.email}
-                                    onChange={e => setBookingData({ ...bookingData, customer: { ...bookingData.customer, email: e.target.value } })} />
+                                    type="email"
+                                    error={!!detailErrors.email}
+                                    helperText={detailErrors.email}
+                                    onChange={e => {
+                                        // Strip emojis, control chars, and non-printable characters
+                                        const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
+                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, email: val } });
+                                        if (detailErrors.email) setDetailErrors(p => ({ ...p, email: undefined }));
+                                    }} />
                             </Grid>
                         </Grid>
-                        <Button fullWidth variant="contained" sx={{ mt: 3, borderRadius: 2 }}
-                            disabled={!bookingData.customer.name || !bookingData.customer.email} onClick={handleNext}>
-                            Review & Pay
+                        <Button fullWidth variant="contained" sx={{ mt: 3, borderRadius: 2 }} onClick={validateAndNext}>
+                            Review &amp; Pay
                         </Button>
                     </Box>
                 );
+            }
 
             case 4:
                 return (
