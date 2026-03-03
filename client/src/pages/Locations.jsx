@@ -1,10 +1,10 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useMemo } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Box, Typography, Divider,
+    IconButton, TextField, Grid, MenuItem, Box, Typography, Divider,
+    Autocomplete,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, LocationOn as LocationIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
@@ -13,6 +13,47 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getBusinesses } from '../api/business.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+
+// ────────────────────────────────────────────────────────────────────────────
+// Indian States → Cities data
+// ────────────────────────────────────────────────────────────────────────────
+const INDIA_STATE_CITIES = {
+    "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Tirupati", "Nellore", "Kurnool", "Kakinada", "Rajahmundry", "Kadapa", "Anantapur"],
+    "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tezpur", "Bomdila"],
+    "Assam": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon", "Tinsukia", "Tezpur", "Kamrup"],
+    "Bihar": ["Patna", "Gaya", "Muzaffarpur", "Bhagalpur", "Darbhanga", "Purnia", "Ara", "Begusarai", "Katihar", "Munger"],
+    "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Durg", "Korba", "Rajnandgaon", "Jagdalpur"],
+    "Goa": ["Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda"],
+    "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh", "Anand", "Nadiad"],
+    "Haryana": ["Faridabad", "Gurgaon", "Panipat", "Ambala", "Yamunanagar", "Rohtak", "Hisar", "Karnal", "Sonipat", "Panchkula"],
+    "Himachal Pradesh": ["Shimla", "Dharamshala", "Solan", "Mandi", "Kullu", "Manali", "Bilaspur", "Hamirpur"],
+    "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro", "Deoghar", "Hazaribagh", "Giridih", "Dumka"],
+    "Karnataka": ["Bangalore", "Mysore", "Hubli", "Dharwad", "Mangalore", "Belgaum", "Davangere", "Bellary", "Bijapur", "Shimoga"],
+    "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Alappuzha", "Palakkad", "Malappuram", "Kannur", "Kasaragod"],
+    "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain", "Sagar", "Ratlam", "Satna", "Dewas", "Murwara"],
+    "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Kolhapur", "Amravati", "Nanded"],
+    "Manipur": ["Imphal", "Thoubal", "Bishnupur", "Churachandpur"],
+    "Meghalaya": ["Shillong", "Tura", "Jowai", "Nongstoin"],
+    "Mizoram": ["Aizawl", "Lunglei", "Champhai", "Serchhip"],
+    "Nagaland": ["Kohima", "Dimapur", "Mokokchung", "Wokha"],
+    "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Brahmapur", "Sambalpur", "Puri", "Balasore", "Bhadrak", "Baripada"],
+    "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda", "Mohali", "Firozpur", "Hoshiarpur", "Gurdaspur"],
+    "Rajasthan": ["Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer", "Udaipur", "Bhilwara", "Alwar", "Bharatpur", "Sikar"],
+    "Sikkim": ["Gangtok", "Namchi", "Gyalshing", "Mangan"],
+    "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Tirunelveli", "Erode", "Vellore", "Thoothukudi", "Dindigul"],
+    "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Ramagundam", "Khammam", "Mahbubnagar", "Nalgonda"],
+    "Tripura": ["Agartala", "Dharmanagar", "Udaipur", "Kailashahar"],
+    "Uttar Pradesh": ["Lucknow", "Kanpur", "Ghaziabad", "Agra", "Meerut", "Varanasi", "Allahabad", "Bareilly", "Aligarh", "Moradabad"],
+    "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rishikesh", "Kashipur", "Rudrapur", "Nainital"],
+    "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Bardhaman", "Malda", "Baharampur"],
+    "Delhi": ["New Delhi", "Dwarka", "Rohini", "Pitampura", "Saket", "Lajpat Nagar", "Connaught Place", "Karol Bagh"],
+    "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag", "Baramulla", "Sopore"],
+    "Ladakh": ["Leh", "Kargil"],
+    "Chandigarh": ["Chandigarh"],
+    "Puducherry": ["Puducherry", "Karaikal", "Yanam", "Mahe"],
+};
+
+const STATES = Object.keys(INDIA_STATE_CITIES).sort();
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -28,6 +69,7 @@ const Locations = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [selectedState, setSelectedState] = useState('');
 
     const filteredLocations = locations.filter(loc => {
         const bizName = businesses.find(b => b.id === loc.business_id)?.business_name || '';
@@ -37,6 +79,11 @@ const Locations = () => {
             loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             loc.state?.toLowerCase().includes(searchQuery.toLowerCase());
     });
+
+    const cityOptions = useMemo(() => {
+        if (!selectedState || !INDIA_STATE_CITIES[selectedState]) return [];
+        return INDIA_STATE_CITIES[selectedState];
+    }, [selectedState]);
 
     const fetchData = async () => {
         setLoading(true);
@@ -51,18 +98,20 @@ const Locations = () => {
         }
     };
 
-    React.useEffect(() => {
-        fetchData();
-    }, []);
+    React.useEffect(() => { fetchData(); }, []);
 
-    const { control, handleSubmit, reset, formState: { errors } } = useForm({
+    const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
         defaultValues: { business_id: '', location_name: '', address: '', city: '', state: '' },
     });
 
     const handleOpen = (loc = null) => {
         setEditId(loc?.id || null);
-        reset(loc ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
-            : { business_id: businesses[0]?.id || '', location_name: '', address: '', city: '', state: '' });
+        const initState = loc?.state || '';
+        setSelectedState(initState);
+        reset(loc
+            ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
+            : { business_id: businesses[0]?.id || '', location_name: '', address: '', city: '', state: '' }
+        );
         setOpen(true);
     };
 
@@ -70,16 +119,10 @@ const Locations = () => {
         try {
             if (editId) {
                 const response = await updateLocation(editId, data);
-                if (response.success) {
-                    toast.success('Location updated successfully');
-                    fetchData();
-                }
+                if (response.success) { toast.success('Location updated successfully'); fetchData(); }
             } else {
                 const response = await createLocation(data);
-                if (response.success) {
-                    toast.success('Location created successfully');
-                    fetchData();
-                }
+                if (response.success) { toast.success('Location created successfully'); fetchData(); }
             }
             setOpen(false);
         } catch (error) {
@@ -91,10 +134,7 @@ const Locations = () => {
         if (window.confirm('Are you sure you want to delete this location?')) {
             try {
                 const response = await deleteLocation(id);
-                if (response.success) {
-                    toast.success('Location deleted successfully');
-                    fetchData();
-                }
+                if (response.success) { toast.success('Location deleted successfully'); fetchData(); }
             } catch (error) {
                 toast.error('Failed to delete location');
             }
@@ -119,22 +159,16 @@ const Locations = () => {
                     </TableHead>
                     <TableBody>
                         {loading ? (
-                            <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                                    <Typography color="text.secondary">Loading locations...</Typography>
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6 }}><Typography color="text.secondary">Loading locations...</Typography></TableCell></TableRow>
                         ) : filteredLocations.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                    {searchQuery ? 'No locations match your search.' : (
-                                        <Box sx={{ opacity: 0.5 }}>
-                                            <Typography variant="h6">No locations found</Typography>
-                                            <Typography variant="body2">Click "Add Location" to create your first one.</Typography>
-                                        </Box>
-                                    )}
-                                </TableCell>
-                            </TableRow>
+                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                {searchQuery ? 'No locations match your search.' : (
+                                    <Box sx={{ opacity: 0.5 }}>
+                                        <Typography variant="h6">No locations found</Typography>
+                                        <Typography variant="body2">Click "Add Location" to create your first one.</Typography>
+                                    </Box>
+                                )}
+                            </TableCell></TableRow>
                         ) : filteredLocations.map((loc, index) => {
                             const biz = businesses.find(b => b.id === loc.business_id);
                             return (
@@ -158,18 +192,23 @@ const Locations = () => {
 
             <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Location' : 'Add New Location'} subtitle="Define where your business operates." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Location' : 'Create Location'}>
                 <FieldSection label="Assignment">
-                    <Controller name="business_id" control={control} rules={{ required: true }}
+                    <Controller name="business_id" control={control} rules={{ required: 'Business is required' }}
                         render={({ field }) => (
-                            <FormControl fullWidth error={!!errors.business_id}>
-                                <InputLabel>Business *</InputLabel>
-                                <Select {...field} label="Business *">
-                                    {businesses.length === 0 && <MenuItem value=""><em>No Businesses Found</em></MenuItem>}
-                                    {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
-                                </Select>
-                            </FormControl>
+                            <Autocomplete
+                                options={businesses}
+                                getOptionLabel={(o) => o.business_name || ''}
+                                value={businesses.find(b => b.id === field.value) || null}
+                                onChange={(_, v) => field.onChange(v?.id || '')}
+                                isOptionEqualToValue={(o, v) => o.id === v?.id}
+                                renderInput={(params) => (
+                                    <TextField {...params} label="Business *" error={!!errors.business_id} helperText={errors.business_id?.message} />
+                                )}
+                            />
                         )} />
                 </FieldSection>
+
                 <Divider sx={{ my: 2.5 }} />
+
                 <FieldSection label="Location Details">
                     <Controller name="location_name" control={control} rules={{ required: 'Location name is required' }}
                         render={({ field }) => (
@@ -179,14 +218,42 @@ const Locations = () => {
                         render={({ field }) => (
                             <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" sx={{ mb: 2.5 }} />
                         )} />
+
+                    {/* State — searchable dropdown */}
                     <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                            <Controller name="city" control={control}
-                                render={({ field }) => <TextField {...field} fullWidth label="City" placeholder="Mumbai" />} />
+                        <Grid item xs={12}>
+                            <Controller name="state" control={control} rules={{ required: 'State is required' }}
+                                render={({ field }) => (
+                                    <Autocomplete
+                                        options={STATES}
+                                        value={field.value || null}
+                                        onChange={(_, v) => {
+                                            field.onChange(v || '');
+                                            setSelectedState(v || '');
+                                            setValue('city', ''); // reset city on state change
+                                        }}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                        )}
+                                        ListboxProps={{ style: { maxHeight: 220 } }}
+                                    />
+                                )} />
                         </Grid>
-                        <Grid item xs={6}>
-                            <Controller name="state" control={control}
-                                render={({ field }) => <TextField {...field} fullWidth label="State" placeholder="Maharashtra" />} />
+                        <Grid item xs={12}>
+                            <Controller name="city" control={control} rules={{ required: 'City is required' }}
+                                render={({ field }) => (
+                                    <Autocomplete
+                                        options={cityOptions}
+                                        value={field.value || null}
+                                        onChange={(_, v) => field.onChange(v || '')}
+                                        disabled={!selectedState}
+                                        noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
+                                        )}
+                                        ListboxProps={{ style: { maxHeight: 220 } }}
+                                    />
+                                )} />
                         </Grid>
                     </Grid>
                 </FieldSection>

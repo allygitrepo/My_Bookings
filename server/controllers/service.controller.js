@@ -1,9 +1,16 @@
 const Service = require("../models/service.model");
 
+const getBusinessId = (req) => {
+    if (req.isWidget) return req.business_id ?? -1;
+    return req.user?.business_id ?? -1;
+};
+
 const serviceController = {
     create: async (req, res) => {
         try {
-            const row = await Service.create(req.body);
+            const business_id = getBusinessId(req);
+            if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
+            const row = await Service.create({ ...req.body, business_id });
             res.status(201).json({ success: true, message: "Service created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -12,11 +19,12 @@ const serviceController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 20;
+            const limit = parseInt(req.query.limit) || 50;
             const offset = (page - 1) * limit;
+            const business_id = getBusinessId(req);
 
             const { count, rows } = await Service.findAndCountAll({
-                where: { status: true },
+                where: { status: true, business_id },
                 limit,
                 offset
             });
@@ -35,7 +43,8 @@ const serviceController = {
     },
     getById: async (req, res) => {
         try {
-            const row = await Service.findByPk(req.params.id);
+            const business_id = getBusinessId(req);
+            const row = await Service.findOne({ where: { id: req.params.id, status: true, business_id } });
             if (!row) return res.status(404).json({ success: false, message: "Service not found" });
             res.json({ success: true, message: "Service fetched successfully", data: row });
         } catch (error) {
@@ -44,9 +53,11 @@ const serviceController = {
     },
     update: async (req, res) => {
         try {
-            const row = await Service.findByPk(req.params.id);
+            const business_id = getBusinessId(req);
+            const row = await Service.findOne({ where: { id: req.params.id, status: true, business_id } });
             if (!row) return res.status(404).json({ success: false, message: "Service not found" });
-            await row.update(req.body);
+            const { business_id: _, ...safeBody } = req.body;
+            await row.update(safeBody);
             res.json({ success: true, message: "Service updated successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -54,7 +65,8 @@ const serviceController = {
     },
     delete: async (req, res) => {
         try {
-            const row = await Service.findByPk(req.params.id);
+            const business_id = getBusinessId(req);
+            const row = await Service.findOne({ where: { id: req.params.id, status: true, business_id } });
             if (!row) return res.status(404).json({ success: false, message: "Service not found" });
             await row.update({ status: false });
             res.json({ success: true, message: "Service deleted successfully" });

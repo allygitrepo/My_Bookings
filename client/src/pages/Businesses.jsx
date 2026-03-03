@@ -10,6 +10,7 @@ import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { getBusinesses, createBusiness, updateBusiness, deleteBusiness } from '../api/business.api';
+import { refreshToken } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
@@ -94,15 +95,27 @@ const Businesses = () => {
                     fetchBusinesses();
                 }
             } else {
-                // Ensure user_id is included for creation
-                const payload = {
-                    ...data,
-                    user_id: currentUser?.id
-                };
-                const response = await createBusiness(payload);
+                const response = await createBusiness(data);
                 if (response.success) {
                     toast.success('Business created successfully');
                     fetchBusinesses();
+
+                    // Refresh the JWT token to embed the new business_id.
+                    // This ensures all subsequent API calls use the correct tenant scope.
+                    try {
+                        const refreshed = await refreshToken();
+                        if (refreshed.success) {
+                            const { token, user: refreshedUser } = refreshed.data;
+                            const currentUserData = JSON.parse(localStorage.getItem('currentUser')) || {};
+                            localStorage.setItem('currentUser', JSON.stringify({
+                                ...currentUserData,
+                                ...refreshedUser,
+                                token,
+                            }));
+                        }
+                    } catch (e) {
+                        console.warn('Token refresh failed, user may need to re-login.', e);
+                    }
                 }
             }
             setOpen(false);

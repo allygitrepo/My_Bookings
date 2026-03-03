@@ -35,30 +35,15 @@ const Login = () => {
         try {
             const response = await login(form);
             if (response.success) {
-                const token = response.data.token;
+                const { token, user } = response.data;
 
-                // 1. Temporarily store token to allow authorized API calls
-                localStorage.setItem('currentUser', JSON.stringify({ token }));
-
-                // 2. Decode token to get user ID
-                const decoded = decodeToken(token);
-                if (!decoded || !decoded.id) {
-                    throw new Error('Invalid token received');
-                }
-
-                // 3. Fetch full user details using the ID from decoded token
-                const userResponse = await getUserById(decoded.id);
-                if (userResponse.success) {
-                    const userData = {
-                        ...userResponse.data,
-                        token: token,
-                    };
-                    // 4. Store complete user data
-                    localStorage.setItem('currentUser', JSON.stringify(userData));
-                    navigate('/dashboard');
-                } else {
-                    setError('Failed to fetch user profile');
-                }
+                // Store the full user object including business_id from the API response
+                const userData = {
+                    ...user,
+                    token,
+                };
+                localStorage.setItem('currentUser', JSON.stringify(userData));
+                navigate('/dashboard');
             } else {
                 setError(response.message || 'Login failed');
             }

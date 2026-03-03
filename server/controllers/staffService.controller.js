@@ -1,4 +1,11 @@
 const StaffService = require("../models/staffService.model");
+const Staff = require("../models/staff.model");
+const { Op } = require("sequelize");
+
+const getBusinessId = (req) => {
+    if (req.isWidget) return req.business_id ?? -1;
+    return req.user?.business_id ?? -1;
+};
 
 const staffServiceController = {
     create: async (req, res) => {
@@ -12,11 +19,31 @@ const staffServiceController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 20;
+            const limit = parseInt(req.query.limit) || 200;
             const offset = (page - 1) * limit;
+            const business_id = getBusinessId(req);
+
+            // Get staff IDs belonging to this business
+            const businessStaff = await Staff.findAll({
+                where: { business_id, status: true },
+                attributes: ['id']
+            });
+            const staffIds = businessStaff.map(s => s.id);
+
+            // Return empty if no staff (prevents leak with empty Op.in)
+            if (staffIds.length === 0) {
+                return res.json({
+                    success: true,
+                    message: "StaffServices fetched successfully",
+                    totalRecords: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    data: []
+                });
+            }
 
             const { count, rows } = await StaffService.findAndCountAll({
-                where: { status: true },
+                where: { status: true, staff_id: { [Op.in]: staffIds } },
                 limit,
                 offset
             });

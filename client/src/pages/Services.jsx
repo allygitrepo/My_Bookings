@@ -60,7 +60,7 @@ const Services = () => {
         fetchData();
     }, []);
 
-    const { control, handleSubmit, reset, formState: { errors } } = useForm({
+    const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
         defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] },
     });
 
@@ -158,7 +158,7 @@ const Services = () => {
                                     <Typography color="text.secondary">Loading services...</Typography>
                                 </TableCell>
                             </TableRow>
-                        ) : filteredServices.length === 0 && (
+                        ) : filteredServices.length === 0 ? (
                             <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 {searchQuery ? 'No services match your search.' : (
                                     <>
@@ -166,7 +166,7 @@ const Services = () => {
                                     </>
                                 )}
                             </TableCell></TableRow>
-                        )}
+                        ) : null}
                         {filteredServices.map((svc, index) => {
                             const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
@@ -219,15 +219,24 @@ const Services = () => {
                                 )} />
                         </Grid>
                         <Grid item xs={6}>
-                            <Controller name="price" control={control}
+                            <Controller name="price" control={control} rules={{ required: 'Price is required', min: { value: 1, message: 'Price must be > 0' } }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Price" type="number" placeholder="500" InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                    <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                 )} />
                         </Grid>
                         <Grid item xs={6}>
                             <Controller name="minimum_booking_charge" control={control}
+                                rules={{
+                                    validate: v => {
+                                        const price = parseFloat(watch('price'));
+                                        const charge = parseFloat(v);
+                                        if (!v || isNaN(charge)) return true;
+                                        if (charge >= price) return 'Booking charge must be less than price';
+                                        return true;
+                                    }
+                                }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                    <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                 )} />
                         </Grid>
                     </Grid>

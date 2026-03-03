@@ -1,13 +1,36 @@
 const Users = require("../models/user.model");
+const Business = require("../models/business.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+
+const NAME_REGEX = /^[A-Za-z ]+$/;
+
+// Helper: issue a JWT token with current business_id for a user
+const issueToken = async (user) => {
+    const business = await Business.findOne({ where: { user_id: user.id, status: true } });
+    const businessId = business ? business.id : null;
+    const token = jwt.sign(
+        { user_id: user.id, business_id: businessId, email: user.email },
+        process.env.JWT_SECRET,
+        { expiresIn: process.env.JWT_EXPIRES_IN }
+    );
+    return { token, businessId };
+};
 
 const userController = {
     register: async (req, res) => {
         try {
             const { name, email, password } = req.body;
-            const existingUser = await Users.findOne({ where: { email } });
 
+            // Validate name format
+            if (!name || !NAME_REGEX.test(name)) {
+                return res.status(400).json({
+                    success: false,
+                    message: "Name must contain only alphabets and spaces"
+                });
+            }
+
+            const existingUser = await Users.findOne({ where: { email } });
             if (existingUser) {
                 return res.status(400).json({
                     success: false,
@@ -26,7 +49,7 @@ const userController = {
             res.status(201).json({
                 success: true,
                 message: "User registered successfully",
-                data: newUser
+                data: { id: newUser.id, name: newUser.name, email: newUser.email }
             });
         } catch (err) {
             res.status(500).json({ success: false, message: "Server Error", error: err.message });
@@ -47,16 +70,16 @@ const userController = {
                 return res.status(400).json({ success: false, message: "Invalid password" });
             }
 
-            const token = jwt.sign(
-                { id: user.id, email: user.email },
-                process.env.JWT_SECRET,
-                { expiresIn: process.env.JWT_EXPIRES_IN }
-            );
+            // issueToken finds the business and issues a fresh JWT
+            const { token, businessId } = await issueToken(user);
 
             res.status(200).json({
                 success: true,
                 message: "Login successful",
-                data: { token }
+                data: {
+                    token,
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId }
+                }
             });
         } catch (err) {
             res.status(500).json({ success: false, message: "Server Error", error: err.message });
@@ -126,6 +149,28 @@ const userController = {
             if (!user) return res.status(404).json({ success: false, message: "User not found" });
             await user.update({ status: false });
             res.json({ success: true, message: "User deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // Re-issues a fresh JWT with the latest business_id for the authenticated user.
+    // Called from the frontend after a business is created.
+    refreshToken: async (req, res) => {
+        try {
+            const user = await Users.findByPk(req.user.user_id);
+            if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+            const { token, businessId } = await issueToken(user);
+
+            res.json({
+                success: true,
+                message: "Token refreshed",
+                data: {
+                    token,
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId }
+                }
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

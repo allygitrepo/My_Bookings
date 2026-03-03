@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    Box, Typography, Avatar, Chip, IconButton, Button, Divider, Checkbox,
-    FormControlLabel, TextField,
+    Box, Typography, Avatar, Chip, IconButton, Button, Divider,
+    TextField,
 } from '@mui/material';
 import { Schedule as ScheduleIcon, Edit as EditIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -28,8 +28,8 @@ const Availability = () => {
     const [open, setOpen] = useState(false);
     const [selectedStaff, setSelectedStaff] = useState(null);
     const [schedule, setSchedule] = useState({});
-    const [syncTimes, setSyncTimes] = useState(false);
     const [saving, setSaving] = useState(false);
+    const [slotErrors, setSlotErrors] = useState({});
 
     const filteredAvailability = availability.filter(a => {
         const staffName = staffList.find(s => s.id === a.staff_id)?.staff_name || '';
@@ -109,16 +109,20 @@ const Availability = () => {
     const updateSlot = (day, idx, field, value) => {
         setSchedule(prev => {
             const updatedDaySlots = prev[day].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
-            const next = { ...prev, [day]: updatedDaySlots };
+            return { ...prev, [day]: updatedDaySlots };
+        });
 
-            if (syncTimes) {
-                // Apply this slot change to all other days that have slots
-                Object.keys(next).forEach(d => {
-                    if (d !== day) {
-                        next[d] = next[d].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
-                    }
-                });
+        // Validate end_time > start_time
+        setSlotErrors(prev => {
+            const key = `${day}-${idx}`;
+            const slot = schedule[day]?.[idx] || {};
+            const start = field === 'start_time' ? value : slot.start_time;
+            const end = field === 'end_time' ? value : slot.end_time;
+            if (start && end && end <= start) {
+                return { ...prev, [key]: 'End time must be after start time' };
             }
+            const next = { ...prev };
+            delete next[key];
             return next;
         });
     };
@@ -135,6 +139,20 @@ const Availability = () => {
     };
 
     const handleSave = async () => {
+        // Validate all time slots before saving
+        const errors = {};
+        Object.entries(schedule).forEach(([day, slots]) => {
+            slots.forEach((slot, idx) => {
+                if (slot.end_time <= slot.start_time) {
+                    errors[`${day}-${idx}`] = 'End time must be after start time';
+                }
+            });
+        });
+        if (Object.keys(errors).length > 0) {
+            setSlotErrors(errors);
+            toast.error('Please fix time errors before saving');
+            return;
+        }
         setSaving(true);
         try {
             // Remove all existing for this staff and re-create (simplest sync logic)
@@ -285,17 +303,6 @@ const Availability = () => {
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1, display: 'block' }}>
                         Weekly Schedule
                     </Typography>
-                    <FormControlLabel
-                        sx={{ mb: 2 }}
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={syncTimes}
-                                onChange={(e) => setSyncTimes(e.target.checked)}
-                            />
-                        }
-                        label={<Typography variant="body2" fontWeight={700} color="primary.main">Same time for all days</Typography>}
-                    />
                     {DAYS.map(day => (
                         <Box key={day} sx={{ mb: 2 }}>
                             <FormControlLabel
@@ -312,14 +319,21 @@ const Availability = () => {
                             />
                             {schedule[day] && (
                                 <Box sx={{ pl: 4, mt: 0.5 }}>
-                                    {schedule[day].map((slot, idx) => (
-                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <TextField type="time" size="small" value={slot.start_time} onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} InputLabelProps={{ shrink: true }} label="Start" sx={{ width: 130 }} />
-                                            <Typography variant="caption" color="text.disabled">to</Typography>
-                                            <TextField type="time" size="small" value={slot.end_time} onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} InputLabelProps={{ shrink: true }} label="End" sx={{ width: 130 }} />
-                                            <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)} disabled={schedule[day].length === 1}><RemoveIcon fontSize="small" /></IconButton>
-                                        </Box>
-                                    ))}
+                                    {schedule[day].map((slot, idx) => {
+                                        const errKey = `${day}-${idx}`;
+                                        const slotErr = slotErrors[errKey];
+                                        return (
+                                            <Box key={idx} sx={{ mb: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <TextField type="time" size="small" value={slot.start_time} onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} InputLabelProps={{ shrink: true }} label="Start" sx={{ width: 130 }} error={!!slotErr} />
+                                                    <Typography variant="caption" color="text.disabled">to</Typography>
+                                                    <TextField type="time" size="small" value={slot.end_time} onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} InputLabelProps={{ shrink: true }} label="End" sx={{ width: 130 }} error={!!slotErr} />
+                                                    <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)} disabled={schedule[day].length === 1}><RemoveIcon fontSize="small" /></IconButton>
+                                                </Box>
+                                                {slotErr && <Typography variant="caption" color="error" sx={{ pl: 0.5 }}>{slotErr}</Typography>}
+                                            </Box>
+                                        );
+                                    })}
                                     <Button size="small" startIcon={<AddIcon />} onClick={() => addSlot(day)} sx={{ fontSize: '0.75rem' }}>Add slot</Button>
                                 </Box>
                             )}

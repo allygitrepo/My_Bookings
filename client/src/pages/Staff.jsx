@@ -50,7 +50,7 @@ const Staff = () => {
 
     // availability schedule: { [day]: [{ start_time, end_time }] | null }
     const [schedule, setSchedule] = useState({});
-    const [syncTimes, setSyncTimes] = useState(false);
+    const [slotErrors, setSlotErrors] = useState({});
 
     const fetchData = async () => {
         setLoading(true);
@@ -135,16 +135,20 @@ const Staff = () => {
     const updateSlot = (day, idx, field, value) => {
         setSchedule(prev => {
             const updatedDaySlots = prev[day].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
-            const next = { ...prev, [day]: updatedDaySlots };
+            return { ...prev, [day]: updatedDaySlots };
+        });
 
-            if (syncTimes) {
-                // Apply this slot change to all other days that have slots
-                Object.keys(next).forEach(d => {
-                    if (d !== day) {
-                        next[d] = next[d].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
-                    }
-                });
+        // Validate end_time > start_time
+        setSlotErrors(prev => {
+            const key = `${day}-${idx}`;
+            const slot = schedule[day]?.[idx] || {};
+            const start = field === 'start_time' ? value : slot.start_time;
+            const end = field === 'end_time' ? value : slot.end_time;
+            if (start && end && end <= start) {
+                return { ...prev, [key]: 'End time must be after start time' };
             }
+            const next = { ...prev };
+            delete next[key];
             return next;
         });
     };
@@ -343,9 +347,18 @@ const Staff = () => {
 
                 {/* --- Staff Details --- */}
                 <FieldSection label="Staff Details">
-                    <Controller name="staff_name" control={control} rules={{ required: 'Name is required' }}
+                    <Controller name="staff_name" control={control}
+                        rules={{
+                            required: 'Name is required',
+                            pattern: { value: /^[A-Za-z .]+$/, message: 'Name must not contain numbers' }
+                        }}
                         render={({ field }) => (
-                            <TextField {...field} fullWidth label="Staff Name *" error={!!errors.staff_name} helperText={errors.staff_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Dr. Agarwal" />
+                            <TextField {...field} fullWidth label="Staff Name *" error={!!errors.staff_name} helperText={errors.staff_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Dr. Agarwal"
+                                onChange={(e) => {
+                                    // Strip digits on input
+                                    field.onChange(e.target.value.replace(/[0-9]/g, ''));
+                                }}
+                            />
                         )} />
                     <Grid container spacing={2}>
                         <Grid item xs={6}>
@@ -354,7 +367,16 @@ const Staff = () => {
                         </Grid>
                         <Grid item xs={6}>
                             <Controller name="phone" control={control}
-                                render={({ field }) => <TextField {...field} fullWidth label="Phone" placeholder="+91 98765 43210" />} />
+                                rules={{
+                                    pattern: { value: /^\d{10}$/, message: 'Phone must be exactly 10 digits' }
+                                }}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Phone" placeholder="9876543210"
+                                        error={!!errors.phone} helperText={errors.phone?.message}
+                                        inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
+                                        onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                    />
+                                )} />
                         </Grid>
                     </Grid>
                 </FieldSection>
@@ -367,17 +389,6 @@ const Staff = () => {
                         Check the days the staff member works and add time slots for each day.
                     </Typography>
 
-                    <FormControlLabel
-                        sx={{ mb: 2 }}
-                        control={
-                            <Checkbox
-                                size="small"
-                                checked={syncTimes}
-                                onChange={(e) => setSyncTimes(e.target.checked)}
-                            />
-                        }
-                        label={<Typography variant="body2" fontWeight={700} color="primary.main">Same time for all days</Typography>}
-                    />
 
                     {DAYS.map(day => (
                         <Box key={day} sx={{ mb: 1.5 }}>
@@ -409,33 +420,21 @@ const Staff = () => {
 
                             {schedule[day] && (
                                 <Box sx={{ pl: 4, mt: 0.5 }}>
-                                    {schedule[day].map((slot, idx) => (
-                                        <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                                            <TextField
-                                                type="time"
-                                                size="small"
-                                                value={slot.start_time}
-                                                onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)}
-                                                InputLabelProps={{ shrink: true }}
-                                                label="Start"
-                                                sx={{ width: 130 }}
-                                            />
-                                            <Typography variant="caption" color="text.disabled">to</Typography>
-                                            <TextField
-                                                type="time"
-                                                size="small"
-                                                value={slot.end_time}
-                                                onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)}
-                                                InputLabelProps={{ shrink: true }}
-                                                label="End"
-                                                sx={{ width: 130 }}
-                                            />
-                                            <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)}
-                                                disabled={schedule[day].length === 1}>
-                                                <RemoveIcon fontSize="small" />
-                                            </IconButton>
-                                        </Box>
-                                    ))}
+                                    {schedule[day].map((slot, idx) => {
+                                        const errKey = `${day}-${idx}`;
+                                        const slotErr = slotErrors[errKey];
+                                        return (
+                                            <Box key={idx} sx={{ mb: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <TextField type="time" size="small" value={slot.start_time} onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} InputLabelProps={{ shrink: true }} label="Start" sx={{ width: 130 }} error={!!slotErr} />
+                                                    <Typography variant="caption" color="text.disabled">to</Typography>
+                                                    <TextField type="time" size="small" value={slot.end_time} onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} InputLabelProps={{ shrink: true }} label="End" sx={{ width: 130 }} error={!!slotErr} />
+                                                    <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)} disabled={schedule[day].length === 1}><RemoveIcon fontSize="small" /></IconButton>
+                                                </Box>
+                                                {slotErr && <Typography variant="caption" color="error" sx={{ pl: 0.5 }}>{slotErr}</Typography>}
+                                            </Box>
+                                        );
+                                    })}
                                     <Button
                                         size="small"
                                         startIcon={<AddIcon />}

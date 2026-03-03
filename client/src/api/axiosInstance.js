@@ -28,9 +28,9 @@ axiosInstance.interceptors.response.use(
     },
     async (error) => {
         if (error.response && error.response.status === 401) {
-            // Handle unauthorized error (e.g., redirect to login)
-            // localStorage.removeItem('currentUser');
-            // window.location.href = '/login';
+            // Token expired or invalid — clear session and redirect to login
+            localStorage.removeItem('currentUser');
+            window.location.href = '/login';
         }
         return Promise.reject(error);
     }

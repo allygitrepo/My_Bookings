@@ -1,9 +1,16 @@
 const ApiKey = require("../models/apiKey.model");
 
+const getBusinessId = (req) => {
+    if (req.isWidget) return req.business_id ?? -1;
+    return req.user?.business_id ?? -1;
+};
+
 const apiKeyController = {
     create: async (req, res) => {
         try {
-            const row = await ApiKey.create(req.body);
+            const business_id = getBusinessId(req);
+            if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
+            const row = await ApiKey.create({ ...req.body, business_id });
             res.status(201).json({ success: true, message: "ApiKey created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -14,9 +21,10 @@ const apiKeyController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 20;
             const offset = (page - 1) * limit;
+            const business_id = getBusinessId(req);
 
             const { count, rows } = await ApiKey.findAndCountAll({
-                where: { status: true },
+                where: { status: true, business_id },
                 limit,
                 offset
             });

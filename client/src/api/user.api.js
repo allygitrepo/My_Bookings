@@ -5,6 +5,11 @@ export const login = async (credentials) => {
     return response.data;
 };
 
+export const refreshToken = async () => {
+    const response = await axiosInstance.post('/users/refresh-token');
+    return response.data;
+};
+
 export const register = async (userData) => {
     const response = await axiosInstance.post('/users/register', userData);
     return response.data;

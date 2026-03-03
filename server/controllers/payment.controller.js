@@ -1,4 +1,11 @@
 const Payment = require("../models/payment.model");
+const Booking = require("../models/booking.model");
+const { Op } = require("sequelize");
+
+const getBusinessId = (req) => {
+    if (req.isWidget) return req.business_id ?? -1;
+    return req.user?.business_id ?? -1;
+};
 
 const paymentController = {
     create: async (req, res) => {
@@ -12,11 +19,31 @@ const paymentController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 20;
+            const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
+            const business_id = getBusinessId(req);
+
+            // Filter payments via bookings belonging to this business
+            const businessBookings = await Booking.findAll({
+                where: { business_id },
+                attributes: ['id']
+            });
+            const bookingIds = businessBookings.map(b => b.id);
+
+            // If no bookings, return empty (avoids showing all payments when bookingIds is [])
+            if (bookingIds.length === 0) {
+                return res.json({
+                    success: true,
+                    message: "Payments fetched successfully",
+                    totalRecords: 0,
+                    totalPages: 0,
+                    currentPage: page,
+                    data: []
+                });
+            }
 
             const { count, rows } = await Payment.findAndCountAll({
-                where: { status: true },
+                where: { booking_id: { [Op.in]: bookingIds } },
                 limit,
                 offset
             });

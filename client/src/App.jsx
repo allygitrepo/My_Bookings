@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { ThemeProvider, CssBaseline } from '@mui/material';
 import { LocalizationProvider } from '@mui/x-date-pickers';
@@ -8,6 +8,7 @@ import theme from './theme';
 import MainLayout from './layout/MainLayout';
 import AuthGuard from './components/AuthGuard';
 import { SearchProvider } from './context/SearchContext';
+import axiosInstance from './api/axiosInstance';
 
 import Dashboard from './pages/Dashboard';
 import Businesses from './pages/Businesses';
@@ -27,6 +28,32 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 
 function App() {
+  // Auto-refresh JWT when user is logged in but business_id is missing.
+  // This handles users who logged in before tenant isolation was implemented.
+  useEffect(() => {
+    const stored = localStorage.getItem('currentUser');
+    if (!stored) return;
+    try {
+      const user = JSON.parse(stored);
+      if (user?.token && !user?.business_id) {
+        axiosInstance.post('/users/refresh-token')
+          .then(res => {
+            if (res.data?.success) {
+              const { token, user: refreshedUser } = res.data.data;
+              localStorage.setItem('currentUser', JSON.stringify({
+                ...user,
+                ...refreshedUser,
+                token,
+              }));
+              // Reload the page so all components pick up the new business_id
+              window.location.reload();
+            }
+          })
+          .catch(() => {/* silent fail */ });
+      }
+    } catch (_) { /* ignore parse errors */ }
+  }, []);
+
   return (
     <ThemeProvider theme={theme}>
       <CssBaseline />

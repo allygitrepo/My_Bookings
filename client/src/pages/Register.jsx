@@ -19,6 +19,7 @@ const Register = () => {
         setError('');
 
         if (!form.name.trim()) { setError('Please enter your full name.'); return; }
+        if (!/^[A-Za-z ]+$/.test(form.name)) { setError('Name must contain only alphabets and spaces.'); return; }
         if (form.password.length < 6) { setError('Password must be at least 6 characters.'); return; }
         if (form.password !== form.confirmPassword) { setError('Passwords do not match.'); return; }
 
