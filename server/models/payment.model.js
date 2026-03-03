@@ -45,6 +45,10 @@ const Payment = sequelize.define(
     {
         timestamps: false,
         tableName: "payments",
+        indexes: [
+            { fields: ["booking_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

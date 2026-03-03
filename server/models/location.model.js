@@ -45,6 +45,10 @@ const Location = sequelize.define(
     {
         timestamps: false,
         tableName: "locations",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

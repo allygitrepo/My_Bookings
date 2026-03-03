@@ -45,6 +45,11 @@ const Staff = sequelize.define(
     {
         timestamps: false,
         tableName: "staff",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["location_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

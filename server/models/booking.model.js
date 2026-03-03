@@ -61,6 +61,15 @@ const Booking = sequelize.define(
     {
         timestamps: false,
         tableName: "bookings",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["location_id"] },
+            { fields: ["staff_id"] },
+            { fields: ["service_id"] },
+            { fields: ["customer_id"] },
+            { fields: ["booking_date"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

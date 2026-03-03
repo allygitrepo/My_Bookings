@@ -41,6 +41,10 @@ const Customer = sequelize.define(
     {
         timestamps: false,
         tableName: "customers",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

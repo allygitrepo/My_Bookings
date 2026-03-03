@@ -11,8 +11,24 @@ const locationController = {
     },
     getAll: async (req, res) => {
         try {
-            const rows = await Location.findAll({ where: { status: true } });
-            res.json({ success: true, message: "Locations fetched successfully", data: rows });
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 20;
+            const offset = (page - 1) * limit;
+
+            const { count, rows } = await Location.findAndCountAll({
+                where: { status: true },
+                limit,
+                offset
+            });
+
+            res.json({
+                success: true,
+                message: "Locations fetched successfully",
+                totalRecords: count,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                data: rows
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

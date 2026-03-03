@@ -41,6 +41,10 @@ const StaffAvailability = sequelize.define(
     {
         timestamps: false,
         tableName: "staff_availability",
+        indexes: [
+            { fields: ["staff_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

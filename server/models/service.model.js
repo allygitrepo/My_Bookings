@@ -45,6 +45,10 @@ const Service = sequelize.define(
     {
         timestamps: false,
         tableName: "services",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

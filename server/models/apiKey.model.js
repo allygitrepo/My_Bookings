@@ -33,6 +33,10 @@ const ApiKey = sequelize.define(
     {
         timestamps: false,
         tableName: "api_keys",
+        indexes: [
+            { fields: ["business_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

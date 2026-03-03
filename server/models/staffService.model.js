@@ -33,6 +33,11 @@ const StaffService = sequelize.define(
     {
         timestamps: false,
         tableName: "staff_services",
+        indexes: [
+            { fields: ["staff_id"] },
+            { fields: ["service_id"] },
+            { fields: ["status"] }
+        ]
     }
 );
 

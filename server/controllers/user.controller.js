@@ -76,8 +76,24 @@ const userController = {
 
     getAll: async (req, res) => {
         try {
-            const users = await Users.findAll({ where: { status: true } });
-            res.json({ success: true, message: "Users fetched successfully", data: users });
+            const page = parseInt(req.query.page) || 1;
+            const limit = parseInt(req.query.limit) || 20;
+            const offset = (page - 1) * limit;
+
+            const { count, rows } = await Users.findAndCountAll({
+                where: { status: true },
+                limit,
+                offset
+            });
+
+            res.json({
+                success: true,
+                message: "Users fetched successfully",
+                totalRecords: count,
+                totalPages: Math.ceil(count / limit),
+                currentPage: page,
+                data: rows
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
