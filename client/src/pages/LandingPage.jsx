@@ -9,6 +9,10 @@ import {
     Grid,
     Card,
     Stack,
+    Accordion,
+    AccordionSummary,
+    AccordionDetails,
+    Link,
 } from '@mui/material';
 import { NavLink } from 'react-router-dom';
 import {
@@ -16,6 +20,7 @@ import {
     Business as BusinessIcon,
     People as StaffIcon,
     Assessment as ReportIcon,
+    ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 
@@ -45,6 +50,25 @@ const Features = [
     },
 ];
 
+const FAQs = [
+    {
+        question: "How do I get started with MyBookings?",
+        answer: "Getting started is easy! Simply sign up for an account, add your business details, and you can begin managing your bookings and staff immediately."
+    },
+    {
+        question: "Can I manage multiple locations?",
+        answer: "Yes, MyBookings is designed for multi-business and multi-location management. You can add as many branches as you need from a single dashboard."
+    },
+    {
+        question: "Is there a limit on staff members?",
+        answer: "No, you can add as many staff members as your business requires. Each staff member can have their own unique schedule and services."
+    },
+    {
+        question: "How secure is my data?",
+        answer: "We take security seriously. All your data is encrypted and stored securely, ensuring that your business and customer information remains private."
+    }
+];
+
 const LandingPage = () => {
     return (
         <Box sx={{ bgcolor: 'background.paper', minHeight: '100vh' }}>
@@ -55,10 +79,9 @@ const LandingPage = () => {
                         <Typography variant="h5" color="primary" fontWeight={800}>
                             MyBookings
                         </Typography>
-                        <Stack direction="row" spacing={2}>
-                            <Button color="inherit">Features</Button>
-                            <Button color="inherit">Pricing</Button>
-                            <Button variant="contained" component={NavLink} to="/dashboard">
+                        <Stack direction="row" spacing={2} alignItems="center">
+                            {/* <Button color="inherit" sx={{ display: { xs: 'none', md: 'inline-flex' } }}>Features</Button> */}
+                            <Button variant="contained" component={NavLink} to="/dashboard" sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}>
                                 Get Started
                             </Button>
                         </Stack>
@@ -85,9 +108,6 @@ const LandingPage = () => {
                                 <Stack direction="row" spacing={2}>
                                     <Button variant="contained" size="large" sx={{ px: 4, py: 1.5 }} component={NavLink} to="/dashboard">
                                         Get Started Free
-                                    </Button>
-                                    <Button variant="outlined" size="large" sx={{ px: 4, py: 1.5 }}>
-                                        View Demo
                                     </Button>
                                 </Stack>
                             </motion.div>
@@ -124,40 +144,139 @@ const LandingPage = () => {
                         Powerful features to help you scale your service-based business.
                     </Typography>
                 </Box>
-                <Grid container spacing={4}>
+                <Grid container spacing={4} justifyContent="center">
                     {Features.map((f, i) => (
                         <Grid item xs={12} sm={6} md={3} key={i}>
-                            <Card variant="outlined" sx={{ p: 4, height: '100%', textAlign: 'center', transition: '0.3s', '&:hover': { transform: 'translateY(-8px)', borderColor: 'primary.main' } }}>
-                                <Box sx={{ mb: 2 }}>{f.icon}</Box>
-                                <Typography variant="h6" fontWeight={700} gutterBottom>{f.title}</Typography>
-                                <Typography variant="body2" color="text.secondary">{f.desc}</Typography>
+                            <Card
+                                variant="outlined"
+                                sx={{
+                                    p: 4,
+                                    height: '100%',
+                                    textAlign: 'center',
+                                    borderRadius: '24px',
+                                    transition: 'all 0.3s ease-in-out',
+                                    '&:hover': {
+                                        transform: 'translateY(-12px)',
+                                        borderColor: 'primary.main',
+                                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
+                                        bgcolor: 'rgba(59, 130, 246, 0.02)'
+                                    }
+                                }}
+                            >
+                                <Box sx={{
+                                    mb: 3,
+                                    display: 'inline-flex',
+                                    p: 2,
+                                    borderRadius: '16px',
+                                    bgcolor: 'primary.light',
+                                    color: 'primary.main',
+                                    opacity: 0.8
+                                }}>
+                                    {f.icon}
+                                </Box>
+                                <Typography variant="h6" fontWeight={800} gutterBottom>{f.title}</Typography>
+                                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{f.desc}</Typography>
                             </Card>
                         </Grid>
                     ))}
                 </Grid>
             </Container>
 
-            {/* CTA Section */}
-            <Box sx={{ py: 10, bgcolor: 'primary.main', color: 'white', textAlign: 'center' }}>
-                <Container maxWidth="sm">
-                    <Typography variant="h3" fontWeight={700} gutterBottom>
-                        Ready to grow?
+
+            {/* FAQ Section */}
+            <Container maxWidth="md" sx={{ py: 12 }}>
+                <Box sx={{ textAlign: 'center', mb: 8 }}>
+                    <Typography variant="h3" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
+                        Frequently Asked Questions
                     </Typography>
-                    <Typography variant="h6" sx={{ mb: 4, opacity: 0.9 }}>
-                        Join 5,000+ businesses using MyBookings to streamline their operations.
+                    <Typography color="text.secondary" variant="h6" sx={{ maxWidth: '600px', mx: 'auto' }}>
+                        Everything you need to know about our booking platform.
                     </Typography>
-                    <Button variant="contained" color="secondary" size="large" sx={{ px: 6, py: 2 }} component={NavLink} to="/dashboard">
-                        Start Your 14-Day Free Trial
-                    </Button>
-                </Container>
-            </Box>
+                </Box>
+                <Box>
+                    {FAQs.map((faq, index) => (
+                        <Accordion
+                            key={index}
+                            elevation={0}
+                            sx={{
+                                mb: 2,
+                                border: '1px solid #e2e8f0',
+                                borderRadius: '16px !important',
+                                '&:before': { display: 'none' },
+                                '&.Mui-expanded': { boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }
+                            }}
+                        >
+                            <AccordionSummary expandIcon={<ExpandMoreIcon color="primary" />}>
+                                <Typography variant="h6" fontWeight={600}>{faq.question}</Typography>
+                            </AccordionSummary>
+                            <AccordionDetails>
+                                <Typography color="text.secondary" variant="body1">
+                                    {faq.answer}
+                                </Typography>
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </Box>
+            </Container>
 
             {/* Footer */}
-            <Box sx={{ py: 6, borderTop: '1px solid #e2e8f0' }}>
-                <Container maxWidth="lg">
-                    <Typography align="center" color="text.secondary" variant="body2">
-                        © 2025 MyBookings SaaS. Built with React & MUI.
-                    </Typography>
+            <Box sx={{ py: 8, borderTop: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
+                <Container maxWidth="xl">
+                    <Grid container spacing={4} alignItems="center" justifyContent="space-between">
+                        <Grid item xs={12} md={5}>
+                            <Typography variant="h5" color="primary" fontWeight={900} letterSpacing="-0.5px">
+                                MyBookings
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                                Empowering businesses with smart, unified booking solutions. <br />
+                                Managed and developed with excellence by Allysoft Solutions.
+                            </Typography>
+                        </Grid>
+
+                        <Grid
+                            item
+                            xs={12}
+                            md={5}
+                            sx={{
+                                display: 'flex',
+                                flexDirection: 'column',
+                                alignItems: { xs: 'flex-start', md: 'flex-end' },
+                                textAlign: { xs: 'left', md: 'right' }
+                            }}
+                        >
+                            <Typography variant="subtitle2" color="text.secondary" fontWeight={700} textTransform="uppercase" letterSpacing="1px" gutterBottom>
+                                Developed By
+                            </Typography>
+                            <Box
+                                component={Link}
+                                href="https://allysoftsolutions.com/"
+                                target="_blank"
+                                underline="none"
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    gap: 1.5,
+                                    transition: 'transform 0.2s',
+                                    '&:hover': { transform: 'scale(1.02)' }
+                                }}
+                            >
+                                <Typography variant="h5" sx={{ color: '#FACC15', fontWeight: 900 }}>
+                                    Allysoft Solutions
+                                </Typography>
+                                <Box
+                                    component="img"
+                                    src="/company_logo.png"
+                                    alt="Allysoft Logo"
+                                    sx={{ width: 44, height: 44, borderRadius: '8px', objectFit: 'contain' }}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+                    <Box sx={{ pt: 4, borderTop: '1px solid #e2e8f0' }}>
+                        <Typography align="center" color="text.secondary" variant="body2">
+                            Copyright © {new Date().getFullYear()} Allysoft Solutions. All rights reserved.
+                        </Typography>
+                    </Box>
                 </Container>
             </Box>
         </Box>
