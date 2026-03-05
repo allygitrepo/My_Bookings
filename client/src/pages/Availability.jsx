@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     Box, Typography, Avatar, Chip, IconButton, Button, Divider,
-    TextField,
+    TextField, FormControlLabel, Checkbox,
 } from '@mui/material';
 import { Schedule as ScheduleIcon, Edit as EditIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
