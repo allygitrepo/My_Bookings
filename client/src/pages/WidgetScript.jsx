@@ -45,7 +45,7 @@ const WidgetScript = () => {
     const selectedBusiness = businesses.find(b => b.id === selectedBusinessId);
 
     const scriptTag = apiKeyValue
-        ? `<script\n  src="https://cdn.mybookings.com/widget.js"\n  data-business-id="${apiKeyValue}"\n  data-theme="light"\n  async>\n</script>`
+        ? `<script\n  src="https://mybookings.allysoftsolutions.com/widget.js"\n  data-business-id="${apiKeyValue}"\n  data-theme="light"\n  async>\n</script>`
         : `<!-- No API Key found for this business. Generate one on the API Keys page. -->`;
 
     const handleCopy = () => toast.success('Widget script copied to clipboard!');
@@ -124,7 +124,7 @@ const WidgetScript = () => {
                             {apiKeyValue ? (
                                 <>
                                     <span style={{ color: '#f472b6' }}>&lt;script</span>{'\n'}
-                                    {'  '}<span style={{ color: '#93c5fd' }}>src</span><span style={{ color: '#94a3b8' }}>="</span><span style={{ color: '#86efac' }}>https://cdn.mybookings.com/widget.js</span><span style={{ color: '#94a3b8' }}>"</span>{'\n'}
+                                    {'  '}<span style={{ color: '#93c5fd' }}>src</span><span style={{ color: '#94a3b8' }}>="</span><span style={{ color: '#86efac' }}>https://mybookings.allysoftsolutions.com/widget.js</span><span style={{ color: '#94a3b8' }}>"</span>{'\n'}
                                     {'  '}<span style={{ color: '#93c5fd' }}>data-business-id</span><span style={{ color: '#94a3b8' }}>="</span><span style={{ color: '#fde68a' }}>{apiKeyValue}</span><span style={{ color: '#94a3b8' }}>"</span>{'\n'}
                                     {'  '}<span style={{ color: '#93c5fd' }}>data-theme</span><span style={{ color: '#94a3b8' }}>="</span><span style={{ color: '#86efac' }}>light</span><span style={{ color: '#94a3b8' }}>"</span>{'\n'}
                                     {'  '}<span style={{ color: '#93c5fd' }}>async</span><span style={{ color: '#f472b6' }}>{'>'}</span>{'\n'}

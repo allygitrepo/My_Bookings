@@ -2,25 +2,33 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
 // https://vite.dev/config/
-export default defineConfig({
-  plugins: [react()],
-  server: {
-    cors: true,
-    origin: 'http://localhost:5173'
-  },
-  build: {
-    lib: {
-      entry: './src/widget-entry.jsx',
-      name: 'BookingWidget',
-      fileName: () => 'widget.js',
-      formats: ['iife'],
+export default defineConfig(({ mode }) => {
+  const isWidget = process.env.BUILD_WIDGET === 'true';
+
+  return {
+    plugins: [react()],
+    server: {
+      cors: true,
+      origin: 'http://localhost:5173',
     },
-    rollupOptions: {
-      // By using lib mode, we are building just the widget as a generic script
-      // It includes React and ReactDOM inside it for full standalone usage
+    build: isWidget ? {
+      outDir: 'dist',
+      emptyOutDir: false, // Keep previous build (dashboard) if build:all is run
+      lib: {
+        entry: './src/widget-entry.jsx',
+        name: 'BookingWidget',
+        fileName: () => 'widget.js',
+        formats: ['iife'],
+      },
+      rollupOptions: {
+        // standalone script including react
+      },
+    } : {
+      outDir: 'dist',
+      emptyOutDir: true,
+    },
+    define: {
+      'process.env.NODE_ENV': '"production"',
     }
-  },
-  define: {
-    'process.env.NODE_ENV': '"production"',
-  }
-})
+  };
+});
