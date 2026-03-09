@@ -21,6 +21,7 @@ import { getBookings, createBooking } from '../api/booking.api';
 import { createPayment } from '../api/payment.api';
 import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
+import { formatDate, getDayName } from '../utils/date';
 
 const steps = ['Service', 'Staff', 'Date & Time', 'Your Details', 'Payment'];
 
@@ -72,14 +73,11 @@ const generateSlots = (startTime, endTime, durationMin) => {
 
 const getDayNameInternal = (dateStr) => {
     if (!dateStr) return '';
-    const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-    return days[new Date(dateStr + 'T00:00:00').getDay()];
+    return getDayName(dateStr).toLowerCase();
 };
 
 const getDayNameDisplay = (dateStr) => {
-    if (!dateStr) return '';
-    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
-    return days[new Date(dateStr + 'T00:00:00').getDay()];
+    return getDayName(dateStr);
 };
 
 console.log('Booking Widget Version: 2.1 (Robust Day Matching)');
@@ -683,7 +681,7 @@ const BookingWidget = ({ businessId }) => {
                             <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Service</Typography><Typography variant="body2" fontWeight={600}>{bookingData.service?.service_name}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Staff</Typography><Typography variant="body2">{bookingData.staff?.staff_name}</Typography></Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Date</Typography><Typography variant="body2">{bookingData.date}</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Date</Typography><Typography variant="body2">{formatDate(bookingData.date)}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Time</Typography><Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, slotDurationMin)}</strong></Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Duration</Typography><Typography variant="body2">{slotDurationMin} min</Typography></Box>
                             </Box>
@@ -766,7 +764,7 @@ const BookingWidget = ({ businessId }) => {
                             Your appointment with <strong>{bookingData.staff?.staff_name}</strong> is scheduled for
                         </Typography>
                         <Box sx={{ bgcolor: 'success.50', borderRadius: 2, p: 2, mb: 3, border: '1px solid', borderColor: 'success.200' }}>
-                            <Typography fontWeight={700} color="success.dark">{bookingData.date}</Typography>
+                            <Typography fontWeight={700} color="success.dark">{formatDate(bookingData.date)}</Typography>
                             <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, slotDurationMin)}</Typography>
                             <Typography variant="caption" color="success.main">{bookingData.service?.service_name}</Typography>
                         </Box>

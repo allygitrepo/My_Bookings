@@ -220,42 +220,57 @@ const Locations = () => {
                         )} />
 
                     {/* State — searchable dropdown */}
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <Controller name="state" control={control} rules={{ required: 'State is required' }}
-                                render={({ field }) => (
-                                    <Autocomplete
-                                        options={STATES}
-                                        value={field.value || null}
-                                        onChange={(_, v) => {
-                                            field.onChange(v || '');
-                                            setSelectedState(v || '');
-                                            setValue('city', ''); // reset city on state change
-                                        }}
-                                        renderInput={(params) => (
-                                            <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
-                                        )}
-                                        ListboxProps={{ style: { maxHeight: 220 } }}
-                                    />
-                                )} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Controller name="city" control={control} rules={{ required: 'City is required' }}
-                                render={({ field }) => (
-                                    <Autocomplete
-                                        options={cityOptions}
-                                        value={field.value || null}
-                                        onChange={(_, v) => field.onChange(v || '')}
-                                        disabled={!selectedState}
-                                        noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
-                                        renderInput={(params) => (
-                                            <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
-                                        )}
-                                        ListboxProps={{ style: { maxHeight: 220 } }}
-                                    />
-                                )} />
-                        </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="state" control={control} rules={{ required: 'State is required' }}
+                            render={({ field }) => (
+                                <Autocomplete
+                                    fullWidth
+                                    options={STATES}
+                                    value={field.value || null}
+                                    onChange={(_, v) => {
+                                        field.onChange(v || '');
+                                        setSelectedState(v || '');
+                                        setValue('city', ''); // reset city on state change
+                                    }}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                    )}
+                                    slotProps={{
+                                        paper: {
+                                            sx: {
+                                                width: 'auto',
+                                                minWidth: '100%',
+                                                '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                            }
+                                        }
+                                    }}
+                                />
+                            )} />
+                        
+                        <Controller name="city" control={control} rules={{ required: 'City is required' }}
+                            render={({ field }) => (
+                                <Autocomplete
+                                    fullWidth
+                                    options={cityOptions}
+                                    value={field.value || null}
+                                    onChange={(_, v) => field.onChange(v || '')}
+                                    disabled={!selectedState}
+                                    noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
+                                    )}
+                                    slotProps={{
+                                        paper: {
+                                            sx: {
+                                                width: 'auto',
+                                                minWidth: '100%',
+                                                '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                            }
+                                        }
+                                    }}
+                                />
+                            )} />
+                    </Box>
                 </FieldSection>
             </FormDrawer>
         </PageTransition>

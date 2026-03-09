@@ -18,6 +18,7 @@ import { getPayments } from '../api/payment.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/PageTransition';
+import { formatDate } from '../utils/date';
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
     <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
@@ -173,7 +174,7 @@ const Dashboard = () => {
                                     </TableCell>
                                     <TableCell>{staffMember?.staff_name || '—'}</TableCell>
                                     <TableCell>{service?.service_name || '—'}</TableCell>
-                                    <TableCell>{b.booking_date || '—'}</TableCell>
+                                    <TableCell>{formatDate(b.booking_date)}</TableCell>
                                     <TableCell>
                                         <Chip
                                             label={(b.payment_status === true || b.payment_status === 1) ? 'Paid' : 'Pending'}

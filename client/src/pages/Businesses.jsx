@@ -16,14 +16,14 @@ import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
 
 const INDUSTRY_OPTIONS = [
-    'Healthcare / Hospital',
-    'Corporate',
-    'Salon / Beauty',
-    'Gym / Fitness',
-    'Spa / Wellness',
-    'Education / Coaching',
-    'Professional Services',
-    'Other'
+    { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
+    { label: 'Corporate', value: 'Corporate', icon: '🏢' },
+    { label: 'Salon / Beauty', value: 'Salon / Beauty', icon: '✂️' },
+    { label: 'Gym / Fitness', value: 'Gym / Fitness', icon: '💪' },
+    { label: 'Spa / Wellness', value: 'Spa / Wellness', icon: '🧖' },
+    { label: 'Education / Coaching', value: 'Education / Coaching', icon: '🎓' },
+    { label: 'Professional Services', value: 'Professional Services', icon: '💼' },
+    { label: 'Other', value: 'Other', icon: '📁' }
 ];
 
 const FieldSection = ({ label, children }) => (
@@ -206,48 +206,51 @@ const Businesses = () => {
                 saveLabel={editId ? 'Update Business' : 'Create Business'}
             >
                 <FieldSection label="Business Identity">
-                    <Grid container spacing={2.5}>
-                        <Grid item xs={12}>
-                            <Controller name="business_name" control={control} rules={{ required: 'Business name is required' }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Business Name *" error={!!errors.business_name}
-                                        helperText={errors.business_name?.message} placeholder="e.g. Shiv Clinic" />
-                                )} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Controller name="business_type" control={control} rules={{ required: 'Business type is required' }}
-                                render={({ field }) => (
-                                    <FormControl fullWidth error={!!errors.business_type} variant="outlined">
-                                        <InputLabel id="business-type-label">Business Type *</InputLabel>
-                                        <Select
-                                            {...field}
-                                            labelId="business-type-label"
-                                            label="Business Type *"
-                                        >
-                                            {INDUSTRY_OPTIONS.map(opt => (
-                                                <MenuItem key={opt} value={opt}>{opt}</MenuItem>
-                                            ))}
-                                        </Select>
-                                        {errors.business_type && (
-                                            <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
-                                                {errors.business_type.message}
-                                            </Typography>
-                                        )}
-                                    </FormControl>
-                                )} />
-                        </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="business_name" control={control} rules={{ required: 'Business name is required' }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Business Name *" error={!!errors.business_name}
+                                    helperText={errors.business_name?.message} placeholder="e.g. Shiv Clinic" />
+                            )} />
+                        
+                        <Controller name="business_type" control={control} rules={{ required: 'Business type is required' }}
+                            render={({ field }) => (
+                                <FormControl fullWidth error={!!errors.business_type} variant="outlined">
+                                    <InputLabel id="business-type-label">Business Type *</InputLabel>
+                                    <Select
+                                        {...field}
+                                        labelId="business-type-label"
+                                        label="Business Type *"
+                                        sx={{ borderRadius: 2 }}
+                                    >
+                                        {INDUSTRY_OPTIONS.map(opt => (
+                                            <MenuItem key={opt.value} value={opt.value} sx={{ py: 1.2 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Typography component="span" sx={{ fontSize: '1.2rem' }}>{opt.icon}</Typography>
+                                                    <Typography variant="body2">{opt.label}</Typography>
+                                                </Box>
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                    {errors.business_type && (
+                                        <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
+                                            {errors.business_type.message}
+                                        </Typography>
+                                    )}
+                                </FormControl>
+                            )} />
+                    </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Contact Information">
                     <Grid container spacing={2.5}>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12}>
                             <Controller name="email" control={control}
                                 render={({ field }) => (
                                     <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" />
                                 )} />
                         </Grid>
-                        <Grid item xs={12} sm={6}>
+                        <Grid item xs={12}>
                             <Controller name="phone" control={control}
                                 render={({ field }) => (
                                     <TextField {...field} fullWidth label="Phone" placeholder="+91 98765 43210" />

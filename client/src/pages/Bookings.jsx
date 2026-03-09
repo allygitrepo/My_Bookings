@@ -15,6 +15,7 @@ import { getCustomers } from '../api/customer.api';
 import { getPayments } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
+import { formatDate } from '../utils/date';
 
 const statusColors = { Confirmed: 'success', Completed: 'info', Cancelled: 'error', Pending: 'warning' };
 const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default', Failed: 'error' };
@@ -132,7 +133,7 @@ const Bookings = () => {
                                     </TableCell>
                                     <TableCell>{service?.service_name || '—'}</TableCell>
                                     <TableCell>{staffMember?.staff_name || '—'}</TableCell>
-                                    <TableCell>{b.booking_date || '—'}</TableCell>
+                                    <TableCell>{formatDate(b.booking_date)}</TableCell>
                                     <TableCell sx={{ whiteSpace: 'nowrap' }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
                                     <TableCell>
                                         <Typography variant="body2" fontWeight={600}>₹{totalAmount}</Typography>
