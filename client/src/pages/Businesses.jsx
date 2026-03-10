@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, IconButton, Chip, TextField, Grid, MenuItem, Select,
-    FormControl, InputLabel, Switch, FormControlLabel, Box, Typography, Divider,
+    Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
+    IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
+    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Business as BusinessIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -42,6 +42,12 @@ const Businesses = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredBusinesses = businesses.filter(biz =>
         biz.business_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -167,7 +173,7 @@ const Businesses = () => {
                                     <Typography color="text.secondary">Loading businesses...</Typography>
                                 </TableCell>
                             </TableRow>
-                        ) : filteredBusinesses.length === 0 && (
+                        ) : filteredBusinesses.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                     {searchQuery ? 'No businesses match your search.' : (
@@ -178,10 +184,9 @@ const Businesses = () => {
                                     )}
                                 </TableCell>
                             </TableRow>
-                        )}
-                        {filteredBusinesses.map((biz, index) => (
+                        ) : filteredBusinesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz, index) => (
                             <TableRow key={biz.id} hover>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                 <TableCell sx={{ fontWeight: 500 }}>{biz.business_name}</TableCell>
                                 <TableCell>{biz.business_type}</TableCell>
                                 <TableCell>{biz.phone}</TableCell>
@@ -196,6 +201,20 @@ const Businesses = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredBusinesses.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer
                 open={open}

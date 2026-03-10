@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Typography,
+    Paper, Chip, Typography, TablePagination,
 } from '@mui/material';
 import { Payments as PayIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -18,6 +18,12 @@ const Payments = () => {
     const [payments, setPayments] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredPayments = payments.filter(p =>
         p.amount?.toString().includes(searchQuery) ||
@@ -78,7 +84,7 @@ const Payments = () => {
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled">Payments are recorded automatically when customers complete a booking via the widget.</Typography>
                             </TableCell></TableRow>
-                        ) : filteredPayments.map((p, index) => (
+                        ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p, index) => (
                             <TableRow key={p.id} hover>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
                                 <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>₹{p.amount}</TableCell>
@@ -102,6 +108,20 @@ const Payments = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredPayments.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
         </PageTransition>
     );
 };

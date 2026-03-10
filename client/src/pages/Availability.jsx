@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     Box, Typography, Avatar, Chip, IconButton, Button, Divider,
-    TextField, FormControlLabel, Checkbox,
+    TextField, FormControlLabel, Checkbox, TablePagination,
 } from '@mui/material';
 import { Schedule as ScheduleIcon, Edit as EditIcon, Add as AddIcon, Remove as RemoveIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -30,6 +30,12 @@ const Availability = () => {
     const [schedule, setSchedule] = useState({});
     const [saving, setSaving] = useState(false);
     const [slotErrors, setSlotErrors] = useState({});
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery, filterStaff]);
 
     const filteredAvailability = availability.filter(a => {
         const staffName = staffList.find(s => s.id === a.staff_id)?.staff_name || '';
@@ -181,8 +187,6 @@ const Availability = () => {
         }
     };
 
-    // Removal of old filter logic as it integrated into filteredAvailability
-
     // Sort by staff name, then day order
     const sorted = [...filteredAvailability].sort((a, b) => {
         const sa = staffList.find(s => s.id === a.staff_id)?.staff_name || '';
@@ -251,7 +255,7 @@ const Availability = () => {
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled">Add availability when creating or editing staff members.</Typography>
                             </TableCell></TableRow>
-                        ) : sorted.map((a, idx) => {
+                        ) : sorted.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((a, idx) => {
                             const staffMember = staffList.find(s => s.id === a.staff_id);
                             const [sh, sm] = (a.start_time || '00:00').split(':').map(Number);
                             const [eh, em] = (a.end_time || '00:00').split(':').map(Number);
@@ -259,7 +263,7 @@ const Availability = () => {
                             const durationLabel = durationMin > 0 ? `${Math.floor(durationMin / 60)}h ${durationMin % 60}m` : '—';
                             return (
                                 <TableRow key={a.id || idx} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{idx + 1}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + idx + 1}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Avatar sx={{ width: 30, height: 30, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
@@ -289,6 +293,20 @@ const Availability = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={sorted.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer
                 open={open}

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Grid, Card, Typography, Box, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Paper, Chip, Avatar,
+    TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TablePagination,
 } from '@mui/material';
 import {
     Business as BusinessIcon, People as StaffIcon,
@@ -59,6 +59,12 @@ const Dashboard = () => {
     const [customers, setCustomers] = useState([]);
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredDashboardBookings = bookings.filter(b => {
         const customer = customers.find(c => c.id === b.customer_id);
@@ -100,7 +106,7 @@ const Dashboard = () => {
         .filter(p => p.payment_status === true || p.payment_status === 1)
         .reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
 
-    const recentBookings = [...filteredDashboardBookings].reverse().slice(0, 5);
+    const recentBookings = [...filteredDashboardBookings].reverse();
 
     return (
         <PageTransition>
@@ -157,7 +163,7 @@ const Dashboard = () => {
                                     {searchQuery ? 'No bookings match your search.' : 'No bookings yet. Go to the Bookings page to create one!'}
                                 </TableCell>
                             </TableRow>
-                        ) : recentBookings.map((b, index) => {
+                        ) : recentBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b, index) => {
                             const customer = customers.find(c => c.id === b.customer_id);
                             const staffMember = staff.find(s => s.id === b.staff_id);
                             const service = services.find(s => s.id === b.service_id);
@@ -196,6 +202,20 @@ const Dashboard = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={recentBookings.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
         </PageTransition>
     );
 };

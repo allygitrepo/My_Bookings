@@ -2,7 +2,7 @@ import React, { useState, useMemo } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Box, Typography, Divider,
-    Autocomplete,
+    Autocomplete, Chip, TablePagination,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -70,6 +70,12 @@ const Locations = () => {
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
     const [selectedState, setSelectedState] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredLocations = locations.filter(loc => {
         const bizName = businesses.find(b => b.id === loc.business_id)?.business_name || '';
@@ -169,7 +175,7 @@ const Locations = () => {
                                     </Box>
                                 )}
                             </TableCell></TableRow>
-                        ) : filteredLocations.map((loc, index) => {
+                        ) : filteredLocations.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((loc, index) => {
                             const biz = businesses.find(b => b.id === loc.business_id);
                             return (
                                 <TableRow key={loc.id} hover>
@@ -189,6 +195,20 @@ const Locations = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredLocations.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Location' : 'Add New Location'} subtitle="Define where your business operates." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Location' : 'Create Location'}>
                 <FieldSection label="Assignment">

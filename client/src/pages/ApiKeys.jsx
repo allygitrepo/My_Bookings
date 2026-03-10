@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Card, Typography, Box, Button, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Paper, IconButton, Chip, Tooltip,
-    MenuItem, Select, FormControl, InputLabel, Grid, Divider,
+    MenuItem, Select, FormControl, InputLabel, Grid, Divider, TablePagination,
 } from '@mui/material';
 import {
     ContentCopy as CopyIcon, Visibility as VisibilityIcon,
@@ -24,6 +24,8 @@ const ApiKeys = () => {
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
     const [visibleKeys, setVisibleKeys] = useState({});
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
 
     const fetchData = async () => {
         setLoading(true);
@@ -118,6 +120,7 @@ const ApiKeys = () => {
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>API Key</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Created At</TableCell>
@@ -127,19 +130,20 @@ const ApiKeys = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 6 }}>
+                                <TableCell colSpan={5} align="center" sx={{ py: 6 }}>
                                     <Typography color="text.secondary">Loading API keys...</Typography>
                                 </TableCell>
                             </TableRow>
                         ) : apiKeys.length === 0 ? (
-                            <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                            <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 No API Keys generated yet. Click "Generate New Key" to create one.
                             </TableCell></TableRow>
-                        ) : apiKeys.map(k => {
+                        ) : apiKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((k, index) => {
                             const biz = businesses.find(b => b.id === k.business_id);
                             const isVisible = visibleKeys[k.id];
                             return (
                                 <TableRow key={k.id} hover>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{biz?.business_name || '—'}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -172,6 +176,20 @@ const ApiKeys = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={apiKeys.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer open={open} onClose={() => setOpen(false)} title="Generate API Key" subtitle="A unique API key will be generated for the selected business." onSave={handleSubmit(onSubmit)} saveLabel="Generate Key">
                 <Box sx={{ mb: 3 }}>

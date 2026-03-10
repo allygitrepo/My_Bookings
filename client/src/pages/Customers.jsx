@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Avatar, Box, Typography,
+    Paper, Avatar, Box, Typography, TablePagination,
 } from '@mui/material';
 import { PersonSearch as PersonSearchIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -14,6 +14,12 @@ const Customers = () => {
     const { searchQuery } = useSearch();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredCustomers = customers.filter(c =>
         c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -69,7 +75,7 @@ const Customers = () => {
                                 </Typography>
                                 {!searchQuery && <Typography variant="caption" color="text.disabled">Customers appear here after they complete a booking via the widget.</Typography>}
                             </TableCell></TableRow>
-                        ) : filteredCustomers.map((c, index) => (
+                        ) : filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((c, index) => (
                             <TableRow key={c.id} hover>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
                                 <TableCell>
@@ -88,6 +94,20 @@ const Customers = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredCustomers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
         </PageTransition>
     );
 };

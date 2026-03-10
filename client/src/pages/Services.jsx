@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete,
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -32,6 +32,12 @@ const Services = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredServices = servicesList.filter(svc =>
         svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -167,7 +173,7 @@ const Services = () => {
                                 )}
                             </TableCell></TableRow>
                         ) : null}
-                        {filteredServices.map((svc, index) => {
+                        {filteredServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((svc, index) => {
                             const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             return (
@@ -192,6 +198,20 @@ const Services = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredServices.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Service' : 'Add New Service'} subtitle="Define a service offering for your business." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Service' : 'Create Service'}>
                 <FieldSection label="Assignment">

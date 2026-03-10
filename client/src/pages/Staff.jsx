@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Box, Typography, Divider, Checkbox, FormControlLabel, Button,
+    Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination,
 } from '@mui/material';
 import {
     Edit as EditIcon, Delete as DeleteIcon, People as PeopleIcon,
@@ -41,6 +41,12 @@ const Staff = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const filteredStaff = staffList.filter(s =>
         s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -265,7 +271,7 @@ const Staff = () => {
                                     )}
                                 </TableCell>
                             </TableRow>
-                        ) : filteredStaff.map((s, index) => {
+                        ) : filteredStaff.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((s, index) => {
                             const biz = businesses.find(b => b.id === s.business_id);
                             const loc = locations.find(l => l.id === s.location_id);
                             const workingDays = [...new Set(availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.slice(0, 3)))];
@@ -306,6 +312,20 @@ const Staff = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredStaff.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer
                 open={open}

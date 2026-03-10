@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
-    IconButton, Chip, Grid, MenuItem, Select, FormControl, InputLabel, Box, Typography, Divider,
+    IconButton, Chip, Grid, MenuItem, Select, FormControl, InputLabel, Box, Typography, Divider, TablePagination,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Link as LinkIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -27,6 +27,8 @@ const StaffServices = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
 
     const fetchData = async () => {
         setLoading(true);
@@ -124,7 +126,7 @@ const StaffServices = () => {
                             <TableRow><TableCell colSpan={4} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 <LinkIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No staff-service assignments yet.
                             </TableCell></TableRow>
-                        ) : staffServices.map(ss => {
+                        ) : staffServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map(ss => {
                             const staffMember = staff.find(s => s.id === ss.staff_id);
                             const service = services.find(s => s.id === ss.service_id);
                             return (
@@ -142,6 +144,20 @@ const StaffServices = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={staffServices.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, newPage) => setPage(newPage)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
 
             <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Assignment' : 'Assign Service to Staff'} subtitle="Link a staff member to a service they can perform." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update' : 'Assign'}>
                 <FieldSection label="Staff & Service">

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button
+    Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -151,6 +151,14 @@ const Bookings = () => {
     const [customers, setCustomers] = useState([]);
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(() => {
+        return parseInt(localStorage.getItem('rowsPerPage'), 10) || 10;
+    });
+
+    useEffect(() => {
+        setPage(0);
+    }, [searchQuery]);
 
     const handleViewChange = (event, nextView) => {
         if (nextView !== null) {
@@ -231,6 +239,7 @@ const Bookings = () => {
                     staff={staff}
                 />
             ) : (
+                <>
                 <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
@@ -262,7 +271,7 @@ const Bookings = () => {
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled">Bookings appear here after customers book via the widget.</Typography>
                             </TableCell></TableRow>
-                        ) : filteredBookings.map((b, index) => {
+                        ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b, index) => {
                             const customer = customers.find(c => c.id === b.customer_id);
                             const service = services.find(s => s.id === b.service_id);
                             const staffMember = staff.find(s => s.id === b.staff_id);
@@ -315,6 +324,21 @@ const Bookings = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                component="div"
+                count={filteredBookings.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={(e, p) => setPage(p)}
+                onRowsPerPageChange={(e) => {
+                    const rpp = parseInt(e.target.value, 10);
+                    setRowsPerPage(rpp);
+                    localStorage.setItem('rowsPerPage', rpp);
+                    setPage(0);
+                }}
+            />
+            </>
             )}
         </PageTransition>
     );
