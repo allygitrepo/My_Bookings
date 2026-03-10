@@ -19,11 +19,12 @@ import { getCustomers, createCustomer } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
 import { getBookings, createBooking } from '../api/booking.api';
 import { createPayment } from '../api/payment.api';
+import { getLocations } from '../api/location.api';
 import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
 import { formatDate, getDayName } from '../utils/date';
 
-const steps = ['Service', 'Staff', 'Date & Time', 'Your Details', 'Payment'];
+const steps = ['Location', 'Services', 'Staff', 'Date & Time', 'Your Details', 'Payment'];
 
 // Format a 24h time string to 12h "H:MM AM/PM"
 const timeFrom24 = (t) => {
@@ -90,14 +91,21 @@ const BookingWidget = ({ businessId }) => {
     const [availability, setAvailability] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [customers, setCustomers] = useState([]);
+    const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [resolvedBusinessId, setResolvedBusinessId] = useState(null);
 
     const [open, setOpen] = useState(false);
     const [activeStep, setActiveStep] = useState(0);
     const [bookingData, setBookingData] = useState({
-        service: null, staff: null, date: '', slot: '', paidAmount: 0,
-        customer: { name: '', email: '', phone: '' },
+        location: null,
+        service: null, // Reverted to single service
+        services: [], // Keep for backward compat or refactor fully
+        staff: null,
+        date: '',
+        slot: '',
+        paidAmount: 0,
+        customer: { name: '', phone: '' },
     });
     const [detailErrors, setDetailErrors] = useState({});
     const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -113,8 +121,8 @@ const BookingWidget = ({ businessId }) => {
 
         setLoading(true);
         try {
-            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes] = await Promise.all([
-                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses()
+            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes, locRes] = await Promise.all([
+                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses(), getLocations()
             ]);
 
             let bizId = businessId;
@@ -131,7 +139,8 @@ const BookingWidget = ({ businessId }) => {
                     bizId = null; // Don't try to filter using the string key
                 }
             }
-            setResolvedBusinessId(bizId);
+            const effectiveBizId = bizId || (bizRes.success && bizRes.data[0]?.id);
+            setResolvedBusinessId(effectiveBizId);
 
             // Filter data by resolvedBusinessId if provided
             if (svcRes.success) {
@@ -155,6 +164,12 @@ const BookingWidget = ({ businessId }) => {
             if (custRes.success) setCustomers(custRes.data);
             if (bookRes.success) setBookings(bookRes.data);
             if (bizRes.success) setBusinesses(bizRes.data);
+            if (locRes.success) {
+                const bizLocs = bizId
+                    ? locRes.data.filter(l => String(l.business_id) === String(bizId))
+                    : locRes.data;
+                setLocations(bizLocs);
+            }
         } catch (error) {
             console.error('Widget Fetch Error:', error);
         } finally {
@@ -174,18 +189,30 @@ const BookingWidget = ({ businessId }) => {
         setActiveStep(0);
         setDetailErrors({});
         setBookingData({
-            service: null, staff: null, date: '', slot: '', paidAmount: 0,
-            customer: { name: '', email: '', phone: '' }
+            location: null,
+            service: null,
+            services: [],
+            staff: null,
+            date: '',
+            slot: '',
+            paidAmount: 0,
+            customer: { name: '', phone: '' }
         });
     };
 
-    // Staff who can perform the selected service (using schema id field: staff_id, service_id)
-    const availableStaff = bookingData.service
-        ? staff.filter(s => staffServices.some(ss => ss.staff_id === s.id && ss.service_id === bookingData.service.id))
+    // Staff who can perform the selected service and belong to the selected location
+    const availableStaff = (bookingData.service && bookingData.location)
+        ? staff.filter(s => {
+            const isAtLocation = String(s.location_id) === String(bookingData.location.id);
+            const canPerform = staffServices.some(ss => ss.staff_id === s.id && ss.service_id === bookingData.service.id);
+            return isAtLocation && canPerform;
+        })
         : [];
 
-    // Time slots and matching availability records
-    const slotDurationMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
+    // Total duration for selected service
+    const totalDuration = Number(bookingData.service?.duration_minutes) || 0;
+    // Time slots use staff's slot_duration_minutes as the "step" for availability
+    const slotStepMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
 
     const matchingRecs = (() => {
         if (!bookingData.staff || !bookingData.date) return [];
@@ -219,7 +246,7 @@ const BookingWidget = ({ businessId }) => {
         const all = [];
         matchingRecs.forEach(r => { // Changed recs.forEach to matchingRecs.forEach
             console.log(` - Record ${r.id}: ${r.start_time} - ${r.end_time}`);
-            generateSlots(r.start_time, r.end_time, slotDurationMin).forEach(s => all.push(s));
+            generateSlots(r.start_time, r.end_time, slotStepMin).forEach(s => all.push(s));
         });
 
         const uniqueSlots = [...new Set(all)].sort();
@@ -261,20 +288,19 @@ const BookingWidget = ({ businessId }) => {
             }
 
             // 2. Create booking
-            const slotDurationMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
-            const endTime = addMinutes(bookingData.slot, slotDurationMin);
+            const endTime = addMinutes(bookingData.slot, totalDuration);
 
             const bookingPayload = {
-                business_id: bookingData.service.business_id,
-                location_id: bookingData.staff.location_id,
+                business_id: bookingData.services[0].business_id,
+                location_id: bookingData.location.id,
                 staff_id: bookingData.staff.id,
-                service_id: bookingData.service.id,
+                service_id: bookingData.services[0].id, // Store first service as primary
                 customer_id: customerId,
                 booking_date: bookingData.date,
                 start_time: bookingData.slot,
                 end_time: endTime,
-                payment_status: true, // Use boolean for DataTypes.BOOLEAN
-                status: true          // Use boolean for DataTypes.BOOLEAN
+                payment_status: true,
+                status: true
             };
 
             console.log('Widget: Creating booking with payload:', bookingPayload);
@@ -287,10 +313,11 @@ const BookingWidget = ({ businessId }) => {
             const bookingId = bookingRes.data.id;
 
             // 3. Create payment
+            const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
             const paymentPayload = {
                 booking_id: bookingId,
-                amount: bookingData.service.price,
-                paid_amount: bookingData.paidAmount || bookingData.service.price,
+                amount: totalAmount,
+                paid_amount: bookingData.paidAmount || totalAmount,
                 payment_method: 'UPI/Card',
                 transaction_id: 'txn_' + crypto.randomUUID().split('-')[0],
                 payment_status: true // Use boolean
@@ -314,33 +341,33 @@ const BookingWidget = ({ businessId }) => {
 
     const renderStep = () => {
         switch (activeStep) {
-            case 0:
+            case 0: // Location Selection
                 return (
                     <Box>
                         <Typography variant="body2" color="text.secondary" mb={2}>
-                            Select the service you'd like to book.
+                            Select a location to see available services.
                         </Typography>
                         {loading ? (
                             <Box sx={{ textAlign: 'center', py: 4 }}>
                                 <LinearProgress sx={{ borderRadius: 2, height: 6, mb: 1.5, bgcolor: 'rgba(99,102,241,0.1)', '& .MuiLinearProgress-bar': { background: 'linear-gradient(90deg,#6366f1,#8b5cf6)' } }} />
-                                <Typography variant="caption" color="text.secondary">Loading services...</Typography>
+                                <Typography variant="caption" color="text.secondary">Loading locations...</Typography>
                             </Box>
-                        ) : services.length === 0 ? (
+                        ) : locations.length === 0 ? (
                             <Box sx={{ textAlign: 'center', py: 4, color: 'text.disabled' }}>
-                                <Typography variant="body2">No services available yet.</Typography>
+                                <Typography variant="body2">No locations available.</Typography>
                             </Box>
                         ) : (
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                                {services.map(service => (
-                                    <Box key={service.id}
+                                {locations.map(loc => (
+                                    <Box key={loc.id}
                                         onClick={() => {
-                                            setBookingData({ ...bookingData, service, staff: null, slot: '', paidAmount: Number(service.minimum_booking_charge) || Number(service.price) });
+                                            setBookingData({ ...bookingData, location: loc, services: [], staff: null, slot: '' });
                                             handleNext();
                                         }}
                                         sx={{
                                             p: 2, borderRadius: 3, cursor: 'pointer',
-                                            border: '1.5px solid', borderColor: 'rgba(99,102,241,0.15)',
-                                            bgcolor: 'white',
+                                            border: '1.5px solid', borderColor: bookingData.location?.id === loc.id ? '#6366f1' : 'rgba(99,102,241,0.15)',
+                                            bgcolor: bookingData.location?.id === loc.id ? 'rgba(99,102,241,0.05)' : 'white',
                                             boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
                                             transition: 'all 0.18s',
                                             '&:hover': {
@@ -350,7 +377,50 @@ const BookingWidget = ({ businessId }) => {
                                             },
                                         }}
                                     >
-                                        <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
+                                        <Typography fontWeight={700} fontSize="0.95rem">{loc.location_name}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{loc.address}, {loc.city}</Typography>
+                                    </Box>
+                                ))}
+                            </Box>
+                        )}
+                    </Box>
+                );
+
+            case 1: // Service Selection (Reverted to Single)
+                return (
+                    <Box>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <IconButton size="small" onClick={handleBack}
+                                sx={{ bgcolor: 'rgba(99,102,241,0.08)', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' } }}>
+                                <BackIcon fontSize="small" sx={{ color: '#6366f1' }} />
+                            </IconButton>
+                            <Typography variant="caption" color="text.secondary">Select a service at <strong>{bookingData.location?.location_name}</strong></Typography>
+                        </Box>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                            {services.map(service => {
+                                const isSelected = bookingData.service?.id === service.id;
+                                return (
+                                    <Box key={service.id}
+                                        onClick={() => {
+                                            setBookingData({ ...bookingData, service: service, services: [service], staff: null, slot: '' });
+                                            handleNext();
+                                        }}
+                                        sx={{
+                                            p: 2, borderRadius: 3, cursor: 'pointer',
+                                            border: '1.5px solid', borderColor: isSelected ? '#6366f1' : 'rgba(99,102,241,0.15)',
+                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'white',
+                                            boxShadow: isSelected ? '0 4px 12px rgba(99,102,241,0.12)' : '0 2px 8px rgba(99,102,241,0.06)',
+                                            transition: 'all 0.18s',
+                                            '&:hover': {
+                                                borderColor: '#6366f1',
+                                                transform: 'translateY(-2px)',
+                                            },
+                                        }}
+                                    >
+                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                            <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
+                                            {isSelected && <SuccessIcon sx={{ fontSize: 20, color: '#6366f1' }} />}
+                                        </Box>
                                         <Box sx={{ display: 'flex', gap: 2, mt: 0.8 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                                 <TimeIcon sx={{ fontSize: 13, color: '#6366f1' }} />
@@ -362,13 +432,13 @@ const BookingWidget = ({ businessId }) => {
                                             </Box>
                                         </Box>
                                     </Box>
-                                ))}
-                            </Box>
-                        )}
+                                );
+                            })}
+                        </Box>
                     </Box>
                 );
 
-            case 1:
+            case 2: // Staff Selection
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -376,47 +446,55 @@ const BookingWidget = ({ businessId }) => {
                                 sx={{ bgcolor: 'rgba(99,102,241,0.08)', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' } }}>
                                 <BackIcon fontSize="small" sx={{ color: '#6366f1' }} />
                             </IconButton>
-                            <Typography variant="caption" color="text.secondary">Professionals who offer <strong>{bookingData.service?.service_name}</strong></Typography>
+                            <Typography variant="caption" color="text.secondary">Select a professional for your services</Typography>
                         </Box>
                         {availableStaff.length === 0 ? (
                             <Box sx={{ textAlign: 'center', py: 4, color: 'text.disabled' }}>
-                                <Typography variant="body2">No staff assigned to this service yet.</Typography>
+                                <Typography variant="body2">No staff available who can perform all selected services at this location.</Typography>
                             </Box>
                         ) : (
                             <Grid container spacing={1.5}>
-                                {availableStaff.map(s => (
-                                    <Grid item xs={6} key={s.id}>
-                                        <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slot: '' }); handleNext(); }}
-                                            sx={{
-                                                p: 2, textAlign: 'center', cursor: 'pointer',
-                                                borderRadius: 3, bgcolor: 'white',
-                                                border: '1.5px solid', borderColor: 'rgba(99,102,241,0.15)',
-                                                boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
-                                                transition: 'all 0.18s',
-                                                '&:hover': {
-                                                    borderColor: '#6366f1',
-                                                    boxShadow: '0 4px 20px rgba(99,102,241,0.15)',
-                                                    transform: 'translateY(-2px)',
-                                                },
-                                            }}
-                                        >
-                                            <Avatar sx={{
-                                                mx: 'auto', mb: 1, width: 44, height: 44, fontSize: '1.1rem',
-                                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                            }}>
-                                                {s.staff_name?.charAt(0)}
-                                            </Avatar>
-                                            <Typography variant="body2" fontWeight={700}>{s.staff_name}</Typography>
-                                            <Typography variant="caption" color="text.secondary">{s.role}</Typography>
-                                        </Box>
-                                    </Grid>
-                                ))}
+                                {availableStaff.map(s => {
+                                    const isSelected = bookingData.staff?.id === s.id;
+                                    return (
+                                        <Grid item xs={6} key={s.id}>
+                                            <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slot: '' }); handleNext(); }}
+                                                sx={{
+                                                    p: 2, textAlign: 'center', cursor: 'pointer',
+                                                    borderRadius: 4, bgcolor: 'white',
+                                                    border: '1.5px solid', borderColor: isSelected ? '#6366f1' : 'rgba(99,102,241,0.1)',
+                                                    boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
+                                                    transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                    '&:hover': {
+                                                        borderColor: '#6366f1',
+                                                        transform: 'translateY(-4px)',
+                                                        boxShadow: '0 12px 20px rgba(99,102,241,0.15)',
+                                                    },
+                                                }}
+                                            >
+                                                <Avatar
+                                                    src={s.photo}
+                                                    sx={{
+                                                        width: 64, height: 64, mx: 'auto', mb: 1.5,
+                                                        border: '2px solid', borderColor: isSelected ? '#6366f1' : 'transparent',
+                                                        p: isSelected ? 0.3 : 0,
+                                                        bgcolor: 'primary.50', color: 'primary.main', fontWeight: 700, fontSize: '1.4rem'
+                                                    }}
+                                                >
+                                                    {s.staff_name?.charAt(0)}
+                                                </Avatar>
+                                                <Typography variant="subtitle2" fontWeight={800} noWrap sx={{ color: isSelected ? '#6366f1' : 'inherit' }}>{s.staff_name}</Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2, fontWeight: 500 }}>{s.role || 'Professional'}</Typography>
+                                            </Box>
+                                        </Grid>
+                                    );
+                                })}
                             </Grid>
                         )}
                     </Box>
                 );
 
-            case 2: {
+            case 3: { // Date & Time
                 // Build calendar grid
                 const today = new Date();
                 today.setHours(0, 0, 0, 0);
@@ -577,7 +655,7 @@ const BookingWidget = ({ businessId }) => {
                                                         fontWeight={700}
                                                         sx={{ color: bookingData.slot === slot ? 'white' : '#6366f1', fontSize: '0.72rem' }}
                                                     >
-                                                        {formatSlotLabel(slot, slotDurationMin)}
+                                                        {formatSlotLabel(slot, slotStepMin)}
                                                     </Typography>
                                                 </Box>
                                             </Grid>
@@ -600,16 +678,14 @@ const BookingWidget = ({ businessId }) => {
                 );
             }
 
-            case 3: {
+            case 4: { // Your Details
                 const validateAndNext = () => {
                     const errs = {};
-                    const { name, phone, email } = bookingData.customer;
+                    const { name, phone } = bookingData.customer;
                     if (!name.trim()) errs.name = 'Name is required';
                     else if (!/^[A-Za-z .\-']+$/.test(name.trim())) errs.name = 'Name can only contain letters and spaces';
                     if (!phone.trim()) errs.phone = 'Phone number is required';
                     else if (!/^\d{10}$/.test(phone)) errs.phone = 'Enter exactly 10 digits';
-                    if (!email.trim()) errs.email = 'Email is required';
-                    else if (!/^[a-zA-Z0-9._%+\-]+@[a-zA-Z0-9.\-]+\.[a-zA-Z]{2,}$/.test(email.trim())) errs.email = 'Enter a valid email (e.g. user@example.com)';
                     setDetailErrors(errs);
                     if (Object.keys(errs).length === 0) handleNext();
                 };
@@ -625,7 +701,6 @@ const BookingWidget = ({ businessId }) => {
                                     error={!!detailErrors.name}
                                     helperText={detailErrors.name}
                                     onChange={e => {
-                                        // Allow only letters, spaces, hyphens, apostrophes, dots
                                         const val = e.target.value.replace(/[^A-Za-z .\-']/g, '');
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, name: val } });
                                         if (detailErrors.name) setDetailErrors(p => ({ ...p, name: undefined }));
@@ -634,24 +709,12 @@ const BookingWidget = ({ businessId }) => {
                             <Grid item xs={12}>
                                 <TextField fullWidth label="Phone Number *" value={bookingData.customer.phone}
                                     error={!!detailErrors.phone}
-                                    helperText={detailErrors.phone || '10-digit mobile number'}
+                                    helperText={detailErrors.phone}
                                     inputProps={{ maxLength: 10, inputMode: 'numeric' }}
                                     onChange={e => {
                                         const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
                                         if (detailErrors.phone) setDetailErrors(p => ({ ...p, phone: undefined }));
-                                    }} />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField fullWidth label="Email *" value={bookingData.customer.email}
-                                    type="email"
-                                    error={!!detailErrors.email}
-                                    helperText={detailErrors.email}
-                                    onChange={e => {
-                                        // Strip emojis, control chars, and non-printable characters
-                                        const val = e.target.value.replace(/[^\x20-\x7E]/g, '');
-                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, email: val } });
-                                        if (detailErrors.email) setDetailErrors(p => ({ ...p, email: undefined }));
                                     }} />
                             </Grid>
                         </Grid>
@@ -667,7 +730,10 @@ const BookingWidget = ({ businessId }) => {
                 );
             }
 
-            case 4:
+            case 5: { // Payment
+                const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
+                const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
+
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2.5 }}>
@@ -675,28 +741,33 @@ const BookingWidget = ({ businessId }) => {
                             <Typography variant="h6" fontWeight={700}>Confirm & Pay</Typography>
                         </Box>
 
-                        {/* Summary card */}
                         <Card variant="outlined" sx={{ p: 2.5, mb: 3, bgcolor: 'background.default', borderRadius: 2.5 }}>
                             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>Order Summary</Typography>
                             <Box sx={{ mt: 1.5, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Service</Typography><Typography variant="body2" fontWeight={600}>{bookingData.service?.service_name}</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="body2" color="text.secondary">Services ({bookingData.services.length})</Typography>
+                                    <Typography variant="body2" fontWeight={600}>{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Location</Typography><Typography variant="body2">{bookingData.location?.location_name}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Staff</Typography><Typography variant="body2">{bookingData.staff?.staff_name}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Date</Typography><Typography variant="body2">{formatDate(bookingData.date)}</Typography></Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Time</Typography><Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, slotDurationMin)}</strong></Typography></Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Duration</Typography><Typography variant="body2">{slotDurationMin} min</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="body2" color="text.secondary">Time</Typography>
+                                    <Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, totalDuration)}</strong></Typography>
+                                </Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Total Duration</Typography><Typography variant="body2">{totalDuration} min</Typography></Box>
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                 <Typography fontWeight={700}>Total Amount</Typography>
-                                <Typography fontWeight={800} color="text.primary" fontSize="1.1rem">₹{bookingData.service?.price}</Typography>
+                                <Typography fontWeight={800} color="text.primary" fontSize="1.1rem">₹{totalAmount}</Typography>
                             </Box>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                                 <Typography variant="body2" color="primary.main" fontWeight={600}>Min. to Pay Now</Typography>
-                                <Typography variant="body2" fontWeight={700} color="primary.main">₹{bookingData.service?.minimum_booking_charge || bookingData.service?.price}</Typography>
+                                <Typography variant="body2" fontWeight={700} color="primary.main">₹{minAmountToPay}</Typography>
                             </Box>
                         </Card>
 
-                        {/* Amount Input */}
                         <Box sx={{ mb: 3 }}>
                             <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
                                 Enter Amount to Pay (₹)
@@ -705,7 +776,7 @@ const BookingWidget = ({ businessId }) => {
                                 fullWidth
                                 type="number"
                                 size="small"
-                                value={bookingData.paidAmount}
+                                value={bookingData.paidAmount || minAmountToPay}
                                 onChange={(e) => {
                                     const val = Number(e.target.value);
                                     if (val >= 0) {
@@ -714,46 +785,52 @@ const BookingWidget = ({ businessId }) => {
                                 }}
                                 InputProps={{
                                     inputProps: {
-                                        min: bookingData.service?.minimum_booking_charge || 0,
-                                        max: bookingData.service?.price || 999999
+                                        min: minAmountToPay,
+                                        max: totalAmount
                                     }
                                 }}
                                 helperText={
-                                    bookingData.paidAmount < (bookingData.service?.minimum_booking_charge || 0)
-                                        ? `Minimum ₹${bookingData.service?.minimum_booking_charge} required`
-                                        : `Remaining: ₹${(Number(bookingData.service?.price || 0) - Number(bookingData.paidAmount)).toFixed(2)}`
+                                    (bookingData.paidAmount || minAmountToPay) < minAmountToPay
+                                        ? `Minimum ₹${minAmountToPay} required`
+                                        : `Remaining: ₹${(totalAmount - (bookingData.paidAmount || minAmountToPay)).toFixed(2)}`
                                 }
-                                error={bookingData.paidAmount < (bookingData.service?.minimum_booking_charge || 0)}
+                                error={(bookingData.paidAmount || minAmountToPay) < minAmountToPay}
                             />
                         </Box>
 
-                        {/* UPI Payment section */}
                         {(() => {
-                            const biz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
+                            const bizIdToLookup = resolvedBusinessId || bookingData.services[0]?.business_id;
+                            const biz = businesses.find(b => String(b.id) === String(bizIdToLookup));
+                            const amountToPay = bookingData.paidAmount || minAmountToPay;
                             if (biz?.upi_id) {
-                                const upiUri = `upi://pay?pa=${biz.upi_id}&pn=${encodeURIComponent(biz.business_name)}&am=${bookingData.paidAmount}&cu=INR`;
+                                const upiUri = `upi://pay?pa=${biz.upi_id}&pn=${encodeURIComponent(biz.business_name)}&am=${amountToPay}&cu=INR`;
                                 const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUri)}`;
                                 return (
                                     <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>Scan to Pay ₹{bookingData.paidAmount}</Typography>
+                                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>Scan to Pay ₹{amountToPay}</Typography>
                                         <Box sx={{ p: 2, bgcolor: 'white', display: 'inline-block', borderRadius: 3, boxShadow: 1, mb: 1.5 }}>
                                             <img src={qrUrl} alt="UPI QR Code" style={{ width: 140, height: 140, display: 'block' }} />
                                         </Box>
                                     </Box>
                                 );
                             }
-                            return null;
+                            return (
+                                <Box sx={{ py: 2, textAlign: 'center', bgcolor: 'rgba(239,68,68,0.05)', borderRadius: 2, mb: 2 }}>
+                                    <Typography variant="caption" color="error">Business UPI ID not configured.</Typography>
+                                </Box>
+                            );
                         })()}
 
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
                             onClick={handleConfirmBooking}
-                            disabled={loading || bookingData.paidAmount < (bookingData.service?.minimum_booking_charge || 0)}>
+                            disabled={loading || (bookingData.paidAmount || minAmountToPay) < minAmountToPay}>
                             {loading ? 'Processing...' : `Confirm & Proceed`}
                         </Button>
                     </Box>
                 );
+            }
 
-            case 5:
+            case 6: // Success
                 return (
                     <Box sx={{ textAlign: 'center', py: 3 }}>
                         <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 18 }}>
@@ -765,8 +842,8 @@ const BookingWidget = ({ businessId }) => {
                         </Typography>
                         <Box sx={{ bgcolor: 'success.50', borderRadius: 2, p: 2, mb: 3, border: '1px solid', borderColor: 'success.200' }}>
                             <Typography fontWeight={700} color="success.dark">{formatDate(bookingData.date)}</Typography>
-                            <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, slotDurationMin)}</Typography>
-                            <Typography variant="caption" color="success.main">{bookingData.service?.service_name}</Typography>
+                            <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, totalDuration)}</Typography>
+                            <Typography variant="caption" color="success.main">{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
                         </Box>
                         <Button variant="outlined" onClick={resetBooking} sx={{ borderRadius: 2 }}>
                             Close
@@ -777,6 +854,7 @@ const BookingWidget = ({ businessId }) => {
                 return null;
         }
     };
+
 
     return (
         <>
@@ -802,7 +880,7 @@ const BookingWidget = ({ businessId }) => {
                 }}>
 
                 {/* ── Gradient Header ── */}
-                {activeStep < 5 && (
+                {activeStep < 6 && (
                     <Box sx={{
                         background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                         px: 3, pt: 2.5, pb: 2,

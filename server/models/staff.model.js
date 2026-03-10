@@ -29,6 +29,10 @@ const Staff = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true
         },
+        photo: {
+            type: DataTypes.TEXT('long'),
+            allowNull: true
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

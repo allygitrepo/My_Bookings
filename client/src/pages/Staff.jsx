@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination,
+    Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination, Avatar,
 } from '@mui/material';
 import {
     Edit as EditIcon, Delete as DeleteIcon, People as PeopleIcon,
@@ -21,6 +21,50 @@ import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+const PHOTO_SIZE_LIMIT = 500 * 1024; // 500 KB limit for base64
+
+const compressImage = (file, maxKB = 499) => {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = (event) => {
+            const img = new Image();
+            img.src = event.target.result;
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                let width = img.width;
+                let height = img.height;
+
+                // Max dimension 800px
+                const maxDim = 800;
+                if (width > height && width > maxDim) {
+                    height *= maxDim / width;
+                    width = maxDim;
+                } else if (height > maxDim) {
+                    width *= maxDim / height;
+                    height = maxDim;
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                let quality = 0.9;
+                let base64 = canvas.toDataURL('image/jpeg', quality);
+                
+                // Iteratively reduce quality if still over limit
+                while (base64.length * 0.75 > maxKB * 1024 && quality > 0.1) {
+                    quality -= 0.1;
+                    base64 = canvas.toDataURL('image/jpeg', quality);
+                }
+                resolve(base64);
+            };
+            img.onerror = reject;
+        };
+        reader.onerror = reject;
+    });
+};
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -57,6 +101,7 @@ const Staff = () => {
     // availability schedule: { [day]: [{ start_time, end_time }] | null }
     const [schedule, setSchedule] = useState({});
     const [slotErrors, setSlotErrors] = useState({});
+    const [photoPreview, setPhotoPreview] = useState(null);
 
     const fetchData = async () => {
         setLoading(true);
@@ -79,16 +124,17 @@ const Staff = () => {
         fetchData();
     }, []);
 
-    const { control, handleSubmit, reset, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', location_id: '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30' },
+    const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
+        defaultValues: { business_id: '', location_id: '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' },
     });
 
     const handleOpen = (s = null) => {
         setEditId(s?.id || null);
         reset(s
-            ? { business_id: s.business_id || '', location_id: s.location_id || '', staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30' }
-            : { business_id: businesses[0]?.id || '', location_id: locations[0]?.id || '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30' }
+            ? { business_id: s.business_id || '', location_id: s.location_id || '', staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30', photo: s.photo || '' }
+            : { business_id: businesses[0]?.id || '', location_id: locations[0]?.id || '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' }
         );
+        setPhotoPreview(s?.photo || null);
 
         // Build schedule from existing availability records for this staff
         if (s) {
@@ -278,7 +324,17 @@ const Staff = () => {
                             return (
                                 <TableRow key={s.id} hover>
                                     <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{s.staff_name}</TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Avatar
+                                                src={s.photo}
+                                                sx={{ width: 36, height: 36, borderRadius: 1.5, bgcolor: 'primary.50', color: 'primary.main', fontWeight: 700 }}
+                                            >
+                                                {s.staff_name.charAt(0)}
+                                            </Avatar>
+                                            <Typography variant="body2" fontWeight={600}>{s.staff_name}</Typography>
+                                        </Box>
+                                    </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'inline-block', px: 1.5, py: 0.3, borderRadius: 1, bgcolor: 'primary.50', color: 'primary.main', fontSize: '0.75rem', fontWeight: 600 }}>
                                             {s.role || '—'}
@@ -399,6 +455,65 @@ const Staff = () => {
                                 )} />
                         </Grid>
                     </Grid>
+                </FieldSection>
+
+                <Divider sx={{ my: 2.5 }} />
+
+                {/* --- Profile Photo --- */}
+                <FieldSection label="Profile Photo">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Avatar
+                            src={photoPreview}
+                            sx={{ width: 80, height: 80, borderRadius: 2, border: '2px solid', borderColor: 'divider' }}
+                        >
+                            <PeopleIcon sx={{ fontSize: 40, opacity: 0.3 }} />
+                        </Avatar>
+                        <Box>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                size="small"
+                                startIcon={<AddIcon />}
+                                sx={{ mb: 1 }}
+                            >
+                                Upload Photo
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            try {
+                                                const compressed = await compressImage(file);
+                                                setPhotoPreview(compressed);
+                                                setValue('photo', compressed);
+                                            } catch (err) {
+                                                toast.error('Failed to process image');
+                                                console.error(err);
+                                            }
+                                        }
+                                    }}
+                                />
+                            </Button>
+                            <Typography variant="caption" color="text.secondary" display="block">
+                                Max 500KB. Square image recommended.
+                            </Typography>
+                            {photoPreview && (
+                                <Button
+                                    size="small"
+                                    color="error"
+                                    sx={{ mt: 0.5, p: 0, minWidth: 0, textTransform: 'none', fontSize: '0.7rem' }}
+                                    onClick={() => {
+                                        setPhotoPreview(null);
+                                        setValue('photo', '');
+                                    }}
+                                >
+                                    Remove
+                                </Button>
+                            )}
+                        </Box>
+                    </Box>
                 </FieldSection>
 
                 <Divider sx={{ my: 2.5 }} />
