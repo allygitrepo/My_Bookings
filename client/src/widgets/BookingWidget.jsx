@@ -203,7 +203,7 @@ const BookingWidget = ({ businessId }) => {
     // Staff who can perform the selected service and belong to the selected location
     const availableStaff = (bookingData.service && bookingData.location)
         ? staff.filter(s => {
-            const isAtLocation = String(s.location_id) === String(bookingData.location.id);
+            const isAtLocation = s.locations?.some(l => String(l.id) === String(bookingData.location.id));
             const canPerform = staffServices.some(ss => ss.staff_id === s.id && ss.service_id === bookingData.service.id);
             return isAtLocation && canPerform;
         })
@@ -227,15 +227,13 @@ const BookingWidget = ({ businessId }) => {
 
         const filtered = availability.filter(a => {
             const isStaffMatch = String(a.staff_id) === String(bookingData.staff.id);
+            const isLocationMatch = String(a.location_id) === String(bookingData.location.id);
             const backendDay = String(a.day_of_week).toLowerCase();
             const isDayMatch = backendDay === internalDay ||
                 backendDay === internalDay.slice(0, 3) ||
                 backendDay.startsWith(internalDay.slice(0, 3));
 
-            if (isStaffMatch) {
-                console.log(` - Checking Staff Avail: "${backendDay}" (Match with "${internalDay}": ${isDayMatch})`);
-            }
-            return isStaffMatch && isDayMatch;
+            return isStaffMatch && isLocationMatch && isDayMatch;
         });
         console.log('Widget Matched Records:', filtered);
         return filtered;
@@ -427,7 +425,6 @@ const BookingWidget = ({ businessId }) => {
                                                 <Typography variant="caption" color="text.secondary" fontWeight={500}>{service.duration_minutes} min</Typography>
                                             </Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <PriceIcon sx={{ fontSize: 13, color: '#10b981' }} />
                                                 <Typography variant="caption" fontWeight={700} color="success.main">₹{service.price}</Typography>
                                             </Box>
                                         </Box>

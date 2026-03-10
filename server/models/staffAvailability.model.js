@@ -17,6 +17,10 @@ const StaffAvailability = sequelize.define(
             type: DataTypes.ENUM('monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'),
             allowNull: false
         },
+        location_id: {
+            type: DataTypes.BIGINT,
+            allowNull: false
+        },
         start_time: {
             type: DataTypes.TIME,
             allowNull: false

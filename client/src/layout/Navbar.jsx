@@ -77,7 +77,7 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                 }),
                 borderBottom: '1px solid',
                 borderColor: 'divider',
-                zIndex: (theme) => theme.zIndex.drawer + 1,
+                zIndex: (theme) => theme.zIndex.appBar,
             }}
         >
             <Toolbar sx={{ justifyContent: 'space-between', px: { xs: 2, sm: 3 } }}>

@@ -9,15 +9,16 @@ const DRAWER_WIDTH = 480;
  * Premium slide-in FormDrawer with Framer Motion entrance and sticky header/footer.
  * Used in place of Dialog popups for all entity CRUD forms.
  */
-const FormDrawer = ({ open, onClose, title, subtitle, onSave, saveLabel = 'Save', children, isLoading = false }) => {
+const FormDrawer = ({ open, onClose, title, subtitle, onSave, saveLabel = 'Save', children, isLoading = false, width = DRAWER_WIDTH }) => {
     return (
         <Drawer
             anchor="right"
             open={open}
             onClose={onClose}
+            sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
             PaperProps={{
                 sx: {
-                    width: { xs: '100%', sm: DRAWER_WIDTH },
+                    width: { xs: '100%', sm: width },
                     display: 'flex',
                     flexDirection: 'column',
                     boxShadow: '-8px 0 48px rgba(0,0,0,0.12)',

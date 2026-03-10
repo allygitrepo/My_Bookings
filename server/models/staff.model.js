@@ -13,10 +13,6 @@ const Staff = sequelize.define(
             type: DataTypes.BIGINT,
             allowNull: false
         },
-        location_id: {
-            type: DataTypes.BIGINT,
-            allowNull: false
-        },
         staff_name: {
             type: DataTypes.STRING,
             allowNull: false
@@ -51,7 +47,11 @@ const Staff = sequelize.define(
         tableName: "staff",
         indexes: [
             { fields: ["business_id"] },
-            { fields: ["location_id"] },
+            { 
+                unique: true,
+                fields: ["business_id", "staff_name"],
+                where: { status: true }
+            },
             { fields: ["status"] }
         ]
     }

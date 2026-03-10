@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import dayjs from 'dayjs';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
     Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination, Avatar,
+    Autocomplete, Chip,
 } from '@mui/material';
+import { MobileTimePicker } from '@mui/x-date-pickers';
 import {
     Edit as EditIcon, Delete as DeleteIcon, People as PeopleIcon,
     Add as AddIcon, Remove as RemoveIcon,
@@ -109,11 +112,19 @@ const Staff = () => {
             const [staffRes, bizRes, locRes, availRes] = await Promise.all([
                 getStaff(), getBusinesses(), getLocations(), getStaffAvailability()
             ]);
-            if (staffRes.success) setStaffList(staffRes.data);
-            if (bizRes.success) setBusinesses(bizRes.data);
-            if (locRes.success) setLocations(locRes.data);
-            if (availRes.success) setAvailability(availRes.data);
+            
+            console.log('Staff Page Data:', { 
+                staff: staffRes.data?.length, 
+                businesses: bizRes.data?.length, 
+                locations: locRes.data?.length 
+            });
+
+            if (staffRes.success) setStaffList(staffRes.data || []);
+            if (bizRes.success) setBusinesses(bizRes.data || []);
+            if (locRes.success) setLocations(locRes.data || []);
+            if (availRes.success) setAvailability(availRes.data || []);
         } catch (error) {
+            console.error('Fetch error:', error);
             toast.error('Failed to fetch data');
         } finally {
             setLoading(false);
@@ -124,15 +135,20 @@ const Staff = () => {
         fetchData();
     }, []);
 
-    const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', location_id: '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' },
+    const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+        defaultValues: { business_id: '', location_ids: [], staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' },
     });
+
+    const selectedLocationIds = watch('location_ids') || [];
 
     const handleOpen = (s = null) => {
         setEditId(s?.id || null);
+        const sLocIds = s?.locations?.map(l => l.id) || [];
+        const initialBizId = s?.business_id || businesses[0]?.id || '';
+        
         reset(s
-            ? { business_id: s.business_id || '', location_id: s.location_id || '', staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30', photo: s.photo || '' }
-            : { business_id: businesses[0]?.id || '', location_id: locations[0]?.id || '', staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' }
+            ? { business_id: initialBizId, location_ids: sLocIds, staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30', photo: s.photo || '' }
+            : { business_id: initialBizId, location_ids: [], staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' }
         );
         setPhotoPreview(s?.photo || null);
 
@@ -144,7 +160,11 @@ const Staff = () => {
                 const dayMatch = DAYS.find(d => d.toLowerCase() === a.day_of_week.toLowerCase());
                 if (dayMatch) {
                     if (!sched[dayMatch]) sched[dayMatch] = [];
-                    sched[dayMatch].push({ start_time: a.start_time, end_time: a.end_time });
+                    sched[dayMatch].push({ 
+                        start_time: a.start_time.slice(0, 5), // 'HH:mm'
+                        end_time: a.end_time.slice(0, 5), 
+                        location_id: a.location_id 
+                    });
                 }
             });
             setSchedule(sched);
@@ -161,14 +181,17 @@ const Staff = () => {
                 delete next[day];
                 return next;
             }
-            return { ...prev, [day]: [{ start_time: '09:00', end_time: '17:00' }] };
+            // Use first assigned location if available
+            const defaultLocId = selectedLocationIds[0] || '';
+            return { ...prev, [day]: [{ start_time: '09:00', end_time: '17:00', location_id: defaultLocId }] };
         });
     };
 
     const addSlot = (day) => {
+        const defaultLocId = selectedLocationIds[0] || '';
         setSchedule(prev => ({
             ...prev,
-            [day]: [...(prev[day] || []), { start_time: '09:00', end_time: '17:00' }],
+            [day]: [...(prev[day] || []), { start_time: '09:00', end_time: '17:00', location_id: defaultLocId }],
         }));
     };
 
@@ -209,12 +232,12 @@ const Staff = () => {
         const slotsToCopy = schedule[sourceDay];
         if (!slotsToCopy) return;
 
-        const newSchedule = { ...schedule };
-        Object.keys(newSchedule).forEach(day => {
+        const newSchedule = {};
+        DAYS.forEach(day => {
             newSchedule[day] = slotsToCopy.map(s => ({ ...s }));
         });
         setSchedule(newSchedule);
-        toast.success(`Copied ${sourceDay}'s schedule to all active days`);
+        toast.success(`Copied ${sourceDay}'s schedule to all 7 days`);
     };
 
     const onSubmit = async (data) => {
@@ -252,12 +275,15 @@ const Staff = () => {
         const records = [];
         Object.entries(schedule).forEach(([day, slots]) => {
             slots.forEach(slot => {
-                records.push({
-                    staff_id: staffId,
-                    day_of_week: day.toLowerCase(),
-                    start_time: slot.start_time,
-                    end_time: slot.end_time,
-                });
+                if (slot.location_id) {
+                    records.push({
+                        staff_id: staffId,
+                        day_of_week: day.toLowerCase(),
+                        location_id: slot.location_id,
+                        start_time: slot.start_time,
+                        end_time: slot.end_time,
+                    });
+                }
             });
         });
         await Promise.all(records.map(r => createStaffAvailability(r)));
@@ -341,7 +367,16 @@ const Staff = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell>{biz?.business_name || '—'}</TableCell>
-                                    <TableCell>{loc?.location_name || '—'}</TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
+                                            {s.locations?.length > 0 
+                                                ? s.locations.map(l => (
+                                                    <Chip key={l.id} label={l.location_name} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+                                                ))
+                                                : '—'
+                                            }
+                                        </Box>
+                                    </TableCell>
                                     <TableCell>{s.phone}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'inline-block', px: 1.5, py: 0.3, borderRadius: 1, bgcolor: 'info.50', color: 'info.dark', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
@@ -390,33 +425,54 @@ const Staff = () => {
                 subtitle="Set staff details and their weekly availability schedule."
                 onSave={handleSubmit(onSubmit)}
                 saveLabel={editId ? 'Update Staff' : 'Add Staff'}
+                width={540}
             >
                 {/* --- Assignment --- */}
                 <FieldSection label="Assignment">
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <Controller name="business_id" control={control} rules={{ required: true }}
-                                render={({ field }) => (
-                                    <FormControl fullWidth>
-                                        <InputLabel>Business *</InputLabel>
-                                        <Select {...field} label="Business *">
-                                            {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
-                                )} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Controller name="location_id" control={control} rules={{ required: true }}
-                                render={({ field }) => (
-                                    <FormControl fullWidth>
-                                        <InputLabel>Location *</InputLabel>
-                                        <Select {...field} label="Location *">
-                                            {locations.map(l => <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>)}
-                                        </Select>
-                                    </FormControl>
-                                )} />
-                        </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="business_id" control={control} rules={{ required: 'Business is required' }}
+                            render={({ field }) => (
+                                <Autocomplete
+                                    options={businesses}
+                                    getOptionLabel={(o) => o.business_name || ''}
+                                    value={businesses.find(b => b.id === field.value) || null}
+                                    onChange={(_, v) => {
+                                        field.onChange(v?.id || '');
+                                        setValue('location_ids', []); // Reset locations when business changes
+                                    }}
+                                    isOptionEqualToValue={(o, v) => o.id === v?.id}
+                                    renderInput={(params) => (
+                                        <TextField {...params} label="Business *" error={!!errors.business_id} helperText={errors.business_id?.message} fullWidth />
+                                    )}
+                                />
+                            )} />
+                        
+                        <Controller name="location_ids" control={control} rules={{ required: 'Select at least one location' }}
+                            render={({ field }) => {
+                                const businessId = watch('business_id');
+                                const filteredLocations = locations.filter(l => !businessId || String(l.business_id) === String(businessId));
+                                
+                                return (
+                                    <Autocomplete
+                                        multiple
+                                        fullWidth
+                                        options={filteredLocations}
+                                        getOptionLabel={(option) => option.location_name || ''}
+                                        value={locations.filter(l => (field.value || []).includes(l.id))}
+                                        onChange={(_, newValue) => field.onChange(newValue.map(v => v.id))}
+                                        disabled={!businessId}
+                                        renderInput={(params) => (
+                                            <TextField {...params} label="Locations *" error={!!errors.location_ids} helperText={errors.location_ids?.message || (!businessId ? 'Select business first' : '')} placeholder="Select locations" fullWidth />
+                                        )}
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => (
+                                                <Chip label={option.location_name} {...getTagProps({ index })} size="small" />
+                                            ))
+                                        }
+                                    />
+                                );
+                            }} />
+                    </Box>
                 </FieldSection>
 
                 <Divider sx={{ my: 2.5 }} />
@@ -520,68 +576,109 @@ const Staff = () => {
 
                 {/* --- Availability Schedule --- */}
                 <FieldSection label="Weekly Availability">
-                    <Typography variant="caption" color="text.secondary" mb={1} display="block">
-                        Check the days the staff member works and add time slots for each day.
+                    <Typography variant="caption" color="text.secondary" mb={2} display="block">
+                        Assign shifts to specific locations. Ensure timings do not overlap.
                     </Typography>
 
+                    {DAYS.map(day => {
+                        const daySlots = schedule[day] || [];
+                        const hasClash = daySlots.some((slot, i) => 
+                            daySlots.some((other, j) => i !== j && slot.start_time < other.end_time && slot.end_time > other.start_time)
+                        );
 
-                    {DAYS.map(day => (
-                        <Box key={day} sx={{ mb: 1.5 }}>
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={!!schedule[day]}
-                                        onChange={() => toggleDay(day)}
-                                        size="small"
-                                        color="primary"
-                                    />
-                                }
-                                label={
-                                    <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', pr: 1 }}>
-                                        <Typography variant="body2" fontWeight={600}>{day}</Typography>
-                                        {schedule[day] && (
-                                            <Button
+                        return (
+                            <Box key={day} sx={{ 
+                                mb: 2, p: 1.5, borderRadius: 2, 
+                                border: '1px solid', 
+                                borderColor: !!schedule[day] ? 'primary.light' : 'divider',
+                                bgcolor: !!schedule[day] ? 'primary.50' : 'transparent',
+                                transition: 'all 0.2s'
+                            }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: !!schedule[day] ? 1.5 : 0 }}>
+                                    <FormControlLabel
+                                        control={
+                                            <Checkbox
+                                                checked={!!schedule[day]}
+                                                onChange={() => toggleDay(day)}
                                                 size="small"
-                                                variant="text"
-                                                onClick={() => copyToAll(day)}
-                                                sx={{ fontSize: '0.65rem', py: 0 }}
-                                            >
-                                                Apply to all days
-                                            </Button>
+                                            />
+                                        }
+                                        label={<Typography variant="body2" fontWeight={700}>{day}</Typography>}
+                                        sx={{ mr: 0 }}
+                                    />
+                                    {schedule[day] && (
+                                        <Button size="small" variant="text" onClick={() => copyToAll(day)} sx={{ fontSize: '0.65rem', fontWeight: 700 }}>
+                                            Apply to all days
+                                        </Button>
+                                    )}
+                                </Box>
+
+                                {schedule[day] && (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+                                        {daySlots.map((slot, idx) => {
+                                            const isClashing = daySlots.some((other, j) => idx !== j && slot.start_time < other.end_time && slot.end_time > other.start_time);
+                                            return (
+                                                <Box key={idx} sx={{ 
+                                                    display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, 
+                                                    borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
+                                                    borderColor: isClashing ? 'error.light' : 'divider',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                                    flexWrap: { xs: 'wrap', sm: 'nowrap' }
+                                                }}>
+                                                    <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
+                                                        <InputLabel>Location</InputLabel>
+                                                        <Select
+                                                            value={slot.location_id}
+                                                            label="Location"
+                                                            onChange={(e) => updateSlot(day, idx, 'location_id', e.target.value)}
+                                                        >
+                                                            {locations.filter(l => selectedLocationIds.includes(l.id)).map(l => (
+                                                                <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>
+                                                            ))}
+                                                            {selectedLocationIds.length === 0 && <MenuItem disabled>Select locations above</MenuItem>}
+                                                        </Select>
+                                                    </FormControl>
+
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                        <MobileTimePicker
+                                                            label="From"
+                                                            value={dayjs(slot.start_time, 'HH:mm')}
+                                                            onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
+                                                            slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+                                                        />
+                                                        <Typography variant="body2" color="text.secondary">to</Typography>
+                                                        <MobileTimePicker
+                                                            label="To"
+                                                            value={dayjs(slot.end_time, 'HH:mm')}
+                                                            onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
+                                                            slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
+                                                        />
+                                                    </Box>
+
+                                                    <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)}>
+                                                        <RemoveIcon fontSize="small" />
+                                                    </IconButton>
+                                                </Box>
+                                            );
+                                        })}
+                                        <Button
+                                            size="small"
+                                            startIcon={<AddIcon />}
+                                            onClick={() => addSlot(day)}
+                                            sx={{ alignSelf: 'flex-start', fontSize: '0.75rem', fontWeight: 700 }}
+                                        >
+                                            Add Shift
+                                        </Button>
+                                        {hasClash && (
+                                            <Typography variant="caption" color="error" sx={{ fontWeight: 600, mt: -0.5 }}>
+                                                ⚠️ Overlapping shifts detected on {day}!
+                                            </Typography>
                                         )}
                                     </Box>
-                                }
-                            />
-
-                            {schedule[day] && (
-                                <Box sx={{ pl: 4, mt: 0.5 }}>
-                                    {schedule[day].map((slot, idx) => {
-                                        const errKey = `${day}-${idx}`;
-                                        const slotErr = slotErrors[errKey];
-                                        return (
-                                            <Box key={idx} sx={{ mb: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <TextField type="time" size="small" value={slot.start_time} onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} InputLabelProps={{ shrink: true }} label="Start" sx={{ width: 130 }} error={!!slotErr} />
-                                                    <Typography variant="caption" color="text.disabled">to</Typography>
-                                                    <TextField type="time" size="small" value={slot.end_time} onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} InputLabelProps={{ shrink: true }} label="End" sx={{ width: 130 }} error={!!slotErr} />
-                                                    <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)} disabled={schedule[day].length === 1}><RemoveIcon fontSize="small" /></IconButton>
-                                                </Box>
-                                                {slotErr && <Typography variant="caption" color="error" sx={{ pl: 0.5 }}>{slotErr}</Typography>}
-                                            </Box>
-                                        );
-                                    })}
-                                    <Button
-                                        size="small"
-                                        startIcon={<AddIcon />}
-                                        onClick={() => addSlot(day)}
-                                        sx={{ fontSize: '0.75rem', ml: 0 }}
-                                    >
-                                        Add slot
-                                    </Button>
-                                </Box>
-                            )}
-                        </Box>
-                    ))}
+                                )}
+                            </Box>
+                        );
+                    })}
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
 
