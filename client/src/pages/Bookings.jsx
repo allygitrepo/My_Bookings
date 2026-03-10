@@ -1,9 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Box, Typography, Avatar,
+    Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button
 } from '@mui/material';
-import { CalendarMonth as CalendarIcon } from '@mui/icons-material';
+import {
+    CalendarMonth as CalendarIcon,
+    ViewList as ViewListIcon,
+    CalendarViewMonth as CalendarViewIcon,
+    ChevronLeft as PrevIcon,
+    ChevronRight as NextIcon
+} from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBookings } from '../api/booking.api';
@@ -16,12 +22,127 @@ import { getPayments } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
 import { formatDate } from '../utils/date';
+import dayjs from 'dayjs';
 
 const statusColors = { Confirmed: 'success', Completed: 'info', Cancelled: 'error', Pending: 'warning' };
 const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default', Failed: 'error' };
 
+const CalendarView = ({ bookings, customers, services, staff }) => {
+    const [currentDate, setCurrentDate] = useState(dayjs());
+
+    const startOfMonth = currentDate.startOf('month');
+    const endOfMonth = currentDate.endOf('month');
+    const startDay = startOfMonth.startOf('week');
+    const endDay = endOfMonth.endOf('week');
+
+    const days = [];
+    let day = startDay;
+    while (day.isBefore(endDay)) {
+        days.push(day);
+        day = day.add(1, 'day');
+    }
+
+    const bookingsByDate = bookings.reduce((acc, b) => {
+        const date = dayjs(b.booking_date).format('YYYY-MM-DD');
+        if (!acc[date]) acc[date] = [];
+        acc[date].push(b);
+        return acc;
+    }, {});
+
+    return (
+        <Paper sx={{ p: 3, borderRadius: 2 }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
+                <Typography variant="h6" fontWeight={700}>
+                    {currentDate.format('MMMM YYYY')}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton onClick={() => setCurrentDate(currentDate.subtract(1, 'month'))}>
+                        <PrevIcon />
+                    </IconButton>
+                    <Button variant="outlined" size="small" onClick={() => setCurrentDate(dayjs())}>Today</Button>
+                    <IconButton onClick={() => setCurrentDate(currentDate.add(1, 'month'))}>
+                        <NextIcon />
+                    </IconButton>
+                </Box>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
+                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+                    <Typography key={d} variant="subtitle2" textAlign="center" sx={{ fontWeight: 600, color: 'text.secondary', py: 1 }}>
+                        {d}
+                    </Typography>
+                ))}
+                {days.map((d, i) => {
+                    const isToday = d.isSame(dayjs(), 'day');
+                    const isCurrentMonth = d.isSame(currentDate, 'month');
+                    const dateStr = d.format('YYYY-MM-DD');
+                    const dayBookings = bookingsByDate[dateStr] || [];
+
+                    return (
+                        <Box
+                            key={i}
+                            sx={{
+                                minHeight: 120,
+                                p: 1,
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                bgcolor: isCurrentMonth ? 'background.paper' : 'action.hover',
+                                borderRadius: 1,
+                                transition: '0.2s',
+                                '&:hover': { bgcolor: 'action.selected' }
+                            }}
+                        >
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontWeight: isToday ? 800 : 500,
+                                    color: isToday ? 'primary.main' : isCurrentMonth ? 'text.primary' : 'text.disabled',
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    width: 24,
+                                    height: 24,
+                                    borderRadius: '50%',
+                                    bgcolor: isToday ? 'primary.lighter' : 'transparent',
+                                    mb: 0.5
+                                }}
+                            >
+                                {d.date()}
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                {dayBookings.map(b => {
+                                    const service = services.find(s => s.id === b.service_id);
+                                    const customer = customers.find(c => c.id === b.customer_id);
+                                    return (
+                                        <Tooltip key={b.id} title={`${customer?.name || 'Customer'} - ${service?.service_name || 'Service'} (${b.start_time})`}>
+                                            <Chip
+                                                label={service?.service_name || 'Booking'}
+                                                size="small"
+                                                sx={{
+                                                    fontSize: '0.65rem',
+                                                    height: 20,
+                                                    bgcolor: (b.status === true || b.status === 1) ? 'success.lighter' : 'error.lighter',
+                                                    color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
+                                                    border: '1px solid',
+                                                    borderColor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
+                                                    '& .MuiChip-label': { px: 1 }
+                                                }}
+                                            />
+                                        </Tooltip>
+                                    );
+                                })}
+                            </Box>
+                        </Box>
+                    );
+                })}
+            </Box>
+        </Paper>
+    );
+};
+
 const Bookings = () => {
     const { searchQuery } = useSearch();
+    const [view, setView] = useState(localStorage.getItem('bookingsView') || 'table');
     const [bookings, setBookings] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -30,6 +151,13 @@ const Bookings = () => {
     const [customers, setCustomers] = useState([]);
     const [payments, setPayments] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    const handleViewChange = (event, nextView) => {
+        if (nextView !== null) {
+            setView(nextView);
+            localStorage.setItem('bookingsView', nextView);
+        }
+    };
 
     const fetchData = async () => {
         setLoading(true);
@@ -51,7 +179,7 @@ const Bookings = () => {
         }
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
         fetchData();
     }, []);
 
@@ -75,8 +203,35 @@ const Bookings = () => {
             <PageHeader
                 title="Bookings"
                 subtitle="All customer appointments. Bookings are created via the widget."
+                extraActions={
+                    <ToggleButtonGroup
+                        value={view}
+                        exclusive
+                        onChange={handleViewChange}
+                        size="small"
+                        sx={{ bgcolor: 'background.paper' }}
+                    >
+                        <ToggleButton value="table">
+                            <ViewListIcon sx={{ mr: 1, fontSize: 18 }} />
+                            Table
+                        </ToggleButton>
+                        <ToggleButton value="calendar">
+                            <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
+                            Calendar
+                        </ToggleButton>
+                    </ToggleButtonGroup>
+                }
             />
-            <TableContainer component={Paper}>
+
+            {view === 'calendar' ? (
+                <CalendarView
+                    bookings={filteredBookings}
+                    customers={customers}
+                    services={services}
+                    staff={staff}
+                />
+            ) : (
+                <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
@@ -160,6 +315,7 @@ const Bookings = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            )}
         </PageTransition>
     );
 };
