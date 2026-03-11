@@ -13,47 +13,7 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getBusinesses } from '../api/business.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
-
-// ────────────────────────────────────────────────────────────────────────────
-// Indian States → Cities data
-// ────────────────────────────────────────────────────────────────────────────
-const INDIA_STATE_CITIES = {
-    "Andhra Pradesh": ["Visakhapatnam", "Vijayawada", "Guntur", "Tirupati", "Nellore", "Kurnool", "Kakinada", "Rajahmundry", "Kadapa", "Anantapur"],
-    "Arunachal Pradesh": ["Itanagar", "Naharlagun", "Pasighat", "Tezpur", "Bomdila"],
-    "Assam": ["Guwahati", "Silchar", "Dibrugarh", "Jorhat", "Nagaon", "Tinsukia", "Tezpur", "Kamrup"],
-    "Bihar": ["Patna", "Gaya", "Muzaffarpur", "Bhagalpur", "Darbhanga", "Purnia", "Ara", "Begusarai", "Katihar", "Munger"],
-    "Chhattisgarh": ["Raipur", "Bhilai", "Bilaspur", "Durg", "Korba", "Rajnandgaon", "Jagdalpur"],
-    "Goa": ["Panaji", "Margao", "Vasco da Gama", "Mapusa", "Ponda"],
-    "Gujarat": ["Ahmedabad", "Surat", "Vadodara", "Rajkot", "Bhavnagar", "Jamnagar", "Gandhinagar", "Junagadh", "Anand", "Nadiad"],
-    "Haryana": ["Faridabad", "Gurgaon", "Panipat", "Ambala", "Yamunanagar", "Rohtak", "Hisar", "Karnal", "Sonipat", "Panchkula"],
-    "Himachal Pradesh": ["Shimla", "Dharamshala", "Solan", "Mandi", "Kullu", "Manali", "Bilaspur", "Hamirpur"],
-    "Jharkhand": ["Ranchi", "Jamshedpur", "Dhanbad", "Bokaro", "Deoghar", "Hazaribagh", "Giridih", "Dumka"],
-    "Karnataka": ["Bangalore", "Mysore", "Hubli", "Dharwad", "Mangalore", "Belgaum", "Davangere", "Bellary", "Bijapur", "Shimoga"],
-    "Kerala": ["Thiruvananthapuram", "Kochi", "Kozhikode", "Thrissur", "Kollam", "Alappuzha", "Palakkad", "Malappuram", "Kannur", "Kasaragod"],
-    "Madhya Pradesh": ["Bhopal", "Indore", "Gwalior", "Jabalpur", "Ujjain", "Sagar", "Ratlam", "Satna", "Dewas", "Murwara"],
-    "Maharashtra": ["Mumbai", "Pune", "Nagpur", "Nashik", "Thane", "Aurangabad", "Solapur", "Kolhapur", "Amravati", "Nanded"],
-    "Manipur": ["Imphal", "Thoubal", "Bishnupur", "Churachandpur"],
-    "Meghalaya": ["Shillong", "Tura", "Jowai", "Nongstoin"],
-    "Mizoram": ["Aizawl", "Lunglei", "Champhai", "Serchhip"],
-    "Nagaland": ["Kohima", "Dimapur", "Mokokchung", "Wokha"],
-    "Odisha": ["Bhubaneswar", "Cuttack", "Rourkela", "Brahmapur", "Sambalpur", "Puri", "Balasore", "Bhadrak", "Baripada"],
-    "Punjab": ["Ludhiana", "Amritsar", "Jalandhar", "Patiala", "Bathinda", "Mohali", "Firozpur", "Hoshiarpur", "Gurdaspur"],
-    "Rajasthan": ["Jaipur", "Jodhpur", "Kota", "Bikaner", "Ajmer", "Udaipur", "Bhilwara", "Alwar", "Bharatpur", "Sikar"],
-    "Sikkim": ["Gangtok", "Namchi", "Gyalshing", "Mangan"],
-    "Tamil Nadu": ["Chennai", "Coimbatore", "Madurai", "Tiruchirappalli", "Salem", "Tirunelveli", "Erode", "Vellore", "Thoothukudi", "Dindigul"],
-    "Telangana": ["Hyderabad", "Warangal", "Nizamabad", "Karimnagar", "Ramagundam", "Khammam", "Mahbubnagar", "Nalgonda"],
-    "Tripura": ["Agartala", "Dharmanagar", "Udaipur", "Kailashahar"],
-    "Uttar Pradesh": ["Lucknow", "Kanpur", "Ghaziabad", "Agra", "Meerut", "Varanasi", "Allahabad", "Bareilly", "Aligarh", "Moradabad"],
-    "Uttarakhand": ["Dehradun", "Haridwar", "Roorkee", "Haldwani", "Rishikesh", "Kashipur", "Rudrapur", "Nainital"],
-    "West Bengal": ["Kolkata", "Howrah", "Durgapur", "Asansol", "Siliguri", "Bardhaman", "Malda", "Baharampur"],
-    "Delhi": ["New Delhi", "Dwarka", "Rohini", "Pitampura", "Saket", "Lajpat Nagar", "Connaught Place", "Karol Bagh"],
-    "Jammu and Kashmir": ["Srinagar", "Jammu", "Anantnag", "Baramulla", "Sopore"],
-    "Ladakh": ["Leh", "Kargil"],
-    "Chandigarh": ["Chandigarh"],
-    "Puducherry": ["Puducherry", "Karaikal", "Yanam", "Mahe"],
-};
-
-const STATES = Object.keys(INDIA_STATE_CITIES).sort();
+import locationService from '../utils/locationService';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -69,7 +29,9 @@ const Locations = () => {
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
-    const [selectedState, setSelectedState] = useState('');
+    const [states, setStates] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [selectedState, setSelectedState] = useState(null); // Will store {name, iso2}
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
 
@@ -86,9 +48,34 @@ const Locations = () => {
             loc.state?.toLowerCase().includes(searchQuery.toLowerCase());
     });
 
-    const cityOptions = useMemo(() => {
-        if (!selectedState || !INDIA_STATE_CITIES[selectedState]) return [];
-        return INDIA_STATE_CITIES[selectedState];
+    const fetchStatesData = async () => {
+        try {
+            const data = await locationService.getStates();
+            setStates(data);
+        } catch (error) {
+            toast.error('Failed to fetch states');
+        }
+    };
+
+    const fetchCitiesData = async (stateCode) => {
+        try {
+            const data = await locationService.getCities(stateCode);
+            setCities(data);
+        } catch (error) {
+            toast.error('Failed to fetch cities');
+        }
+    };
+
+    useEffect(() => {
+        fetchStatesData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedState?.iso2) {
+            fetchCitiesData(selectedState.iso2);
+        } else {
+            setCities([]);
+        }
     }, [selectedState]);
 
     const fetchData = async () => {
@@ -110,10 +97,21 @@ const Locations = () => {
         defaultValues: { business_id: '', location_name: '', address: '', city: '', state: '' },
     });
 
-    const handleOpen = (loc = null) => {
+    const handleOpen = async (loc = null) => {
         setEditId(loc?.id || null);
-        const initState = loc?.state || '';
-        setSelectedState(initState);
+        
+        if (loc) {
+            // Find state object to trigger city fetch
+            const stateObj = states.find(s => s.name === loc.state);
+            setSelectedState(stateObj || null);
+            if (stateObj) {
+                await fetchCitiesData(stateObj.iso2);
+            }
+        } else {
+            setSelectedState(null);
+            setCities([]);
+        }
+
         reset(loc
             ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
             : { business_id: businesses[0]?.id || '', location_name: '', address: '', city: '', state: '' }
@@ -245,13 +243,15 @@ const Locations = () => {
                             render={({ field }) => (
                                 <Autocomplete
                                     fullWidth
-                                    options={STATES}
-                                    value={field.value || null}
+                                    options={states}
+                                    getOptionLabel={(option) => option.name || ''}
+                                    value={states.find(s => s.name === field.value) || null}
                                     onChange={(_, v) => {
-                                        field.onChange(v || '');
-                                        setSelectedState(v || '');
+                                        field.onChange(v?.name || '');
+                                        setSelectedState(v || null);
                                         setValue('city', ''); // reset city on state change
                                     }}
+                                    isOptionEqualToValue={(option, value) => option.name === value?.name}
                                     renderInput={(params) => (
                                         <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
                                     )}
@@ -271,9 +271,11 @@ const Locations = () => {
                             render={({ field }) => (
                                 <Autocomplete
                                     fullWidth
-                                    options={cityOptions}
-                                    value={field.value || null}
-                                    onChange={(_, v) => field.onChange(v || '')}
+                                    options={cities}
+                                    getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
+                                    value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
+                                    onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
+                                    isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
                                     disabled={!selectedState}
                                     noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
                                     renderInput={(params) => (
