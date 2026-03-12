@@ -29,6 +29,10 @@ const Staff = sequelize.define(
             type: DataTypes.TEXT('long'),
             allowNull: true
         },
+        slot_duration_minutes: {
+            type: DataTypes.INTEGER,
+            defaultValue: 30
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination,
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -10,6 +10,8 @@ import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { getServices, createService, updateService, deleteService } from '../api/service.api';
+import { getLocations } from '../api/location.api';
+import { getServiceLocations, createServiceLocation, deleteServiceLocation } from '../api/serviceLocation.api';
 import { getBusinesses } from '../api/business.api';
 import { getStaff } from '../api/staff.api';
 import { getStaffServices, createStaffService, deleteStaffService } from '../api/staffService.api';
@@ -27,6 +29,8 @@ const Services = () => {
     const { searchQuery } = useSearch();
     const [servicesList, setServicesList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
+    const [locations, setLocations] = useState([]);
+    const [serviceLocations, setServiceLocations] = useState([]);
     const [staff, setStaff] = useState([]);
     const [staffServices, setStaffServices] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -48,11 +52,13 @@ const Services = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [svcRes, bizRes, staffRes, ssRes] = await Promise.all([
-                getServices(), getBusinesses(), getStaff(), getStaffServices()
+            const [svcRes, bizRes, locRes, slRes, staffRes, ssRes] = await Promise.all([
+                getServices(), getBusinesses(), getLocations(), getServiceLocations(), getStaff(), getStaffServices()
             ]);
             if (svcRes.success) setServicesList(svcRes.data);
             if (bizRes.success) setBusinesses(bizRes.data);
+            if (locRes.success) setLocations(locRes.data);
+            if (slRes.success) setServiceLocations(slRes.data);
             if (staffRes.success) setStaff(staffRes.data);
             if (ssRes.success) setStaffServices(ssRes.data);
         } catch (error) {
@@ -67,29 +73,41 @@ const Services = () => {
     }, []);
 
     const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] },
+        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: [] },
     });
 
     const handleOpen = (svc = null) => {
         setEditId(svc?.id || null);
         if (svc) {
-            const assigned = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
-            reset({ business_id: svc.business_id || '', service_name: svc.service_name || '', duration_minutes: svc.duration_minutes || '', price: svc.price || '', minimum_booking_charge: svc.minimum_booking_charge || '', assignedStaff: assigned });
+            const assignedS = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
+            const assignedL = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
+            reset({
+                business_id: svc.business_id || '',
+                service_name: svc.service_name || '',
+                duration_minutes: svc.duration_minutes || '',
+                price: svc.price || '',
+                minimum_booking_charge: svc.minimum_booking_charge || '',
+                assignedStaff: assignedS,
+                assignedLocations: assignedL
+            });
         } else {
-            reset({ business_id: businesses[0]?.id || '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [] });
+            reset({ business_id: businesses[0]?.id || '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: locations.map(l => l.id) }); // Default to all locations for new service
         }
         setOpen(true);
     };
 
     const onSubmit = async (data) => {
-        const { assignedStaff, ...svcData } = data;
+        const { assignedStaff, assignedLocations, ...svcData } = data;
         try {
             let targetId;
             if (editId) {
                 targetId = editId;
                 const response = await updateService(editId, svcData);
                 if (response.success) {
-                    await updateStaffAssignments(targetId, assignedStaff);
+                    await Promise.all([
+                        updateStaffAssignments(targetId, assignedStaff),
+                        updateLocationAssignments(targetId, assignedLocations)
+                    ]);
                     toast.success('Service updated successfully');
                     fetchData();
                 }
@@ -97,7 +115,10 @@ const Services = () => {
                 const response = await createService(svcData);
                 if (response.success) {
                     targetId = response.data.id;
-                    await updateStaffAssignments(targetId, assignedStaff);
+                    await Promise.all([
+                        updateStaffAssignments(targetId, assignedStaff),
+                        updateLocationAssignments(targetId, assignedLocations)
+                    ]);
                     toast.success('Service created successfully');
                     fetchData();
                 }
@@ -111,15 +132,22 @@ const Services = () => {
     const updateStaffAssignments = async (serviceId, assignedStaffIds) => {
         const currentAssigned = staffServices.filter(ss => ss.service_id === serviceId);
         const currentIds = currentAssigned.map(ss => ss.staff_id);
-
-        // To remove
         const toRemove = currentAssigned.filter(ss => !assignedStaffIds.includes(ss.staff_id));
-        // To add
         const toAdd = assignedStaffIds.filter(id => !currentIds.includes(id));
-
         await Promise.all([
             ...toRemove.map(ss => deleteStaffService(ss.id)),
             ...toAdd.map(staffId => createStaffService({ staff_id: staffId, service_id: serviceId }))
+        ]);
+    };
+
+    const updateLocationAssignments = async (serviceId, assignedLocationIds) => {
+        const currentAssigned = serviceLocations.filter(sl => sl.service_id === serviceId);
+        const currentIds = currentAssigned.map(sl => sl.location_id);
+        const toRemove = currentAssigned.filter(sl => !assignedLocationIds.includes(sl.location_id));
+        const toAdd = assignedLocationIds.filter(id => !currentIds.includes(id));
+        await Promise.all([
+            ...toRemove.map(sl => deleteServiceLocation(sl.id)),
+            ...toAdd.map(locId => createServiceLocation({ service_id: serviceId, location_id: locId }))
         ]);
     };
 
@@ -153,6 +181,7 @@ const Services = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Duration (min)</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Min. Charge</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Locations</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Assigned Staff</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
@@ -176,6 +205,8 @@ const Services = () => {
                         {filteredServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((svc, index) => {
                             const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
+                            const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
+                            const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
                             return (
                                 <TableRow key={svc.id} hover>
                                     <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
@@ -183,6 +214,14 @@ const Services = () => {
                                     <TableCell>{svc.duration_minutes} min</TableCell>
                                     <TableCell>₹{svc.price}</TableCell>
                                     <TableCell>₹{svc.minimum_booking_charge}</TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {locNames.length > 0 ? (
+                                                locNames.length === locations.length ? <Chip label="All Locations" size="small" color="success" variant="outlined" /> :
+                                                    locNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" />)
+                                            ) : <Typography variant="caption" color="text.disabled">None</Typography>}
+                                        </Box>
+                                    </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                             {assignedNames.length > 0 ? assignedNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" />) : <Typography variant="caption" color="text.disabled">None</Typography>}
@@ -226,6 +265,47 @@ const Services = () => {
                         )} />
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
+                <FieldSection label="Availability Locations">
+                    <Controller name="assignedLocations" control={control}
+                        render={({ field }) => {
+                            const selectedIds = field.value || [];
+                            const isAllSelected = selectedIds.length > 0 && selectedIds.length === locations.length;
+                            return (
+                                <Box>
+                                    <Autocomplete
+                                        multiple
+                                        options={locations}
+                                        getOptionLabel={(o) => o.location_name}
+                                        isOptionEqualToValue={(o, v) => o.id === v.id}
+                                        value={locations.filter(l => selectedIds.includes(l.id))}
+                                        onChange={(_, newVal) => field.onChange(newVal.map(l => l.id))}
+                                        filterSelectedOptions
+                                        renderTags={(value, getTagProps) =>
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({ index });
+                                                return (
+                                                    <Chip key={key} label={option.location_name} size="small" color="secondary" variant="outlined" {...tagProps} />
+                                                );
+                                            })
+                                        }
+                                        renderInput={(params) => (
+                                            <TextField
+                                                {...params}
+                                                label="Select Locations *"
+                                                placeholder={selectedIds.length === 0 ? 'Search and select locations...' : ''}
+                                            />
+                                        )}
+                                    />
+                                    <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
+                                        <Button size="small" variant="text" onClick={() => field.onChange(locations.map(l => l.id))} disabled={isAllSelected}>Select All</Button>
+                                        <Button size="small" variant="text" color="error" onClick={() => field.onChange([])} disabled={selectedIds.length === 0}>Clear All</Button>
+                                    </Box>
+                                </Box>
+                            );
+                        }} />
+                </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+
                 <FieldSection label="Service Details">
                     <Controller name="service_name" control={control} rules={{ required: 'Service name is required' }}
                         render={({ field }) => (
@@ -267,7 +347,6 @@ const Services = () => {
                         render={({ field }) => {
                             const selectedIds = field.value || [];
                             const selectedStaff = staff.filter(s => selectedIds.includes(s.id));
-                            // Only show staff NOT yet selected
                             const availableOptions = staff.filter(s => !selectedIds.includes(s.id));
                             return (
                                 <Autocomplete
@@ -279,28 +358,20 @@ const Services = () => {
                                     onChange={(_, newVal) => field.onChange(newVal.map(s => s.id))}
                                     filterSelectedOptions
                                     renderTags={(value, getTagProps) =>
-                                        value.map((option, index) => (
-                                            <Chip
-                                                key={option.id}
-                                                label={option.staff_name}
-                                                size="small"
-                                                color="primary"
-                                                variant="outlined"
-                                                {...getTagProps({ index })}
-                                            />
-                                        ))
+                                        value.map((option, index) => {
+                                            const { key, ...tagProps } = getTagProps({ index });
+                                            return (
+                                                <Chip key={key} label={option.staff_name} size="small" color="primary" variant="outlined" {...tagProps} />
+                                            );
+                                        })
                                     }
-                                    renderInput={(params) => (
-                                        <TextField
-                                            {...params}
-                                            label="Assign Staff"
-                                            placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''}
-                                        />
-                                    )}
+                                    renderInput={(params) => <TextField {...params} label="Assign Staff" placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''} />}
                                 />
                             );
                         }} />
                 </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+
             </FormDrawer>
         </PageTransition>
     );

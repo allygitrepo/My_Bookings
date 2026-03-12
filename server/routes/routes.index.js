@@ -9,6 +9,7 @@ const customerRoutes = require("./customer.routes");
 const bookingRoutes = require("./booking.routes");
 const paymentRoutes = require("./payment.routes");
 const apiKeyRoutes = require("./apiKey.routes");
+const serviceLocationRoutes = require("./serviceLocation.routes");
 
 const routes = (app) => {
     const prefix = "/mybookings";
@@ -24,6 +25,7 @@ const routes = (app) => {
     app.use(`${prefix}/bookings`, bookingRoutes);
     app.use(`${prefix}/payments`, paymentRoutes);
     app.use(`${prefix}/api-keys`, apiKeyRoutes);
+    app.use(`${prefix}/service-locations`, serviceLocationRoutes);
 };
 
 module.exports = routes;

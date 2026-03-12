@@ -11,6 +11,7 @@ import {
 } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getServices } from '../api/service.api';
+import { getServiceLocations } from '../api/serviceLocation.api';
 import { getApiKeys } from '../api/apiKey.api';
 import { getStaff } from '../api/staff.api';
 import { getStaffServices } from '../api/staffService.api';
@@ -89,6 +90,7 @@ const BookingWidget = ({ businessId }) => {
     const [staff, setStaff] = useState([]);
     const [staffServices, setStaffServices] = useState([]);
     const [availability, setAvailability] = useState([]);
+    const [serviceLocations, setServiceLocations] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [customers, setCustomers] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -99,8 +101,7 @@ const BookingWidget = ({ businessId }) => {
     const [activeStep, setActiveStep] = useState(0);
     const [bookingData, setBookingData] = useState({
         location: null,
-        service: null, // Reverted to single service
-        services: [], // Keep for backward compat or refactor fully
+        services: [], // Multi-selection enabled
         staff: null,
         date: '',
         slot: '',
@@ -121,8 +122,8 @@ const BookingWidget = ({ businessId }) => {
 
         setLoading(true);
         try {
-            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes, locRes] = await Promise.all([
-                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses(), getLocations()
+            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes, locRes, slRes] = await Promise.all([
+                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses(), getLocations(), getServiceLocations()
             ]);
 
             let bizId = businessId;
@@ -170,6 +171,7 @@ const BookingWidget = ({ businessId }) => {
                     : locRes.data;
                 setLocations(bizLocs);
             }
+            if (slRes.success) setServiceLocations(slRes.data);
         } catch (error) {
             console.error('Widget Fetch Error:', error);
         } finally {
@@ -200,17 +202,19 @@ const BookingWidget = ({ businessId }) => {
         });
     };
 
-    // Staff who can perform the selected service and belong to the selected location
-    const availableStaff = (bookingData.service && bookingData.location)
+    // Staff who can perform ALL selected services and belong to the selected location
+    const availableStaff = (bookingData.services.length > 0 && bookingData.location)
         ? staff.filter(s => {
             const isAtLocation = s.locations?.some(l => String(l.id) === String(bookingData.location.id));
-            const canPerform = staffServices.some(ss => ss.staff_id === s.id && ss.service_id === bookingData.service.id);
-            return isAtLocation && canPerform;
+            const canPerformAll = bookingData.services.every(svc =>
+                staffServices.some(ss => ss.staff_id === s.id && ss.service_id === svc.id)
+            );
+            return isAtLocation && canPerformAll;
         })
         : [];
 
-    // Total duration for selected service
-    const totalDuration = Number(bookingData.service?.duration_minutes) || 0;
+    // Total duration for all selected services
+    const totalDuration = bookingData.services.reduce((acc, s) => acc + (Number(s.duration_minutes) || 0), 0);
     // Time slots use staff's slot_duration_minutes as the "step" for availability
     const slotStepMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
 
@@ -384,7 +388,7 @@ const BookingWidget = ({ businessId }) => {
                     </Box>
                 );
 
-            case 1: // Service Selection (Reverted to Single)
+            case 1: // Service Selection (Multi-selection enabled)
                 return (
                     <Box>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
@@ -392,16 +396,21 @@ const BookingWidget = ({ businessId }) => {
                                 sx={{ bgcolor: 'rgba(99,102,241,0.08)', '&:hover': { bgcolor: 'rgba(99,102,241,0.15)' } }}>
                                 <BackIcon fontSize="small" sx={{ color: '#6366f1' }} />
                             </IconButton>
-                            <Typography variant="caption" color="text.secondary">Select a service at <strong>{bookingData.location?.location_name}</strong></Typography>
+                            <Typography variant="caption" color="text.secondary">Select one or more services at <strong>{bookingData.location?.location_name}</strong></Typography>
                         </Box>
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-                            {services.map(service => {
-                                const isSelected = bookingData.service?.id === service.id;
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, mb: 3 }}>
+                            {services.filter(svc => {
+                                // Only show services assigned to THIS location
+                                return serviceLocations.some(sl => sl.service_id === svc.id && String(sl.location_id) === String(bookingData.location.id));
+                            }).map(service => {
+                                const isSelected = bookingData.services.some(s => s.id === service.id);
                                 return (
                                     <Box key={service.id}
                                         onClick={() => {
-                                            setBookingData({ ...bookingData, service: service, services: [service], staff: null, slot: '' });
-                                            handleNext();
+                                            const newServices = isSelected
+                                                ? bookingData.services.filter(s => s.id !== service.id)
+                                                : [...bookingData.services, service];
+                                            setBookingData({ ...bookingData, services: newServices, staff: null, slot: '' });
                                         }}
                                         sx={{
                                             p: 2, borderRadius: 3, cursor: 'pointer',
@@ -417,7 +426,15 @@ const BookingWidget = ({ businessId }) => {
                                     >
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
-                                            {isSelected && <SuccessIcon sx={{ fontSize: 20, color: '#6366f1' }} />}
+                                            <Box sx={{
+                                                width: 20, height: 20, borderRadius: '4px',
+                                                border: '2px solid', borderColor: isSelected ? '#6366f1' : '#cbd5e1',
+                                                bgcolor: isSelected ? '#6366f1' : 'transparent',
+                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                transition: 'all 0.2s'
+                                            }}>
+                                                {isSelected && <SuccessIcon sx={{ fontSize: 14, color: 'white' }} />}
+                                            </Box>
                                         </Box>
                                         <Box sx={{ display: 'flex', gap: 2, mt: 0.8 }}>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -432,6 +449,21 @@ const BookingWidget = ({ businessId }) => {
                                 );
                             })}
                         </Box>
+                        <Button
+                            fullWidth
+                            variant="contained"
+                            disabled={bookingData.services.length === 0}
+                            onClick={handleNext}
+                            sx={{
+                                borderRadius: 2.5, fontWeight: 700, py: 1.3,
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
+                                '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
+                                '&:disabled': { background: '#f1f5f9', color: '#94a3b8', boxShadow: 'none' }
+                            }}
+                        >
+                            Continue ({bookingData.services.length} {bookingData.services.length === 1 ? 'service' : 'services'})
+                        </Button>
                     </Box>
                 );
 

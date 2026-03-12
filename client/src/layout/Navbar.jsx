@@ -131,9 +131,7 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                 </Box>
 
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, ml: 2 }}>
-                    <IconButton color="inherit">
-                        <Badge badgeContent={0} color="error"><NotificationsIcon /></Badge>
-                    </IconButton>
+
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={handleMenu}>
                         <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: '0.85rem', fontWeight: 700 }}>
