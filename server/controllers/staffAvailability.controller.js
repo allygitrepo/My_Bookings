@@ -10,19 +10,22 @@ const getBusinessId = (req) => {
 const staffAvailabilityController = {
     create: async (req, res) => {
         try {
-            const { staff_id, day_of_week, start_time, end_time, location_id } = req.body;
+            const { staff_id, day_of_week, start_time, end_time } = req.body;
             
-            // Overlap check: Find any slot on the same day for this staff where (newStart < existingEnd AND newEnd > existingStart)
-            const clash = await StaffAvailability.findOne({
-                where: {
-                    staff_id,
-                    day_of_week,
-                    status: true,
-                    [Op.and]: [
-                        { start_time: { [Op.lt]: end_time } },
-                        { end_time: { [Op.gt]: start_time } }
-                    ]
-                }
+            const existing = await StaffAvailability.findAll({
+                where: { staff_id, day_of_week, status: true }
+            });
+
+            const newSlot = { start_time, end_time };
+            const clash = existing.find(ex => {
+                const s1 = { start_time: newSlot.start_time, end_time: newSlot.end_time };
+                const s2 = { start_time: ex.start_time, end_time: ex.end_time };
+                
+                const getI = (s) => (s.start_time < s.end_time ? [[s.start_time, s.end_time]] : [[s.start_time, '23:59:59'], ['00:00:00', s.end_time]]);
+                const i1 = getI(s1);
+                const i2 = getI(s2);
+
+                return i1.some(([s1s, s1e]) => i2.some(([s2s, s2e]) => s1s < s2e && s1e > s2s));
             });
 
             if (clash) {
@@ -34,6 +37,33 @@ const staffAvailabilityController = {
 
             const row = await StaffAvailability.create(req.body);
             res.status(201).json({ success: true, message: "StaffAvailability created successfully", data: row });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+    bulkCreate: async (req, res) => {
+        try {
+            const records = req.body; // Array of availability records
+            if (!Array.isArray(records) || records.length === 0) {
+                return res.status(400).json({ success: false, message: "Invalid records provided" });
+            }
+
+            // Simple validation: check for internal overlaps in the batch
+            for (let i = 0; i < records.length; i++) {
+                for (let j = i + 1; j < records.length; j++) {
+                    const r1 = records[i];
+                    const r2 = records[j];
+                    if (r1.day_of_week === r2.day_of_week) {
+                        const getI = (s) => (s.start_time < s.end_time ? [[s.start_time, s.end_time]] : [[s.start_time, '23:59:59'], ['00:00:00', s.end_time]]);
+                        if (getI(r1).some(([s1s, s1e]) => getI(r2).some(([s2s, s2e]) => s1s < s2e && s1e > s2s))) {
+                            return res.status(400).json({ success: false, message: "Internal clash detected in the provided schedule" });
+                        }
+                    }
+                }
+            }
+
+            const rows = await StaffAvailability.bulkCreate(records);
+            res.status(201).json({ success: true, message: "StaffAvailabilities created successfully", data: rows });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -96,20 +126,27 @@ const staffAvailabilityController = {
             const row = await StaffAvailability.findByPk(req.params.id);
             if (!row) return res.status(404).json({ success: false, message: "StaffAvailability not found" });
             
-            const { staff_id, day_of_week, start_time, end_time } = { ...row.toJSON(), ...req.body };
+            const updatedData = { ...row.toJSON(), ...req.body };
+            const { staff_id, day_of_week, start_time, end_time } = updatedData;
             
-            // Overlap check (excluding current record)
-            const clash = await StaffAvailability.findOne({
-                where: {
-                    id: { [Op.ne]: req.params.id },
-                    staff_id,
-                    day_of_week,
+            const existing = await StaffAvailability.findAll({
+                where: { 
+                    staff_id, 
+                    day_of_week, 
                     status: true,
-                    [Op.and]: [
-                        { start_time: { [Op.lt]: end_time } },
-                        { end_time: { [Op.gt]: start_time } }
-                    ]
+                    id: { [Op.ne]: req.params.id }
                 }
+            });
+
+            const clash = existing.find(ex => {
+                const s1 = { start_time, end_time };
+                const s2 = { start_time: ex.start_time, end_time: ex.end_time };
+                
+                const getI = (s) => (s.start_time < s.end_time ? [[s.start_time, s.end_time]] : [[s.start_time, '23:59:59'], ['00:00:00', s.end_time]]);
+                const i1 = getI(s1);
+                const i2 = getI(s2);
+
+                return i1.some(([s1s, s1e]) => i2.some(([s2s, s2e]) => s1s < s2e && s1e > s2s));
             });
 
             if (clash) {
@@ -131,6 +168,15 @@ const staffAvailabilityController = {
             if (!row) return res.status(404).json({ success: false, message: "StaffAvailability not found" });
             await row.update({ status: false });
             res.json({ success: true, message: "StaffAvailability deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+    deleteByStaff: async (req, res) => {
+        try {
+            const { staff_id } = req.params;
+            await StaffAvailability.update({ status: false }, { where: { staff_id } });
+            res.json({ success: true, message: "StaffAvailabilities deleted successfully" });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

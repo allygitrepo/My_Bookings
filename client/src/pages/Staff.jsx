@@ -9,7 +9,7 @@ import {
 import { MobileTimePicker } from '@mui/x-date-pickers';
 import {
     Edit as EditIcon, Delete as DeleteIcon, People as PeopleIcon,
-    Add as AddIcon, Remove as RemoveIcon,
+    Add as AddIcon, Remove as RemoveIcon, Warning as WarningIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
@@ -18,7 +18,7 @@ import PageTransition from '../components/PageTransition';
 import { getStaff, createStaff, updateStaff, deleteStaff } from '../api/staff.api';
 import { getBusinesses } from '../api/business.api';
 import { getLocations } from '../api/location.api';
-import { getStaffAvailability, createStaffAvailability, updateStaffAvailability, deleteStaffAvailability } from '../api/staffAvailability.api';
+import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabilityByStaff } from '../api/staffAvailability.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
@@ -208,20 +208,21 @@ const Staff = () => {
     };
 
     const updateSlot = (day, idx, field, value) => {
+        let updatedSlot;
         setSchedule(prev => {
-            const updatedDaySlots = prev[day].map((slot, i) => i === idx ? { ...slot, [field]: value } : slot);
+            const updatedDaySlots = prev[day].map((slot, i) => {
+                if (i === idx) {
+                    updatedSlot = { ...slot, [field]: value };
+                    return updatedSlot;
+                }
+                return slot;
+            });
             return { ...prev, [day]: updatedDaySlots };
         });
 
-        // Validate end_time > start_time
+        // Removed "End time must be after start time" validation to allow overnight shifts
         setSlotErrors(prev => {
             const key = `${day}-${idx}`;
-            const slot = schedule[day]?.[idx] || {};
-            const start = field === 'start_time' ? value : slot.start_time;
-            const end = field === 'end_time' ? value : slot.end_time;
-            if (start && end && end <= start) {
-                return { ...prev, [key]: 'End time must be after start time' };
-            }
             const next = { ...prev };
             delete next[key];
             return next;
@@ -240,18 +241,61 @@ const Staff = () => {
         toast.success(`Copied ${sourceDay}'s schedule to all 7 days`);
     };
 
+    const checkOverlap = (s1, s2) => {
+        if (!s1.start_time || !s1.end_time || !s2.start_time || !s2.end_time) return false;
+        
+        const getIntervals = (s) => {
+            if (s.start_time < s.end_time) return [[s.start_time, s.end_time]];
+            // Wrap-around shift: e.g., 21:00 to 05:00
+            return [[s.start_time, '23:59'], ['00:00', s.end_time]];
+        };
+
+        const i1 = getIntervals(s1);
+        const i2 = getIntervals(s2);
+
+        return i1.some(([s1s, s1e]) => 
+            i2.some(([s2s, s2e]) => s1s < s2e && s1e > s2s)
+        );
+    };
+
     const onSubmit = async (data) => {
+        // Final check for any clashes before submitting
+        const clashingDays = [];
+        
+        DAYS.forEach(day => {
+            const daySlots = schedule[day] || [];
+            const hasClash = daySlots.some((slot, i) => daySlots.some((other, j) => i !== j && checkOverlap(slot, other)));
+            if (hasClash) clashingDays.push(day);
+        });
+
+        if (clashingDays.length > 0) {
+            toast.error(`Schedule conflict detected on: ${clashingDays.join(', ')}. Please adjust overlapping shifts.`);
+            return;
+        }
+
+        if (!selectedLocationIds.length) {
+            toast.error('Please select at least one location for this staff member');
+            return;
+        }
+
+        // Check if all slots have a location assigned
+        let missingLocation = false;
+        DAYS.forEach(day => {
+            if (schedule[day]?.some(slot => !slot.location_id)) missingLocation = true;
+        });
+        if (missingLocation) {
+            toast.error('Please assign a location for all time slots');
+            return;
+        }
+
         try {
             let staffId;
             if (editId) {
                 staffId = editId;
                 const response = await updateStaff(editId, data);
                 if (response.success) {
-                    // Update availability
-                    // The backend might handle this differently, but following the original logic's pattern:
-                    // Remove old records and add new ones (though a real API might have a bulk sync endpoint)
-                    const existingAvails = availability.filter(a => a.staff_id === editId);
-                    await Promise.all(existingAvails.map(a => deleteStaffAvailability(a.id)));
+                    // Update availability using bulk methods
+                    await deleteStaffAvailabilityByStaff(editId);
                     await createNewAvailabilityRecords(staffId);
                     toast.success('Staff member updated successfully');
                     fetchData();
@@ -286,7 +330,9 @@ const Staff = () => {
                 }
             });
         });
-        await Promise.all(records.map(r => createStaffAvailability(r)));
+        if (records.length > 0) {
+            await bulkCreateStaffAvailability(records);
+        }
     };
 
     const handleDelete = async (id) => {
@@ -579,19 +625,18 @@ const Staff = () => {
                     <Typography variant="caption" color="text.secondary" mb={2} display="block">
                         Assign shifts to specific locations. Ensure timings do not overlap.
                     </Typography>
-
                     {DAYS.map(day => {
                         const daySlots = schedule[day] || [];
                         const hasClash = daySlots.some((slot, i) => 
-                            daySlots.some((other, j) => i !== j && slot.start_time < other.end_time && slot.end_time > other.start_time)
+                            daySlots.some((other, j) => i !== j && checkOverlap(slot, other))
                         );
 
                         return (
                             <Box key={day} sx={{ 
                                 mb: 2, p: 1.5, borderRadius: 2, 
                                 border: '1px solid', 
-                                borderColor: !!schedule[day] ? 'primary.light' : 'divider',
-                                bgcolor: !!schedule[day] ? 'primary.50' : 'transparent',
+                                borderColor: hasClash ? 'error.light' : (!!schedule[day] ? 'primary.light' : 'divider'),
+                                bgcolor: hasClash ? 'error.50' : (!!schedule[day] ? 'primary.50' : 'transparent'),
                                 transition: 'all 0.2s'
                             }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: !!schedule[day] ? 1.5 : 0 }}>
@@ -603,11 +648,16 @@ const Staff = () => {
                                                 size="small"
                                             />
                                         }
-                                        label={<Typography variant="body2" fontWeight={700}>{day}</Typography>}
+                                        label={<Typography variant="body2" fontWeight={700} color={hasClash ? "error" : "inherit"}>{day}</Typography>}
                                         sx={{ mr: 0 }}
                                     />
+                                    {hasClash && (
+                                        <Typography variant="caption" color="error" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <WarningIcon fontSize="inherit" /> Conflict
+                                        </Typography>
+                                    )}
                                     {schedule[day] && (
-                                        <Button size="small" variant="text" onClick={() => copyToAll(day)} sx={{ fontSize: '0.65rem', fontWeight: 700 }}>
+                                        <Button size="small" variant="text" onClick={() => copyToAll(day)} sx={{ fontSize: '0.65rem', fontWeight: 700, ml: 'auto' }}>
                                             Apply to all days
                                         </Button>
                                     )}
@@ -616,12 +666,15 @@ const Staff = () => {
                                 {schedule[day] && (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                         {daySlots.map((slot, idx) => {
-                                            const isClashing = daySlots.some((other, j) => idx !== j && slot.start_time < other.end_time && slot.end_time > other.start_time);
+                                            const errKey = `${day}-${idx}`;
+                                            const slotErr = slotErrors[errKey];
+                                            const isClashing = daySlots.some((other, j) => idx !== j && checkOverlap(slot, other));
+                                            
                                             return (
                                                 <Box key={idx} sx={{ 
                                                     display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, 
                                                     borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
-                                                    borderColor: isClashing ? 'error.light' : 'divider',
+                                                    borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                                                     flexWrap: { xs: 'wrap', sm: 'nowrap' }
                                                 }}>
@@ -631,28 +684,31 @@ const Staff = () => {
                                                             value={slot.location_id}
                                                             label="Location"
                                                             onChange={(e) => updateSlot(day, idx, 'location_id', e.target.value)}
+                                                            error={!slot.location_id}
                                                         >
                                                             {locations.filter(l => selectedLocationIds.includes(l.id)).map(l => (
                                                                 <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>
                                                             ))}
-                                                            {selectedLocationIds.length === 0 && <MenuItem disabled>Select locations above</MenuItem>}
                                                         </Select>
                                                     </FormControl>
 
-                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                        <MobileTimePicker
-                                                            label="From"
-                                                            value={dayjs(slot.start_time, 'HH:mm')}
-                                                            onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
-                                                            slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-                                                        />
-                                                        <Typography variant="body2" color="text.secondary">to</Typography>
-                                                        <MobileTimePicker
-                                                            label="To"
-                                                            value={dayjs(slot.end_time, 'HH:mm')}
-                                                            onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
-                                                            slotProps={{ textField: { size: 'small', sx: { width: 140 } } }}
-                                                        />
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                            <MobileTimePicker
+                                                                label="From"
+                                                                value={dayjs(slot.start_time, 'HH:mm')}
+                                                                onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
+                                                                slotProps={{ textField: { size: 'small', sx: { width: 140 }, error: !!slotErr || isClashing } }}
+                                                            />
+                                                            <Typography variant="body2" color="text.secondary">to</Typography>
+                                                            <MobileTimePicker
+                                                                label="To"
+                                                                value={dayjs(slot.end_time, 'HH:mm')}
+                                                                onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
+                                                                slotProps={{ textField: { size: 'small', sx: { width: 140 }, error: !!slotErr || isClashing } }}
+                                                            />
+                                                        </Box>
+                                                        {slotErr && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>{slotErr}</Typography>}
                                                     </Box>
 
                                                     <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)}>
@@ -669,11 +725,6 @@ const Staff = () => {
                                         >
                                             Add Shift
                                         </Button>
-                                        {hasClash && (
-                                            <Typography variant="caption" color="error" sx={{ fontWeight: 600, mt: -0.5 }}>
-                                                ⚠️ Overlapping shifts detected on {day}!
-                                            </Typography>
-                                        )}
                                     </Box>
                                 )}
                             </Box>
