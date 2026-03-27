@@ -27,6 +27,10 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 
+import { GoogleOAuthProvider } from '@react-oauth/google';
+
+const GOOGLE_CLIENT_ID = "518219129243-ffkdl9t99oqrofkfm5l4o3nvnvmolvd4.apps.googleusercontent.com";
+
 function App() {
   // Auto-refresh JWT when user is logged in but business_id is missing.
   // This handles users who logged in before tenant isolation was implemented.
@@ -55,41 +59,43 @@ function App() {
   }, []);
 
   return (
-    <ThemeProvider theme={theme}>
-      <CssBaseline />
-      <LocalizationProvider dateAdapter={AdapterDayjs}>
-        <SearchProvider>
-          <Router>
-            <Toaster position="top-right" />
-            <Routes>
-              {/* Public Routes */}
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/register" element={<Register />} />
+    <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
+      <ThemeProvider theme={theme}>
+        <CssBaseline />
+        <LocalizationProvider dateAdapter={AdapterDayjs}>
+          <SearchProvider>
+            <Router>
+              <Toaster position="top-right" />
+              <Routes>
+                {/* Public Routes */}
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<Login />} />
+                <Route path="/register" element={<Register />} />
 
-              {/* Protected Dashboard Routes */}
-              <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/businesses" element={<Businesses />} />
-                <Route path="/locations" element={<Locations />} />
-                <Route path="/staff" element={<Staff />} />
-                <Route path="/services" element={<Services />} />
-                <Route path="/staff-services" element={<StaffServices />} />
-                <Route path="/availability" element={<Availability />} />
-                <Route path="/customers" element={<Customers />} />
-                <Route path="/bookings" element={<Bookings />} />
-                <Route path="/payments" element={<Payments />} />
-                <Route path="/api-keys" element={<ApiKeys />} />
-                <Route path="/widget-script" element={<WidgetScript />} />
-                <Route path="/profile" element={<Profile />} />
-              </Route>
+                {/* Protected Dashboard Routes */}
+                <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/businesses" element={<Businesses />} />
+                  <Route path="/locations" element={<Locations />} />
+                  <Route path="/staff" element={<Staff />} />
+                  <Route path="/services" element={<Services />} />
+                  <Route path="/staff-services" element={<StaffServices />} />
+                  <Route path="/availability" element={<Availability />} />
+                  <Route path="/customers" element={<Customers />} />
+                  <Route path="/bookings" element={<Bookings />} />
+                  <Route path="/payments" element={<Payments />} />
+                  <Route path="/api-keys" element={<ApiKeys />} />
+                  <Route path="/widget-script" element={<WidgetScript />} />
+                  <Route path="/profile" element={<Profile />} />
+                </Route>
 
-              <Route path="*" element={<Navigate to="/login" replace />} />
-            </Routes>
-          </Router>
-        </SearchProvider>
-      </LocalizationProvider>
-    </ThemeProvider>
+                <Route path="*" element={<Navigate to="/login" replace />} />
+              </Routes>
+            </Router>
+          </SearchProvider>
+        </LocalizationProvider>
+      </ThemeProvider>
+    </GoogleOAuthProvider>
   );
 }
 

@@ -8,7 +8,10 @@ import {
     Event as BookIcon, Close as CloseIcon, ArrowBack as BackIcon,
     CheckCircle as SuccessIcon, AccessTime as TimeIcon,
     AttachMoney as PriceIcon,
+    Google as GoogleIcon,
 } from '@mui/icons-material';
+import { useGoogleLogin } from '@react-oauth/google';
+import { createCalendarEvent, formatBookingToEvent } from '../services/googleCalendar.service';
 import { motion, AnimatePresence } from 'framer-motion';
 import { getServices } from '../api/service.api';
 import { getServiceLocations } from '../api/serviceLocation.api';
@@ -338,6 +341,68 @@ const BookingWidget = ({ businessId }) => {
             toast.error(error.message || 'Booking failed');
         } finally {
             setLoading(false);
+        }
+    };
+
+    // Google Calendar Sync Logic for Widget
+    const [googleToken, setGoogleToken] = useState(null);
+    const [isSyncing, setIsSyncing] = useState(false);
+    const [isSynced, setIsSynced] = useState(false);
+
+    const googleLogin = useGoogleLogin({
+        onSuccess: tokenResponse => {
+            setGoogleToken(tokenResponse.access_token);
+            performWidgetSync(tokenResponse.access_token);
+        },
+        onError: error => toast.error('Google login failed'),
+        scope: 'https://www.googleapis.com/auth/calendar.events',
+    });
+
+    const performWidgetSync = async (token) => {
+        setIsSyncing(true);
+        try {
+            const primaryService = bookingData.services[0];
+            const staffMember = bookingData.staff;
+            const location = bookingData.location;
+            const customer = bookingData.customer;
+
+            // Reconstruct a booking-like object for the formatter
+            const bookingProxy = {
+                booking_date: bookingData.date,
+                start_time: bookingData.slot,
+                end_time: addMinutes(bookingData.slot, totalDuration),
+                id: 'New Booking'
+            };
+
+            const eventData = formatBookingToEvent(bookingProxy, { 
+                customer, 
+                service: primaryService, 
+                staff: staffMember, 
+                location 
+            });
+
+            await createCalendarEvent(token, eventData);
+            setIsSynced(true);
+            
+            // Also mark in global synced list if possible
+            try {
+                const globalSyncs = JSON.parse(localStorage.getItem('syncedBookingIds') || '[]');
+                localStorage.setItem('syncedBookingIds', JSON.stringify([...new Set([...globalSyncs, 'widget_last_sync'])]));
+            } catch (_) {}
+
+            toast.success('Added to Google Calendar!');
+        } catch (error) {
+            toast.error(error.message || 'Failed to sync to Google Calendar');
+        } finally {
+            setIsSyncing(false);
+        }
+    };
+
+    const handleGoogleSync = () => {
+        if (googleToken) {
+            performWidgetSync(googleToken);
+        } else {
+            googleLogin();
         }
     };
 
@@ -874,9 +939,33 @@ const BookingWidget = ({ businessId }) => {
                             <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, totalDuration)}</Typography>
                             <Typography variant="caption" color="success.main">{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
                         </Box>
-                        <Button variant="outlined" onClick={resetBooking} sx={{ borderRadius: 2 }}>
-                            Close
-                        </Button>
+                        <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
+                            {!isSynced ? (
+                                <Button 
+                                    variant="contained" 
+                                    color="primary" 
+                                    onClick={handleGoogleSync}
+                                    disabled={isSyncing}
+                                    startIcon={<GoogleIcon />}
+                                    sx={{ 
+                                        borderRadius: 2, 
+                                        textTransform: 'none',
+                                        fontWeight: 700,
+                                        bgcolor: '#4285F4',
+                                        '&:hover': { bgcolor: '#357ae8' }
+                                    }}
+                                >
+                                    {isSyncing ? 'Syncing...' : 'Add to Google Calendar'}
+                                </Button>
+                            ) : (
+                                <Typography variant="body2" color="success.main" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                    <SuccessIcon fontSize="small" /> Added to Calendar
+                                </Typography>
+                            )}
+                            <Button variant="outlined" onClick={resetBooking} sx={{ borderRadius: 2, textTransform: 'none' }}>
+                                Close
+                            </Button>
+                        </Box>
                     </Box>
                 );
             default:

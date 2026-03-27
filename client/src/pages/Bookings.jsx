@@ -8,8 +8,11 @@ import {
     ViewList as ViewListIcon,
     CalendarViewMonth as CalendarViewIcon,
     ChevronLeft as PrevIcon,
-    ChevronRight as NextIcon
+    ChevronRight as NextIcon,
+    Sync as SyncIcon
 } from '@mui/icons-material';
+import { useGoogleLogin } from '@react-oauth/google';
+import { createCalendarEvent, formatBookingToEvent } from '../services/googleCalendar.service';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBookings } from '../api/booking.api';
@@ -156,6 +159,112 @@ const Bookings = () => {
         return parseInt(localStorage.getItem('rowsPerPage'), 10) || 10;
     });
 
+    // Google Calendar Sync Logic
+    const [googleToken, setGoogleToken] = useState(null);
+    const [pendingSync, setPendingSync] = useState(null); // Booking currently being synced
+    const [syncedIds, setSyncedIds] = useState(() => {
+        try {
+            return JSON.parse(localStorage.getItem('syncedBookingIds') || '[]');
+        } catch (_) { return []; }
+    });
+
+    const markAsSynced = (id) => {
+        setSyncedIds(prev => {
+            const next = [...new Set([...prev, id])];
+            localStorage.setItem('syncedBookingIds', JSON.stringify(next));
+            return next;
+        });
+    };
+
+    const login = useGoogleLogin({
+        onSuccess: tokenResponse => {
+            console.log('Google login success:', tokenResponse);
+            setGoogleToken(tokenResponse.access_token);
+            if (pendingSync === 'all') {
+                const today = dayjs().startOf('day');
+                const upcoming = bookings.filter(b => {
+                    const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
+                    return isUpcoming && (b.status === true || b.status === 1);
+                });
+                syncAllSequence(tokenResponse.access_token, upcoming);
+            } else if (pendingSync) {
+                performSync(tokenResponse.access_token, pendingSync);
+            }
+        },
+        onError: error => console.error('Google login error:', error),
+        scope: 'https://www.googleapis.com/auth/calendar.events',
+    });
+
+    const performSync = async (token, b) => {
+        const customer = customers.find(c => c.id === b.customer_id);
+        const service = services.find(s => s.id === b.service_id);
+        const staffMember = staff.find(s => s.id === b.staff_id);
+        const location = locations.find(l => l.id === b.location_id);
+
+        const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
+
+        try {
+            await createCalendarEvent(token, eventData);
+            markAsSynced(b.id);
+            toast.success('Successfully synced to Google Calendar!');
+        } catch (error) {
+            toast.error(error.message || 'Failed to sync to Google Calendar');
+        } finally {
+            setPendingSync(null);
+        }
+    };
+
+    const handleSync = (b) => {
+        if (googleToken) {
+            performSync(googleToken, b);
+        } else {
+            setPendingSync(b);
+            login();
+        }
+    };
+
+    const handleSyncAll = () => {
+        const today = dayjs().startOf('day');
+        const upcoming = bookings.filter(b => {
+            const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
+            const isConfirmed = (b.status === true || b.status === 1);
+            return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
+        });
+
+        if (upcoming.length === 0) {
+            toast.error('No new upcoming confirmed bookings to sync');
+            return;
+        }
+
+        if (googleToken) {
+            syncAllSequence(googleToken, upcoming);
+        } else {
+            setPendingSync('all'); // Special value to trigger bulk sync after login
+            login();
+        }
+    };
+
+    const syncAllSequence = async (token, items) => {
+        toast.loading(`Syncing ${items.length} bookings...`, { id: 'bulk-sync' });
+        let successCount = 0;
+        for (const b of items) {
+            try {
+                const customer = customers.find(c => c.id === b.customer_id);
+                const service = services.find(s => s.id === b.service_id);
+                const staffMember = staff.find(s => s.id === b.staff_id);
+                const location = locations.find(l => l.id === b.location_id);
+                const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
+                await createCalendarEvent(token, eventData);
+                markAsSynced(b.id);
+                successCount++;
+            } catch (err) {
+                console.error(`Failed to sync booking ${b.id}:`, err);
+            }
+        }
+        toast.dismiss('bulk-sync');
+        toast.success(`Successfully synced ${successCount} out of ${items.length} bookings!`);
+    };
+
     useEffect(() => {
         setPage(0);
     }, [searchQuery]);
@@ -206,28 +315,48 @@ const Bookings = () => {
         );
     });
 
-    return (
-        <PageTransition>
-            <PageHeader
-                title="Bookings"
-                subtitle="All customer appointments. Bookings are created via the widget."
-                extraActions={
-                    <ToggleButtonGroup
-                        value={view}
-                        exclusive
-                        onChange={handleViewChange}
-                        size="small"
-                        sx={{ bgcolor: 'background.paper' }}
-                    >
-                        <ToggleButton value="table">
-                            <ViewListIcon sx={{ mr: 1, fontSize: 18 }} />
-                            Table
-                        </ToggleButton>
-                        <ToggleButton value="calendar">
-                            <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
-                            Calendar
-                        </ToggleButton>
-                    </ToggleButtonGroup>
+        const today = dayjs().startOf('day');
+        const hasUnsyncedUpcoming = bookings.some(b => {
+            const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
+            const isConfirmed = (b.status === true || b.status === 1);
+            return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
+        });
+
+        return (
+            <PageTransition>
+                <PageHeader
+                    title="Bookings"
+                    subtitle="All customer appointments. Bookings are created via the widget."
+                    extraActions={
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                            {hasUnsyncedUpcoming && (
+                                <Button 
+                                    variant="contained" 
+                                    size="small" 
+                                    startIcon={<SyncIcon />}
+                                    onClick={handleSyncAll}
+                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                                >
+                                    Sync All Upcoming
+                                </Button>
+                            )}
+                            <ToggleButtonGroup
+                            value={view}
+                            exclusive
+                            onChange={handleViewChange}
+                            size="small"
+                            sx={{ bgcolor: 'background.paper' }}
+                        >
+                            <ToggleButton value="table">
+                                <ViewListIcon sx={{ mr: 1, fontSize: 18 }} />
+                                Table
+                            </ToggleButton>
+                            <ToggleButton value="calendar">
+                                <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
+                                Calendar
+                            </ToggleButton>
+                        </ToggleButtonGroup>
+                    </Box>
                 }
             />
 
@@ -254,6 +383,7 @@ const Bookings = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Sync</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -317,6 +447,25 @@ const Bookings = () => {
                                             size="small"
                                             color={(b.status === true || b.status === 1) ? 'success' : 'error'}
                                         />
+                                    </TableCell>
+                                    <TableCell>
+                                        {(b.status === true || b.status === 1) && 
+                                         !syncedIds.includes(b.id) && 
+                                         (dayjs(b.booking_date).isAfter(dayjs().subtract(1, 'day'), 'day')) ? (
+                                            <Tooltip title="Sync to Google Calendar">
+                                                <IconButton 
+                                                    size="small" 
+                                                    color="primary" 
+                                                    onClick={() => handleSync(b)}
+                                                >
+                                                    <SyncIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        ) : (
+                                            <Typography variant="caption" color="text.disabled">
+                                                {syncedIds.includes(b.id) ? 'Synced' : '—'}
+                                            </Typography>
+                                        )}
                                     </TableCell>
                                 </TableRow>
                             );
