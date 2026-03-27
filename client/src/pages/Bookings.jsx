@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import axiosInstance from '../api/axiosInstance';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
@@ -11,12 +13,15 @@ import {
     ChevronLeft as PrevIcon,
     ChevronRight as NextIcon,
     Sync as SyncIcon,
-    FilterList as FilterIcon
+    FilterList as FilterIcon,
+    AccessTimeOutlined as ClockIcon,
+    CheckCircleOutline as CheckCircleIcon,
+    SyncDisabledOutlined as SyncDisabledIcon,
 } from '@mui/icons-material';
+import { Switch, FormControlLabel } from '@mui/material';
 import { useGoogleLogin } from '@react-oauth/google';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
-import { createCalendarEvent, formatBookingToEvent } from '../services/googleCalendar.service';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBookings } from '../api/booking.api';
@@ -169,14 +174,36 @@ const Bookings = () => {
     const [autoSync, setAutoSync] = useState(() => localStorage.getItem('autoSyncEnabled') === 'true');
     const [showFilters, setShowFilters] = useState(false);
 
-    // Google Calendar Sync Logic
-    const [googleToken, setGoogleToken] = useState(null);
-    const [pendingSync, setPendingSync] = useState(null); // Booking currently being synced
-    const [syncedIds, setSyncedIds] = useState(() => {
+    const [syncedIds, setSyncedIds] = useState([]); // No longer needed for logic, but keeping state for compatibility if used elsewhere
+    const [isSyncingInProgress, setIsSyncingInProgress] = useState(false);
+    const [isGoogleConnected, setIsGoogleConnected] = useState(false);
+    const [isSyncEnabled, setIsSyncEnabled] = useState(true);
+
+    useEffect(() => {
+        if (businesses.length > 0) {
+            const biz = businesses[0];
+            setIsGoogleConnected(!!biz.google_refresh_token);
+            setIsSyncEnabled(biz.google_sync_enabled !== false);
+        }
+    }, [businesses]);
+
+    const handleToggleSync = async () => {
+        const businessId = businesses[0]?.id;
+        if (!businessId) return;
+
+        const newStatus = !isSyncEnabled;
         try {
-            return JSON.parse(localStorage.getItem('syncedBookingIds') || '[]');
-        } catch (_) { return []; }
-    });
+            // Correct format: /business/update/:id (verified in business.routes.js)
+            await axiosInstance.put(`/business/update/${businessId}`, {
+                google_sync_enabled: newStatus
+            });
+            setIsSyncEnabled(newStatus);
+            toast.success(`Auto-sync ${newStatus ? 'enabled' : 'disabled'}`);
+        } catch (err) {
+            console.error('Toggle Sync Error:', err);
+            toast.error('Failed to update sync status');
+        }
+    };
 
     const markAsSynced = (id) => {
         setSyncedIds(prev => {
@@ -187,119 +214,38 @@ const Bookings = () => {
     };
 
     const login = useGoogleLogin({
-        onSuccess: tokenResponse => {
-            console.log('Google login success:', tokenResponse);
-            setGoogleToken(tokenResponse.access_token);
-            if (pendingSync === 'all') {
-                const today = dayjs().startOf('day');
-                const upcoming = bookings.filter(b => {
-                    const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
-                    return isUpcoming && (b.status === true || b.status === 1);
+        onSuccess: async (codeResponse) => {
+            console.log('Google Auth Code received:', codeResponse);
+            try {
+                const businessId = businesses[0]?.id;
+                if (!businessId) {
+                    toast.error('No business ID found');
+                    return;
+                }
+                await axios.post(`${import.meta.env.VITE_API_BASE_URL}/google/auth-code`, {
+                    businessId,
+                    code: codeResponse.code
                 });
-                syncAllSequence(tokenResponse.access_token, upcoming);
-            } else if (pendingSync) {
-                performSync(tokenResponse.access_token, pendingSync);
+                setIsGoogleConnected(true);
+                toast.success('Google Calendar connected for truly automatic background syncing!');
+            } catch (err) {
+                console.error('Failed to connect Google:', err);
+                toast.error('Failed to connect Google Calendar');
             }
         },
-        onError: error => console.error('Google login error:', error),
+        flow: 'auth-code',
         scope: 'https://www.googleapis.com/auth/calendar.events',
     });
 
-    const performSync = async (token, b) => {
-        const customer = customers.find(c => c.id === b.customer_id);
-        const service = services.find(s => s.id === b.service_id);
-        const staffMember = staff.find(s => s.id === b.staff_id);
-        const location = locations.find(l => l.id === b.location_id);
-
-        const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
-        const business = businesses.find(bz => bz.id === b.business_id);
-        const calendarId = business?.sync_email || 'primary';
-
-        try {
-            await createCalendarEvent(token, eventData, calendarId);
-            markAsSynced(b.id);
-            toast.success('Successfully synced to Google Calendar!');
-        } catch (error) {
-            toast.error(error.message || 'Failed to sync to Google Calendar');
-        } finally {
-            setPendingSync(null);
-        }
-    };
-
-    const handleSync = (b) => {
-        if (googleToken) {
-            performSync(googleToken, b);
-        } else {
-            setPendingSync(b);
-            login();
-        }
-    };
-
-    const handleSyncAll = () => {
-        const today = dayjs().startOf('day');
-        const upcoming = bookings.filter(b => {
-            const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
-            const isConfirmed = (b.status === true || b.status === 1);
-            return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
-        });
-
-        if (upcoming.length === 0) {
-            toast.error('No new upcoming confirmed bookings to sync');
-            return;
-        }
-
-        if (googleToken) {
-            syncAllSequence(googleToken, upcoming);
-        } else {
-            setPendingSync('all'); // Special value to trigger bulk sync after login
-            login();
-        }
-    };
-
-    const syncAllSequence = async (token, items) => {
-        toast.loading(`Syncing ${items.length} bookings...`, { id: 'bulk-sync' });
-        let successCount = 0;
-        for (const b of items) {
-            try {
-                const customer = customers.find(c => c.id === b.customer_id);
-                const service = services.find(s => s.id === b.service_id);
-                const staffMember = staff.find(s => s.id === b.staff_id);
-                const location = locations.find(l => l.id === b.location_id);
-                const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
-                const business = businesses.find(bz => bz.id === b.business_id);
-                const calendarId = business?.sync_email || 'primary';
-
-                await createCalendarEvent(token, eventData, calendarId);
-                markAsSynced(b.id);
-                successCount++;
-            } catch (err) {
-                console.error(`Failed to sync booking ${b.id}:`, err);
-            }
-        }
-        toast.dismiss('bulk-sync');
-        toast.success(`Successfully synced ${successCount} out of ${items.length} bookings!`);
-        if (autoSync) {
-            localStorage.setItem('lastAutoSync', new Date().toISOString());
-        }
-    };
-
     useEffect(() => {
-        if (autoSync && bookings.length > 0 && !loading) {
-            const today = dayjs().startOf('day');
-            const unsynced = bookings.filter(b => {
-                const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
-                const isConfirmed = (b.status === true || b.status === 1);
-                return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
-            });
-            if (unsynced.length > 0 && googleToken) {
-                syncAllSequence(googleToken, unsynced);
-            }
+        if (businesses.length > 0 && businesses[0].google_refresh_token) {
+            setIsGoogleConnected(true);
         }
-    }, [bookings, autoSync, loading]);
+    }, [businesses]);
 
     useEffect(() => {
         setPage(0);
-    }, [searchQuery]);
+    }, [filterStatus, startDate, endDate, searchQuery]);
 
     const handleViewChange = (event, nextView) => {
         if (nextView !== null) {
@@ -330,6 +276,9 @@ const Bookings = () => {
 
     useEffect(() => {
         fetchData();
+        // Automatic Polling every 30 seconds to fetch new bookings from widget
+        const interval = setInterval(fetchData, 30000);
+        return () => clearInterval(interval);
     }, []);
 
     const filteredBookings = [...bookings].reverse().filter(b => {
@@ -375,38 +324,49 @@ const Bookings = () => {
                 subtitle="All customer appointments. Bookings are created via the widget."
                 extraActions={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Button
-                            variant={autoSync ? "contained" : "outlined"}
-                            size="small"
-                            color={autoSync ? "success" : "inherit"}
-                            startIcon={<SyncIcon className={autoSync ? "animate-spin-slow" : ""} />}
-                            onClick={() => {
-                                const next = !autoSync;
-                                setAutoSync(next);
-                                localStorage.setItem('autoSyncEnabled', next);
-                                if (next) toast.success('Auto Sync Enabled');
-                            }}
-                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                        >
-                            {autoSync ? 'Auto Sync ON' : 'Auto Sync OFF'}
-                        </Button>
-                        Filter
-                        <IconButton
-                            color={showFilters ? "primary" : "default"}
-                            onClick={() => setShowFilters(!showFilters)}
-                            sx={{ bgcolor: showFilters ? 'action.selected' : 'background.paper', borderRadius: 2 }}
-                        >
-                            <FilterIcon />
-                        </IconButton>
-                        {hasUnsyncedUpcoming && (
+                        {isGoogleConnected && (
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={isSyncEnabled}
+                                        onChange={handleToggleSync}
+                                        size="small"
+                                        color="primary"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="caption" sx={{ fontWeight: 600, color: isSyncEnabled ? 'primary.main' : 'text.secondary' }}>
+                                        {isSyncEnabled ? 'Auto Sync ON' : 'Auto Sync OFF'}
+                                    </Typography>
+                                }
+                                sx={{ mr: 1 }}
+                            />
+                        )}
+                        {isGoogleConnected ? (
+                            <Tooltip 
+                                title={businesses[0]?.sync_email || 'Account details unavailable. Re-link to verify email.'} 
+                                arrow 
+                                placement="top"
+                            >
+                                <Chip 
+                                    label="Google Calendar Linked" 
+                                    color="success" 
+                                    variant="outlined" 
+                                    icon={<SyncIcon />}
+                                    size="small"
+                                    sx={{ borderRadius: 2, fontWeight: 600, cursor: 'help' }}
+                                />
+                            </Tooltip>
+                        ) : (
                             <Button
                                 variant="contained"
                                 size="small"
+                                color="warning"
                                 startIcon={<SyncIcon />}
-                                onClick={handleSyncAll}
+                                onClick={() => login()}
                                 sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
                             >
-                                Sync All Upcoming
+                                Link Google Calendar
                             </Button>
                         )}
                         <ToggleButtonGroup
@@ -503,7 +463,7 @@ const Bookings = () => {
                                     <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Sync</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>Sync</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -568,23 +528,23 @@ const Bookings = () => {
                                                     color={(b.status === true || b.status === 1) ? 'success' : 'error'}
                                                 />
                                             </TableCell>
-                                            <TableCell>
-                                                {(b.status === true || b.status === 1) &&
-                                                    !syncedIds.includes(b.id) &&
-                                                    (dayjs(b.booking_date).isAfter(dayjs().subtract(1, 'day'), 'day')) ? (
-                                                    <Tooltip title="Sync to Google Calendar">
-                                                        <IconButton
-                                                            size="small"
-                                                            color="primary"
-                                                            onClick={() => handleSync(b)}
-                                                        >
-                                                            <SyncIcon fontSize="small" />
-                                                        </IconButton>
+                                             <TableCell>
+                                                {b.google_event_id ? (
+                                                    <Tooltip title="Synced to Google Calendar">
+                                                        <CheckCircleIcon color="success" sx={{ fontSize: 18, opacity: 0.8 }} />
                                                     </Tooltip>
+                                                ) : isGoogleConnected ? (
+                                                    isSyncEnabled ? (
+                                                        <Tooltip title="Sync Pending">
+                                                            <ClockIcon color="warning" sx={{ fontSize: 18, opacity: 0.8 }} />
+                                                        </Tooltip>
+                                                    ) : (
+                                                        <Tooltip title="Auto-sync Disabled">
+                                                            <SyncDisabledIcon color="disabled" sx={{ fontSize: 18, opacity: 0.8 }} />
+                                                        </Tooltip>
+                                                    )
                                                 ) : (
-                                                    <Typography variant="caption" color="text.disabled">
-                                                        {syncedIds.includes(b.id) ? 'Synced' : '—'}
-                                                    </Typography>
+                                                    <Typography variant="caption" color="text.disabled">—</Typography>
                                                 )}
                                             </TableCell>
                                         </TableRow>

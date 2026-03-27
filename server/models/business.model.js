@@ -37,6 +37,14 @@ const Business = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true
         },
+        google_refresh_token: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
+        google_sync_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

@@ -10,6 +10,7 @@ const bookingRoutes = require("./booking.routes");
 const paymentRoutes = require("./payment.routes");
 const apiKeyRoutes = require("./apiKey.routes");
 const serviceLocationRoutes = require("./serviceLocation.routes");
+const googleAuthRoutes = require("./googleAuth.routes");
 
 const routes = (app) => {
     const prefix = "/mybookings";
@@ -26,6 +27,7 @@ const routes = (app) => {
     app.use(`${prefix}/payments`, paymentRoutes);
     app.use(`${prefix}/api-keys`, apiKeyRoutes);
     app.use(`${prefix}/service-locations`, serviceLocationRoutes);
+    app.use(`${prefix}/google`, googleAuthRoutes);
 };
 
 module.exports = routes;

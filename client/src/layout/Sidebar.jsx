@@ -43,7 +43,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const location = useLocation();
 
     const drawerContent = (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center' }}>
                 <Typography variant="h5" color="primary" fontWeight="bold">
                     MyBookings
@@ -101,6 +101,26 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                     boxSizing: 'border-box',
                     borderRight: '1px solid',
                     borderColor: 'divider',
+                    direction: 'rtl', // Move scrollbar to start (left)
+                    overflowX: 'hidden',
+                    scrollbarWidth: 'thin',
+                    '&::-webkit-scrollbar': {
+                        width: '6px',
+                    },
+                    '&::-webkit-scrollbar-track': {
+                        background: 'transparent',
+                    },
+                    '&::-webkit-scrollbar-thumb': {
+                        background: (theme) => 
+                            theme.palette.mode === 'dark' 
+                                ? 'rgba(255, 255, 255, 0.2)' 
+                                : 'rgba(0, 0, 0, 0.1)',
+                        borderRadius: '10px',
+                        transition: 'background 0.3s ease',
+                    },
+                    '&::-webkit-scrollbar-thumb:hover': {
+                        background: (theme) => theme.palette.primary.main,
+                    },
                 },
             }}
         >

@@ -41,6 +41,10 @@ const Booking = sequelize.define(
             type: DataTypes.TIME,
             allowNull: false
         },
+        google_event_id: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
         payment_status: {
             type: DataTypes.BOOLEAN,
             defaultValue: false
