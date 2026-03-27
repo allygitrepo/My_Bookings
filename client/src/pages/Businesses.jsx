@@ -54,11 +54,12 @@ const Businesses = () => {
         biz.business_type?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         biz.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         biz.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        biz.sync_email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
         biz.upi_id?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
     const { control, handleSubmit, reset, formState: { errors } } = useForm({
-        defaultValues: { business_name: '', business_type: '', email: '', phone: '', upi_id: '' },
+        defaultValues: { business_name: '', business_type: '', email: '', phone: '', upi_id: '', sync_email: '' },
     });
 
     const fetchBusinesses = async () => {
@@ -88,7 +89,8 @@ const Businesses = () => {
             email: biz.email || '',
             phone: biz.phone || '',
             upi_id: biz.upi_id || '',
-        } : { business_name: '', business_type: '', email: '', phone: '', upi_id: '' });
+            sync_email: biz.sync_email || '',
+        } : { business_name: '', business_type: '', email: '', phone: '', upi_id: '', sync_email: '' });
         setOpen(true);
     };
 
@@ -162,6 +164,7 @@ const Businesses = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Sync Email</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>UPI ID</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
@@ -191,6 +194,7 @@ const Businesses = () => {
                                 <TableCell>{biz.business_type}</TableCell>
                                 <TableCell>{biz.phone}</TableCell>
                                 <TableCell>{biz.email}</TableCell>
+                                <TableCell>{biz.sync_email || '—'}</TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{biz.upi_id || '—'}</TableCell>
                                 <TableCell align="right">
                                     <IconButton onClick={() => handleOpen(biz)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
@@ -273,6 +277,12 @@ const Businesses = () => {
                             <Controller name="phone" control={control}
                                 render={({ field }) => (
                                     <TextField {...field} fullWidth label="Phone" placeholder="+91 98765 43210" />
+                                )} />
+                        </Grid>
+                        <Grid item xs={12}>
+                            <Controller name="sync_email" control={control}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Sync Email (Calendar)" type="email" placeholder="calendar@example.com" />
                                 )} />
                         </Grid>
                         <Grid item xs={12}>

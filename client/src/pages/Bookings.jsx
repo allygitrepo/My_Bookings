@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination
+    Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
+    TextField, MenuItem
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -9,9 +10,12 @@ import {
     CalendarViewMonth as CalendarViewIcon,
     ChevronLeft as PrevIcon,
     ChevronRight as NextIcon,
-    Sync as SyncIcon
+    Sync as SyncIcon,
+    FilterList as FilterIcon
 } from '@mui/icons-material';
 import { useGoogleLogin } from '@react-oauth/google';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import { createCalendarEvent, formatBookingToEvent } from '../services/googleCalendar.service';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
@@ -159,6 +163,12 @@ const Bookings = () => {
         return parseInt(localStorage.getItem('rowsPerPage'), 10) || 10;
     });
 
+    const [filterStatus, setFilterStatus] = useState('All');
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+    const [autoSync, setAutoSync] = useState(() => localStorage.getItem('autoSyncEnabled') === 'true');
+    const [showFilters, setShowFilters] = useState(false);
+
     // Google Calendar Sync Logic
     const [googleToken, setGoogleToken] = useState(null);
     const [pendingSync, setPendingSync] = useState(null); // Booking currently being synced
@@ -202,9 +212,11 @@ const Bookings = () => {
         const location = locations.find(l => l.id === b.location_id);
 
         const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
+        const business = businesses.find(bz => bz.id === b.business_id);
+        const calendarId = business?.sync_email || 'primary';
 
         try {
-            await createCalendarEvent(token, eventData);
+            await createCalendarEvent(token, eventData, calendarId);
             markAsSynced(b.id);
             toast.success('Successfully synced to Google Calendar!');
         } catch (error) {
@@ -254,7 +266,10 @@ const Bookings = () => {
                 const staffMember = staff.find(s => s.id === b.staff_id);
                 const location = locations.find(l => l.id === b.location_id);
                 const eventData = formatBookingToEvent(b, { customer, service, staff: staffMember, location });
-                await createCalendarEvent(token, eventData);
+                const business = businesses.find(bz => bz.id === b.business_id);
+                const calendarId = business?.sync_email || 'primary';
+
+                await createCalendarEvent(token, eventData, calendarId);
                 markAsSynced(b.id);
                 successCount++;
             } catch (err) {
@@ -263,7 +278,24 @@ const Bookings = () => {
         }
         toast.dismiss('bulk-sync');
         toast.success(`Successfully synced ${successCount} out of ${items.length} bookings!`);
+        if (autoSync) {
+            localStorage.setItem('lastAutoSync', new Date().toISOString());
+        }
     };
+
+    useEffect(() => {
+        if (autoSync && bookings.length > 0 && !loading) {
+            const today = dayjs().startOf('day');
+            const unsynced = bookings.filter(b => {
+                const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
+                const isConfirmed = (b.status === true || b.status === 1);
+                return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
+            });
+            if (unsynced.length > 0 && googleToken) {
+                syncAllSequence(googleToken, unsynced);
+            }
+        }
+    }, [bookings, autoSync, loading]);
 
     useEffect(() => {
         setPage(0);
@@ -301,46 +333,83 @@ const Bookings = () => {
     }, []);
 
     const filteredBookings = [...bookings].reverse().filter(b => {
-        if (!searchQuery) return true;
         const customer = customers.find(c => c.id === b.customer_id);
         const service = services.find(s => s.id === b.service_id);
         const staffMember = staff.find(s => s.id === b.staff_id);
+
+        // Search Filter
         const q = searchQuery.toLowerCase();
-        return (
+        const matchesSearch = !searchQuery || (
             customer?.name?.toLowerCase().includes(q) ||
             customer?.phone?.toLowerCase().includes(q) ||
             service?.service_name?.toLowerCase().includes(q) ||
             staffMember?.staff_name?.toLowerCase().includes(q) ||
             b.booking_date?.toLowerCase().includes(q)
         );
+
+        // Status Filter
+        const isConfirmed = (b.status === true || b.status === 1);
+        const matchesStatus = filterStatus === 'All' ||
+            (filterStatus === 'Confirmed' && isConfirmed) ||
+            (filterStatus === 'Cancelled' && !isConfirmed);
+
+        // Date Filter
+        const bDate = dayjs(b.booking_date);
+        const matchesDate = (!startDate || bDate.isAfter(startDate.subtract(1, 'day'))) &&
+            (!endDate || bDate.isBefore(endDate.add(1, 'day')));
+
+        return matchesSearch && matchesStatus && matchesDate;
     });
 
-        const today = dayjs().startOf('day');
-        const hasUnsyncedUpcoming = bookings.some(b => {
-            const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
-            const isConfirmed = (b.status === true || b.status === 1);
-            return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
-        });
+    const today = dayjs().startOf('day');
+    const hasUnsyncedUpcoming = bookings.some(b => {
+        const isUpcoming = dayjs(b.booking_date).isAfter(today) || (dayjs(b.booking_date).isSame(today, 'day'));
+        const isConfirmed = (b.status === true || b.status === 1);
+        return isUpcoming && isConfirmed && !syncedIds.includes(b.id);
+    });
 
-        return (
-            <PageTransition>
-                <PageHeader
-                    title="Bookings"
-                    subtitle="All customer appointments. Bookings are created via the widget."
-                    extraActions={
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            {hasUnsyncedUpcoming && (
-                                <Button 
-                                    variant="contained" 
-                                    size="small" 
-                                    startIcon={<SyncIcon />}
-                                    onClick={handleSyncAll}
-                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                                >
-                                    Sync All Upcoming
-                                </Button>
-                            )}
-                            <ToggleButtonGroup
+    return (
+        <PageTransition>
+            <PageHeader
+                title="Bookings"
+                subtitle="All customer appointments. Bookings are created via the widget."
+                extraActions={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Button
+                            variant={autoSync ? "contained" : "outlined"}
+                            size="small"
+                            color={autoSync ? "success" : "inherit"}
+                            startIcon={<SyncIcon className={autoSync ? "animate-spin-slow" : ""} />}
+                            onClick={() => {
+                                const next = !autoSync;
+                                setAutoSync(next);
+                                localStorage.setItem('autoSyncEnabled', next);
+                                if (next) toast.success('Auto Sync Enabled');
+                            }}
+                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                        >
+                            {autoSync ? 'Auto Sync ON' : 'Auto Sync OFF'}
+                        </Button>
+                        Filter
+                        <IconButton
+                            color={showFilters ? "primary" : "default"}
+                            onClick={() => setShowFilters(!showFilters)}
+                            sx={{ bgcolor: showFilters ? 'action.selected' : 'background.paper', borderRadius: 2 }}
+                        >
+                            <FilterIcon />
+                        </IconButton>
+                        {hasUnsyncedUpcoming && (
+                            <Button
+                                variant="contained"
+                                size="small"
+                                startIcon={<SyncIcon />}
+                                onClick={handleSyncAll}
+                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
+                            >
+                                Sync All Upcoming
+                            </Button>
+                        )}
+                        <ToggleButtonGroup
                             value={view}
                             exclusive
                             onChange={handleViewChange}
@@ -360,6 +429,57 @@ const Bookings = () => {
                 }
             />
 
+            {/* --- Filters Bar --- */}
+            {showFilters && (
+                <LocalizationProvider dateAdapter={AdapterDayjs}>
+                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', animation: 'fadeIn 0.3s ease-in-out' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <FilterIcon size="small" color="action" />
+                            <Typography variant="body2" fontWeight={600} color="text.secondary">Filters:</Typography>
+                        </Box>
+
+                        <TextField
+                            select
+                            size="small"
+                            label="Status"
+                            value={filterStatus}
+                            onChange={(e) => setFilterStatus(e.target.value)}
+                            sx={{ minWidth: 130 }}
+                        >
+                            <MenuItem value="All">All Status</MenuItem>
+                            <MenuItem value="Confirmed">Confirmed</MenuItem>
+                            <MenuItem value="Cancelled">Cancelled</MenuItem>
+                        </TextField>
+
+                        <DatePicker
+                            label="Start Date"
+                            value={startDate}
+                            onChange={(val) => setStartDate(val)}
+                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                        />
+
+                        <DatePicker
+                            label="End Date"
+                            value={endDate}
+                            onChange={(val) => setEndDate(val)}
+                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                        />
+
+                        <Button
+                            size="small"
+                            onClick={() => {
+                                setFilterStatus('All');
+                                setStartDate(null);
+                                setEndDate(null);
+                            }}
+                            sx={{ textTransform: 'none', ml: 'auto' }}
+                        >
+                            Reset Filters
+                        </Button>
+                    </Paper>
+                </LocalizationProvider>
+            )}
+
             {view === 'calendar' ? (
                 <CalendarView
                     bookings={filteredBookings}
@@ -369,125 +489,125 @@ const Bookings = () => {
                 />
             ) : (
                 <>
-                <TableContainer component={Paper}>
-                <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Sync</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow>
-                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                                    <Typography color="text.secondary">Loading bookings...</Typography>
-                                </TableCell>
-                            </TableRow>
-                        ) : filteredBookings.length === 0 ? (
-                            <TableRow><TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
-                                <CalendarIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
-                                <Typography variant="body2" color="text.secondary">
-                                    {searchQuery ? 'No bookings match your search.' : 'No bookings yet.'}
-                                </Typography>
-                                <Typography variant="caption" color="text.disabled">Bookings appear here after customers book via the widget.</Typography>
-                            </TableCell></TableRow>
-                        ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b, index) => {
-                            const customer = customers.find(c => c.id === b.customer_id);
-                            const service = services.find(s => s.id === b.service_id);
-                            const staffMember = staff.find(s => s.id === b.staff_id);
-                            const payment = payments.find(p => p.booking_id === b.id);
-
-                            const totalAmount = Number(service?.price || 0);
-                            const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                            const remainingAmount = Math.max(0, totalAmount - paidAmount);
-
-                            return (
-                                <TableRow key={b.id} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
-                                    <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', bgcolor: 'primary.light', color: 'primary.dark' }}>
-                                                {customer?.name?.charAt(0)}
-                                            </Avatar>
-                                            <Box>
-                                                <Typography variant="body2" fontWeight={500}>{customer?.name || '—'}</Typography>
-                                                <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
-                                            </Box>
-                                        </Box>
-                                    </TableCell>
-                                    <TableCell>{service?.service_name || '—'}</TableCell>
-                                    <TableCell>{staffMember?.staff_name || '—'}</TableCell>
-                                    <TableCell>{formatDate(b.booking_date)}</TableCell>
-                                    <TableCell sx={{ whiteSpace: 'nowrap' }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={600}>₹{totalAmount}</Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={700} color="success.main">₹{paidAmount}</Typography>
-
-                                    </TableCell>
-                                    <TableCell>
-                                        <Typography variant="body2" fontWeight={700} color={remainingAmount > 0 ? 'error.main' : 'text.disabled'}>
-                                            ₹{remainingAmount.toFixed(2)}
-                                        </Typography>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Chip
-                                            label={(b.status === true || b.status === 1) ? 'Confirmed' : 'Cancelled'}
-                                            size="small"
-                                            color={(b.status === true || b.status === 1) ? 'success' : 'error'}
-                                        />
-                                    </TableCell>
-                                    <TableCell>
-                                        {(b.status === true || b.status === 1) && 
-                                         !syncedIds.includes(b.id) && 
-                                         (dayjs(b.booking_date).isAfter(dayjs().subtract(1, 'day'), 'day')) ? (
-                                            <Tooltip title="Sync to Google Calendar">
-                                                <IconButton 
-                                                    size="small" 
-                                                    color="primary" 
-                                                    onClick={() => handleSync(b)}
-                                                >
-                                                    <SyncIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        ) : (
-                                            <Typography variant="caption" color="text.disabled">
-                                                {syncedIds.includes(b.id) ? 'Synced' : '—'}
-                                            </Typography>
-                                        )}
-                                    </TableCell>
+                    <TableContainer component={Paper}>
+                        <Table>
+                            <TableHead sx={{ bgcolor: 'background.default' }}>
+                                <TableRow>
+                                    <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Sync</TableCell>
                                 </TableRow>
-                            );
-                        })}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-            <TablePagination
-                rowsPerPageOptions={[5, 10, 20, 30, 50]}
-                component="div"
-                count={filteredBookings.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={(e, p) => setPage(p)}
-                onRowsPerPageChange={(e) => {
-                    const rpp = parseInt(e.target.value, 10);
-                    setRowsPerPage(rpp);
-                    localStorage.setItem('rowsPerPage', rpp);
-                    setPage(0);
-                }}
-            />
-            </>
+                            </TableHead>
+                            <TableBody>
+                                {loading ? (
+                                    <TableRow>
+                                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
+                                            <Typography color="text.secondary">Loading bookings...</Typography>
+                                        </TableCell>
+                                    </TableRow>
+                                ) : filteredBookings.length === 0 ? (
+                                    <TableRow><TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                                        <CalendarIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
+                                        <Typography variant="body2" color="text.secondary">
+                                            {searchQuery ? 'No bookings match your search.' : 'No bookings yet.'}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.disabled">Bookings appear here after customers book via the widget.</Typography>
+                                    </TableCell></TableRow>
+                                ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b, index) => {
+                                    const customer = customers.find(c => c.id === b.customer_id);
+                                    const service = services.find(s => s.id === b.service_id);
+                                    const staffMember = staff.find(s => s.id === b.staff_id);
+                                    const payment = payments.find(p => p.booking_id === b.id);
+
+                                    const totalAmount = Number(service?.price || 0);
+                                    const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
+                                    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+
+                                    return (
+                                        <TableRow key={b.id} hover>
+                                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                            <TableCell>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', bgcolor: 'primary.light', color: 'primary.dark' }}>
+                                                        {customer?.name?.charAt(0)}
+                                                    </Avatar>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={500}>{customer?.name || '—'}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
+                                                    </Box>
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>{service?.service_name || '—'}</TableCell>
+                                            <TableCell>{staffMember?.staff_name || '—'}</TableCell>
+                                            <TableCell>{formatDate(b.booking_date)}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>₹{totalAmount}</Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={700} color="success.main">₹{paidAmount}</Typography>
+
+                                            </TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={700} color={remainingAmount > 0 ? 'error.main' : 'text.disabled'}>
+                                                    ₹{remainingAmount.toFixed(2)}
+                                                </Typography>
+                                            </TableCell>
+                                            <TableCell>
+                                                <Chip
+                                                    label={(b.status === true || b.status === 1) ? 'Confirmed' : 'Cancelled'}
+                                                    size="small"
+                                                    color={(b.status === true || b.status === 1) ? 'success' : 'error'}
+                                                />
+                                            </TableCell>
+                                            <TableCell>
+                                                {(b.status === true || b.status === 1) &&
+                                                    !syncedIds.includes(b.id) &&
+                                                    (dayjs(b.booking_date).isAfter(dayjs().subtract(1, 'day'), 'day')) ? (
+                                                    <Tooltip title="Sync to Google Calendar">
+                                                        <IconButton
+                                                            size="small"
+                                                            color="primary"
+                                                            onClick={() => handleSync(b)}
+                                                        >
+                                                            <SyncIcon fontSize="small" />
+                                                        </IconButton>
+                                                    </Tooltip>
+                                                ) : (
+                                                    <Typography variant="caption" color="text.disabled">
+                                                        {syncedIds.includes(b.id) ? 'Synced' : '—'}
+                                                    </Typography>
+                                                )}
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
+                            </TableBody>
+                        </Table>
+                    </TableContainer>
+                    <TablePagination
+                        rowsPerPageOptions={[5, 10, 20, 30, 50]}
+                        component="div"
+                        count={filteredBookings.length}
+                        rowsPerPage={rowsPerPage}
+                        page={page}
+                        onPageChange={(e, p) => setPage(p)}
+                        onRowsPerPageChange={(e) => {
+                            const rpp = parseInt(e.target.value, 10);
+                            setRowsPerPage(rpp);
+                            localStorage.setItem('rowsPerPage', rpp);
+                            setPage(0);
+                        }}
+                    />
+                </>
             )}
         </PageTransition>
     );

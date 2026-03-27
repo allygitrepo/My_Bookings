@@ -6,14 +6,15 @@
 const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
 
 /**
- * Creates an event in the user's primary Google Calendar.
+ * Creates an event in a specific Google Calendar (defaults to primary).
  * @param {string} accessToken - OAuth2 access token
  * @param {Object} eventData - Event details
+ * @param {string} calendarId - The calendar ID (email or 'primary')
  * @returns {Promise<Object>} - The created event
  */
-export const createCalendarEvent = async (accessToken, eventData) => {
+export const createCalendarEvent = async (accessToken, eventData, calendarId = 'primary') => {
     try {
-        const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/calendars/primary/events`, {
+        const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/calendars/${calendarId}/events`, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${accessToken}`,

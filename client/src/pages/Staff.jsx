@@ -90,16 +90,24 @@ const Staff = () => {
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [filterDays, setFilterDays] = useState([]);
 
     useEffect(() => {
         setPage(0);
     }, [searchQuery]);
 
-    const filteredStaff = staffList.filter(s =>
-        s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        s.phone?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredStaff = staffList.filter(s => {
+        const matchesSearch = s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            s.phone?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        if (filterDays.length === 0) return matchesSearch;
+        
+        const staffDays = availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.toLowerCase());
+        const matchesDays = filterDays.some(d => staffDays.includes(d.toLowerCase()));
+        
+        return matchesSearch && matchesDays;
+    });
 
     // availability schedule: { [day]: [{ start_time, end_time }] | null }
     const [schedule, setSchedule] = useState({});
@@ -354,7 +362,29 @@ const Staff = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Staff Members" subtitle="Manage your team and their weekly availability." onAddClick={() => handleOpen()} buttonText="Add Staff" />
+            <PageHeader title="Staff Members" subtitle="Manage your team and their weekly availability." onAddClick={() => handleOpen()} buttonText="Add Staff" 
+                extraActions={
+                    <Autocomplete
+                        multiple
+                        size="small"
+                        options={DAYS}
+                        value={filterDays}
+                        onChange={(_, newValue) => {
+                            setFilterDays(newValue);
+                            setPage(0);
+                        }}
+                        renderInput={(params) => (
+                            <TextField {...params} label="Filter by Days" placeholder="Select Days" sx={{ minWidth: 220, bgcolor: 'background.paper' }} />
+                        )}
+                        renderTags={(value, getTagProps) =>
+                            value.map((option, index) => {
+                                const { key, ...tagProps } = getTagProps({ index });
+                                return <Chip key={key} label={option.slice(0, 3)} {...tagProps} size="small" />;
+                            })
+                        }
+                    />
+                }
+            />
 
             <TableContainer component={Paper}>
                 <Table>
@@ -511,9 +541,10 @@ const Staff = () => {
                                             <TextField {...params} label="Locations *" error={!!errors.location_ids} helperText={errors.location_ids?.message || (!businessId ? 'Select business first' : '')} placeholder="Select locations" fullWidth />
                                         )}
                                         renderTags={(value, getTagProps) =>
-                                            value.map((option, index) => (
-                                                <Chip label={option.location_name} {...getTagProps({ index })} size="small" />
-                                            ))
+                                            value.map((option, index) => {
+                                                const { key, ...tagProps } = getTagProps({ index });
+                                                return <Chip key={key} label={option.location_name} {...tagProps} size="small" />;
+                                            })
                                         }
                                     />
                                 );

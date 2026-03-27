@@ -34,6 +34,7 @@ const Locations = () => {
     const [selectedState, setSelectedState] = useState(null); // Will store {name, iso2}
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [filterState, setFilterState] = useState('All');
 
     useEffect(() => {
         setPage(0);
@@ -41,11 +42,15 @@ const Locations = () => {
 
     const filteredLocations = locations.filter(loc => {
         const bizName = businesses.find(b => b.id === loc.business_id)?.business_name || '';
-        return loc.location_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        const matchesSearch = loc.location_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             bizName.toLowerCase().includes(searchQuery.toLowerCase()) ||
             loc.address?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             loc.city?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             loc.state?.toLowerCase().includes(searchQuery.toLowerCase());
+        
+        const matchesState = filterState === 'All' || loc.state === filterState;
+        
+        return matchesSearch && matchesState;
     });
 
     const fetchStatesData = async () => {
@@ -147,7 +152,26 @@ const Locations = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" />
+            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" 
+                extraActions={
+                    <TextField
+                        select
+                        size="small"
+                        label="Filter by State"
+                        value={filterState}
+                        onChange={(e) => {
+                            setFilterState(e.target.value);
+                            setPage(0);
+                        }}
+                        sx={{ minWidth: 150, bgcolor: 'background.paper' }}
+                    >
+                        <MenuItem value="All">All States</MenuItem>
+                        {[...new Set(locations.map(l => l.state))].filter(Boolean).sort().map(s => (
+                            <MenuItem key={s} value={s}>{s}</MenuItem>
+                        ))}
+                    </TextField>
+                }
+            />
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>

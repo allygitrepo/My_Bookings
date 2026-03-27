@@ -42,7 +42,9 @@ const timeFrom24 = (t) => {
 const addMinutes = (t, mins) => {
     const [h, m] = t.split(':').map(Number);
     const total = h * 60 + m + mins;
-    return `${String(Math.floor(total / 60)).padStart(2, '0')}:${String(total % 60).padStart(2, '0')}`;
+    const finalH = Math.floor(total / 60) % 24;
+    const finalM = total % 60;
+    return `${String(finalH).padStart(2, '0')}:${String(finalM).padStart(2, '0')}:00`;
 };
 
 // Format a slot as "9:00 – 9:30"
@@ -51,9 +53,9 @@ const formatSlotLabel = (startTime, durationMin) => {
     return `${timeFrom24(startTime)} – ${timeFrom24(end)}`;
 };
 
-const generateSlots = (startTime, endTime, durationMin) => {
+const generateSlots = (startTime, endTime, stepMin, serviceDuration) => {
     const slots = [];
-    if (!startTime || !endTime || !durationMin) return slots;
+    if (!startTime || !endTime || !stepMin || !serviceDuration) return slots;
     const [sh, sm] = startTime.split(':').map(Number);
     const [eh, em] = endTime.split(':').map(Number);
     let cur = sh * 60 + sm;
@@ -64,15 +66,20 @@ const generateSlots = (startTime, endTime, durationMin) => {
         end += 24 * 60;
     }
 
-    console.log(`Widget: Generating slots from ${startTime} to ${endTime} (${durationMin} min). cur=${cur}, end=${end}`);
+    console.log(`Widget: Generating slots from ${startTime} to ${endTime} (step=${stepMin}, service=${serviceDuration}min). cur=${cur}, end=${end}`);
 
-    while (cur + durationMin <= end) {
-        const h = Math.floor(cur / 60) % 24;
-        const m = cur % 60;
-        slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-        cur += durationMin;
+    let lastEnd = -1;
+    while (cur + serviceDuration <= end) {
+        if (cur >= lastEnd) {
+            const h = Math.floor(cur / 60) % 24;
+            const m = cur % 60;
+            const timeStr = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`;
+            slots.push(timeStr);
+            lastEnd = cur + serviceDuration;
+        }
+        cur += stepMin;
     }
-    console.log(`Widget: Generated ${slots.length} slots.`);
+    console.log(`Widget: Generated ${slots.length} non-overlapping slots.`);
     return slots;
 };
 
@@ -220,6 +227,11 @@ const BookingWidget = ({ businessId }) => {
     const totalDuration = bookingData.services.reduce((acc, s) => acc + (Number(s.duration_minutes) || 0), 0);
     // Time slots use staff's slot_duration_minutes as the "step" for availability
     const slotStepMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
+    
+    // User wants the booking duration to match the staff's slot setting (dynamic)
+    const bookingDuration = bookingData.services.length > 0 
+        ? slotStepMin * bookingData.services.length 
+        : slotStepMin;
 
     const matchingRecs = (() => {
         if (!bookingData.staff || !bookingData.date) return [];
@@ -251,19 +263,37 @@ const BookingWidget = ({ businessId }) => {
         const all = [];
         matchingRecs.forEach(r => { // Changed recs.forEach to matchingRecs.forEach
             console.log(` - Record ${r.id}: ${r.start_time} - ${r.end_time}`);
-            generateSlots(r.start_time, r.end_time, slotStepMin).forEach(s => all.push(s));
+            generateSlots(r.start_time, r.end_time, slotStepMin, bookingDuration).forEach(s => all.push(s));
         });
 
         const uniqueSlots = [...new Set(all)].sort();
 
-        // BLOCK ALREADY BOOKED SLOTS
+        // BLOCK ALREADY BOOKED SLOTS & PAST SLOTS FOR TODAY
         return uniqueSlots.filter(slot => {
-            const isAlreadyBooked = bookings.some(b =>
-                String(b.staff_id) === String(bookingData.staff.id) &&
-                String(b.booking_date) === String(bookingData.date) &&
-                String(b.start_time).startsWith(slot) &&
-                (b.status === true || String(b.status) === '1')
-            );
+            // Check if slot is in the past (for today)
+            const now = new Date();
+            const todayStr = now.toLocaleDateString('en-CA'); // YYYY-MM-DD format
+            if (bookingData.date === todayStr) {
+                const curTime = now.toTimeString().split(' ')[0]; // HH:MM:SS
+                if (slot < curTime) return false;
+            }
+
+            const slotStart = slot;
+            const slotEnd = addMinutes(slot, bookingDuration);
+
+            const isAlreadyBooked = bookings.some(b => {
+                if (String(b.staff_id) !== String(bookingData.staff.id)) return false;
+                if (String(b.booking_date) !== String(bookingData.date)) return false;
+                if (b.status !== true && String(b.status) !== '1') return false;
+
+                // Check overlap: (StartA < EndB) and (EndA > StartB)
+                const startA = slotStart;
+                const endA = slotEnd;
+                const startB = b.start_time;
+                const endB = b.end_time || addMinutes(b.start_time, slotStepMin); // fallback if end_time missing
+
+                return (startA < endB && endA > startB);
+            });
             return !isAlreadyBooked;
         });
     })();
@@ -293,7 +323,7 @@ const BookingWidget = ({ businessId }) => {
             }
 
             // 2. Create booking
-            const endTime = addMinutes(bookingData.slot, totalDuration);
+            const endTime = addMinutes(bookingData.slot, bookingDuration);
 
             const bookingPayload = {
                 business_id: bookingData.services[0].business_id,
@@ -721,19 +751,12 @@ const BookingWidget = ({ businessId }) => {
                                     <Grid container spacing={1}>
                                         {availableSlots.map(slot => (
                                             <Grid item xs={6} key={slot}>
-                                                <Box
+                                                <Button
+                                                    key={slot}
+                                                    variant={bookingData.slot === slot ? "contained" : "outlined"}
+                                                    fullWidth
                                                     onClick={() => setBookingData({ ...bookingData, slot })}
                                                     sx={{
-                                                        textAlign: 'center', py: 1, px: 0.5,
-                                                        borderRadius: 2.5, cursor: 'pointer',
-                                                        border: '1.5px solid',
-                                                        borderColor: bookingData.slot === slot ? '#6366f1' : 'rgba(99,102,241,0.2)',
-                                                        bgcolor: bookingData.slot === slot
-                                                            ? 'linear-gradient(135deg,#6366f1,#8b5cf6)'
-                                                            : 'white',
-                                                        background: bookingData.slot === slot
-                                                            ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)'
-                                                            : 'white',
                                                         boxShadow: bookingData.slot === slot
                                                             ? '0 4px 12px rgba(99,102,241,0.3)'
                                                             : 'none',
@@ -749,9 +772,9 @@ const BookingWidget = ({ businessId }) => {
                                                         fontWeight={700}
                                                         sx={{ color: bookingData.slot === slot ? 'white' : '#6366f1', fontSize: '0.72rem' }}
                                                     >
-                                                        {formatSlotLabel(slot, slotStepMin)}
+                                                        {formatSlotLabel(slot, bookingDuration)}
                                                     </Typography>
-                                                </Box>
+                                                </Button>
                                             </Grid>
                                         ))}
                                     </Grid>
@@ -847,9 +870,9 @@ const BookingWidget = ({ businessId }) => {
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Date</Typography><Typography variant="body2">{formatDate(bookingData.date)}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2" color="text.secondary">Time</Typography>
-                                    <Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, totalDuration)}</strong></Typography>
+                                    <Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, bookingDuration)}</strong></Typography>
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Total Duration</Typography><Typography variant="body2">{totalDuration} min</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Total Duration</Typography><Typography variant="body2">{bookingDuration} min</Typography></Box>
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -936,7 +959,7 @@ const BookingWidget = ({ businessId }) => {
                         </Typography>
                         <Box sx={{ bgcolor: 'success.50', borderRadius: 2, p: 2, mb: 3, border: '1px solid', borderColor: 'success.200' }}>
                             <Typography fontWeight={700} color="success.dark">{formatDate(bookingData.date)}</Typography>
-                            <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, totalDuration)}</Typography>
+                            <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, bookingDuration)}</Typography>
                             <Typography variant="caption" color="success.main">{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
