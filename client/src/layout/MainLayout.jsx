@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Box, useMediaQuery, useTheme } from '@mui/material';
 import Sidebar from './Sidebar';
 import Navbar from './Navbar';
@@ -9,12 +9,15 @@ const DRAWER_WIDTH = 260;
 
 const MainLayout = () => {
     const theme = useTheme();
+    const location = useLocation();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
 
     const toggleSidebar = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
+
+    const isBookingsPage = location.pathname.startsWith('/bookings');
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -44,11 +47,17 @@ const MainLayout = () => {
                 <Box sx={{ mt: 10 }}>
                     <Outlet />
                 </Box>
-                {/* Widget Preview for Admin */}
-                <BookingWidget />
+                {/* Widget Preview for Admin - Only on Bookings Page */}
+                {isBookingsPage && (
+                    <BookingWidget 
+                        isSidebarOpen={isSidebarOpen && !isMobile} 
+                        drawerWidth={DRAWER_WIDTH} 
+                    />
+                )}
             </Box>
         </Box>
     );
 };
 
 export default MainLayout;
+
