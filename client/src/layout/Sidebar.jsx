@@ -29,7 +29,6 @@ import {
 const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Businesses', icon: <BusinessIcon />, path: '/businesses' },
-    { text: 'Website Builder', icon: <WebsiteIcon />, path: '/website-builder' },
     { text: 'Locations', icon: <LocationIcon />, path: '/locations' },
     { text: 'Staff', icon: <StaffIcon />, path: '/staff' },
     { text: 'Services', icon: <ServicesIcon />, path: '/services' },
@@ -39,6 +38,7 @@ const menuItems = [
     { text: 'Payments', icon: <PaymentsIcon />, path: '/payments' },
     { text: 'API Keys', icon: <ApiKeysIcon />, path: '/api-keys' },
     { text: 'Widget Script', icon: <WidgetIcon />, path: '/widget-script' },
+    { text: 'Website Builder', icon: <WebsiteIcon />, path: '/website-builder' },
 ];
 
 const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
@@ -113,9 +113,9 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                         background: 'transparent',
                     },
                     '&::-webkit-scrollbar-thumb': {
-                        background: (theme) => 
-                            theme.palette.mode === 'dark' 
-                                ? 'rgba(255, 255, 255, 0.2)' 
+                        background: (theme) =>
+                            theme.palette.mode === 'dark'
+                                ? 'rgba(255, 255, 255, 0.2)'
                                 : 'rgba(0, 0, 0, 0.1)',
                         borderRadius: '10px',
                         transition: 'background 0.3s ease',
