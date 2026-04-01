@@ -45,6 +45,19 @@ const Business = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: true
         },
+        slug: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true
+        },
+        selected_template: {
+            type: DataTypes.STRING,
+            defaultValue: 'template1'
+        },
+        website_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true
@@ -63,6 +76,7 @@ const Business = sequelize.define(
         tableName: "businesses",
         indexes: [
             { fields: ["user_id"] },
+            { fields: ["slug"], unique: true },
             { fields: ["status"] }
         ]
     }

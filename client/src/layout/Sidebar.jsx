@@ -23,11 +23,13 @@ import {
     Payments as PaymentsIcon,
     VpnKey as ApiKeysIcon,
     Code as WidgetIcon,
+    Language as WebsiteIcon,
 } from '@mui/icons-material';
 
 const menuItems = [
     { text: 'Dashboard', icon: <DashboardIcon />, path: '/dashboard' },
     { text: 'Businesses', icon: <BusinessIcon />, path: '/businesses' },
+    { text: 'Website Builder', icon: <WebsiteIcon />, path: '/website-builder' },
     { text: 'Locations', icon: <LocationIcon />, path: '/locations' },
     { text: 'Staff', icon: <StaffIcon />, path: '/staff' },
     { text: 'Services', icon: <ServicesIcon />, path: '/services' },

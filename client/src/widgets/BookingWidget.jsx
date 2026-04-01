@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Fab, Dialog, DialogContent, Box, Typography, IconButton, Button,
     Card, Grid, TextField, List, ListItem, ListItemButton,
-    ListItemText, Avatar, Divider, LinearProgress,
+    Avatar, Divider, LinearProgress,
 } from '@mui/material';
 import {
     Event as BookIcon, Close as CloseIcon, ArrowBack as BackIcon,
@@ -94,7 +94,7 @@ const getDayNameDisplay = (dateStr) => {
 
 console.log('Booking Widget Version: 2.1 (Robust Day Matching)');
 
-const BookingWidget = ({ businessId }) => {
+const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false }) => {
     const [services, setServices] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [staff, setStaff] = useState([]);
@@ -108,6 +108,18 @@ const BookingWidget = ({ businessId }) => {
     const [resolvedBusinessId, setResolvedBusinessId] = useState(null);
 
     const [open, setOpen] = useState(false);
+
+    // Sync externalOpen with internal open state
+    useEffect(() => {
+        if (externalOpen !== null) {
+            setOpen(externalOpen);
+        }
+    }, [externalOpen]);
+
+    const handleInternalClose = () => {
+        setOpen(false);
+        if (onClose) onClose();
+    };
     const [activeStep, setActiveStep] = useState(0);
     const [bookingData, setBookingData] = useState({
         location: null,
@@ -198,6 +210,7 @@ const BookingWidget = ({ businessId }) => {
 
     const resetBooking = () => {
         setOpen(false);
+        if (onClose) onClose();
         setActiveStep(0);
         setDetailErrors({});
         setBookingData({
@@ -999,18 +1012,20 @@ const BookingWidget = ({ businessId }) => {
 
     return (
         <>
-            <Fab color="primary" aria-label="book-now" variant="extended"
-                sx={{
-                    position: 'fixed', bottom: 32, right: 32, zIndex: 1050,
-                    boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
-                    borderRadius: 3, fontWeight: 700, px: 3,
-                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                    '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
-                }}
-                onClick={() => setOpen(true)}>
-                <BookIcon sx={{ mr: 1 }} />
-                Book Now
-            </Fab>
+            {!hideFab && (
+                <Fab color="primary" aria-label="book-now" variant="extended"
+                    sx={{
+                        position: 'fixed', bottom: 32, right: 32, zIndex: 1050,
+                        boxShadow: '0 8px 24px rgba(99,102,241,0.4)',
+                        borderRadius: 3, fontWeight: 700, px: 3,
+                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                        '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
+                    }}
+                    onClick={() => setOpen(true)}>
+                    <BookIcon sx={{ mr: 1 }} />
+                    Book Now
+                </Fab>
+            )}
 
             <Dialog open={open} onClose={resetBooking} maxWidth="xs" fullWidth
                 PaperProps={{

@@ -29,6 +29,9 @@ import Profile from './pages/Profile';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
+import PublicBusinessWebsite from './pages/PublicBusinessWebsite';
+import WebsiteGenerator from './pages/WebsiteGenerator';
+
 const GOOGLE_CLIENT_ID = "518219129243-ffkdl9t99oqrofkfm5l4o3nvnvmolvd4.apps.googleusercontent.com";
 
 function App() {
@@ -86,9 +89,11 @@ function App() {
                   <Route path="/payments" element={<Payments />} />
                   <Route path="/api-keys" element={<ApiKeys />} />
                   <Route path="/widget-script" element={<WidgetScript />} />
+                  <Route path="/website-builder" element={<WebsiteGenerator />} />
                   <Route path="/profile" element={<Profile />} />
                 </Route>
 
+                <Route path="/:slug" element={<PublicBusinessWebsite />} />
                 <Route path="*" element={<Navigate to="/login" replace />} />
               </Routes>
             </Router>

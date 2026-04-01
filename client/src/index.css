@@ -1,5 +1,4 @@
-/* Hide browser default password reveal and clear buttons */
-::-ms-reveal,
+Hide browser default password reveal and clear buttons::-ms-reveal,
 ::-ms-clear {
   display: none;
 }

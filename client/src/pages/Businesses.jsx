@@ -4,7 +4,12 @@ import {
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
     Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination,
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Business as BusinessIcon } from '@mui/icons-material';
+import { 
+    Edit as EditIcon, 
+    Delete as DeleteIcon, 
+    Business as BusinessIcon,
+    OpenInNew as OpenIcon,
+} from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
@@ -58,8 +63,15 @@ const Businesses = () => {
         biz.upi_id?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const { control, handleSubmit, reset, formState: { errors } } = useForm({
-        defaultValues: { business_name: '', business_type: '', email: '', phone: '', upi_id: '', sync_email: '' },
+    const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
+        defaultValues: { 
+            business_name: '', 
+            business_type: '', 
+            email: '', 
+            phone: '', 
+            upi_id: '', 
+            sync_email: '',
+        },
     });
 
     const fetchBusinesses = async () => {
@@ -90,7 +102,14 @@ const Businesses = () => {
             phone: biz.phone || '',
             upi_id: biz.upi_id || '',
             sync_email: biz.sync_email || '',
-        } : { business_name: '', business_type: '', email: '', phone: '', upi_id: '', sync_email: '' });
+        } : { 
+            business_name: '', 
+            business_type: '', 
+            email: '', 
+            phone: '', 
+            upi_id: '', 
+            sync_email: '',
+        });
         setOpen(true);
     };
 
@@ -197,6 +216,16 @@ const Businesses = () => {
                                 <TableCell>{biz.sync_email || '—'}</TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{biz.upi_id || '—'}</TableCell>
                                 <TableCell align="right">
+                                    {biz.website_enabled && biz.slug && (
+                                        <IconButton 
+                                            onClick={() => window.open(`/${biz.slug}`, '_blank')} 
+                                            color="secondary" 
+                                            size="small"
+                                            title="Visit Website"
+                                        >
+                                            <OpenIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
                                     <IconButton onClick={() => handleOpen(biz)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
                                     <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
                                 </TableCell>
@@ -293,7 +322,8 @@ const Businesses = () => {
                         </Grid>
                     </Grid>
                 </FieldSection>
-
+                <Divider sx={{ my: 2.5 }} />
+                
             </FormDrawer>
         </PageTransition>
     );
