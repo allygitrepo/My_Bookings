@@ -324,7 +324,7 @@ const Bookings = () => {
                 subtitle="All customer appointments. Bookings are created via the widget."
                 extraActions={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        {isGoogleConnected && (
+                        {/* {isGoogleConnected && (
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -341,8 +341,8 @@ const Bookings = () => {
                                 }
                                 sx={{ mr: 1 }}
                             />
-                        )}
-                        {isGoogleConnected ? (
+                        )} */}
+                        {/* {isGoogleConnected ? (
                             <Tooltip 
                                 title={businesses[0]?.sync_email || 'Account details unavailable. Re-link to verify email.'} 
                                 arrow 
@@ -368,7 +368,7 @@ const Bookings = () => {
                             >
                                 Link Google Calendar
                             </Button>
-                        )}
+                        )} */}
                         <ToggleButtonGroup
                             value={view}
                             exclusive
@@ -528,7 +528,7 @@ const Bookings = () => {
                                                     color={(b.status === true || b.status === 1) ? 'success' : 'error'}
                                                 />
                                             </TableCell>
-                                             <TableCell>
+                                            <TableCell>
                                                 {b.google_event_id ? (
                                                     <Tooltip title="Synced to Google Calendar">
                                                         <CheckCircleIcon color="success" sx={{ fontSize: 18, opacity: 0.8 }} />
