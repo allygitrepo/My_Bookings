@@ -315,34 +315,53 @@ const WebsiteGenerator = () => {
                                 </Box>
                             </Box> */}
 
-                                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 3, mb: 3 }}>
+                                <Box sx={{ 
+                                    p: 1.5, 
+                                    bgcolor: 'action.hover', 
+                                    borderRadius: 4, 
+                                    display: 'flex', 
+                                    alignItems: 'center', 
+                                    justifyContent: 'space-between',
+                                    gap: 2
+                                }}>
                                     <FormControlLabel
+                                        sx={{ m: 0 }}
                                         control={
                                             <Switch
+                                                size="small"
                                                 checked={settings.website_enabled}
                                                 onChange={(e) => setSettings({ ...settings, website_enabled: e.target.checked })}
                                             />
                                         }
                                         label={
                                             <Box>
-                                                <Typography variant="body2" fontWeight={700}>Publish My Website</Typography>
-                                                <Typography variant="caption" color="text.secondary">Make it visible to the public</Typography>
+                                                <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, lineHeight: 1.2 }}>Live Site</Typography>
+                                                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', display: 'block' }}>
+                                                    {settings.website_enabled ? 'Public' : 'Hidden'}
+                                                </Typography>
                                             </Box>
                                         }
                                     />
+                                    <Button
+                                        variant="contained"
+                                        size="small"
+                                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '14px !important' }} />}
+                                        disabled={saving}
+                                        onClick={handleSave}
+                                        sx={{ 
+                                            px: 3, 
+                                            py: 1, 
+                                            borderRadius: 2.5, 
+                                            fontWeight: 900, 
+                                            fontSize: '0.75rem', 
+                                            whiteSpace: 'nowrap',
+                                            textTransform: 'none',
+                                            boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
+                                        }}
+                                    >
+                                        {saving ? 'Wait...' : 'Publish'}
+                                    </Button>
                                 </Box>
-
-                                <Button
-                                    fullWidth
-                                    variant="contained"
-                                    size="large"
-                                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
-                                    disabled={saving}
-                                    onClick={handleSave}
-                                    sx={{ py: 1.8, borderRadius: 3, fontWeight: 800, fontSize: '0.9rem', boxShadow: '0 8px 24px rgba(99,102,241,0.25)' }}
-                                >
-                                    {saving ? 'Applying...' : 'Publish Content'}
-                                </Button>
                             </Box>
                         </Paper>
                     </Grid>
