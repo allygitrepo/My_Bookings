@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { Box, CircularProgress, Typography, Button, Container } from '@mui/material';
-import { getBusinessBySlug } from '../api/business.api';
+import { getBusinessBySlug, getBusinessByIdPublic } from '../api/business.api';
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
@@ -10,19 +10,30 @@ import PageTransition from '../components/PageTransition';
 const PublicBusinessWebsite = () => {
     const { slug } = useParams();
     const navigate = useNavigate();
+    const location = useLocation();
     const [loading, setLoading] = useState(true);
     const [businessData, setBusinessData] = useState(null);
     const [error, setError] = useState(null);
+
+    // Get biz ID from query string if it exists
+    const searchParams = new URLSearchParams(location.search);
+    const bizId = searchParams.get('biz');
 
     useEffect(() => {
         const fetchWebsiteData = async () => {
             setLoading(true);
             try {
-                const response = await getBusinessBySlug(slug);
-                if (response.success) {
+                let response;
+                if (bizId) {
+                    response = await getBusinessByIdPublic(bizId);
+                } else if (slug) {
+                    response = await getBusinessBySlug(slug);
+                }
+
+                if (response?.success) {
                     setBusinessData(response.data);
                 } else {
-                    setError(response.message || 'Website not found');
+                    setError(response?.message || 'Website not found');
                 }
             } catch (err) {
                 console.error('Error fetching website data:', err);
@@ -32,10 +43,13 @@ const PublicBusinessWebsite = () => {
             }
         };
 
-        if (slug) {
+        if (bizId || slug) {
             fetchWebsiteData();
+        } else {
+            setLoading(false);
+            setError('No business identifier provided.');
         }
-    }, [slug]);
+    }, [slug, bizId]);
 
     if (loading) {
         return (

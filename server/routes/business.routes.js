@@ -6,6 +6,7 @@ const authMiddleware = require("../middleware/auth.middleware");
 router.post("/create", authMiddleware, businessController.create);
 router.get("/all", authMiddleware, businessController.getAll);
 router.get("/public/:slug", businessController.getBySlug);
+router.get("/public/id/:id", businessController.getPublicById);
 router.get("/:id", authMiddleware, businessController.getById);
 router.put("/update/:id", authMiddleware, businessController.update);
 router.delete("/delete/:id", authMiddleware, businessController.delete);

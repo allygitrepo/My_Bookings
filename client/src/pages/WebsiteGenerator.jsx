@@ -212,7 +212,7 @@ const WebsiteGenerator = () => {
                                     value={settings.slug}
                                     placeholder="e.g. shiv-clinic"
                                     onChange={(e) => setSettings({ ...settings, slug: e.target.value })}
-                                    helperText={settings.slug ? `Your site will be at: ${window.location.origin}/${settings.slug}` : 'Auto-generated if left empty'}
+                                    helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${selectedBusinessId}` : 'Select a business and publish to get a live link'}
                                     sx={{ mt: 1 }}
                                 />
                             </Box>
@@ -379,7 +379,7 @@ const WebsiteGenerator = () => {
                                     </Box>
                                     {settings.website_enabled && settings.slug && (
                                         <Tooltip title="View Live Site">
-                                            <IconButton size="small" onClick={() => window.open(`/${settings.slug}`, '_blank')} sx={{ bgcolor: 'action.hover' }}>
+                                            <IconButton size="small" onClick={() => window.open(`/?biz=${selectedBusinessId}`, '_blank')} sx={{ bgcolor: 'action.hover' }}>
                                                 <OpenIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>

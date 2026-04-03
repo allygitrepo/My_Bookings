@@ -92,9 +92,6 @@ const businessController = {
             }
 
             // We use the associated models as well (locations, services)
-            // Note: Since associations.js handles relationships, we can use include if needed.
-            // But for now, let's just return the business and the client can fetch the rest if needed, 
-            // OR we fetch them here to save round trips.
             const Location = require("../models/location.model");
             const Service = require("../models/service.model");
 
@@ -106,6 +103,38 @@ const businessController = {
             res.json({
                 success: true,
                 message: "Public business data fetched",
+                data: {
+                    business,
+                    locations,
+                    services
+                }
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+    getPublicById: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({
+                where: { id, status: true, website_enabled: true }
+            });
+
+            if (!business) {
+                return res.status(404).json({ success: false, message: "Website not found or disabled" });
+            }
+
+            const Location = require("../models/location.model");
+            const Service = require("../models/service.model");
+
+            const [locations, services] = await Promise.all([
+                Location.findAll({ where: { business_id: business.id, status: true } }),
+                Service.findAll({ where: { business_id: business.id, status: true } })
+            ]);
+
+            res.json({
+                success: true,
+                message: "Public business data fetched by ID",
                 data: {
                     business,
                     locations,

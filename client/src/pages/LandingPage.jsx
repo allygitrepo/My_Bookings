@@ -14,7 +14,8 @@ import {
     AccordionDetails,
     Link,
 } from '@mui/material';
-import { NavLink } from 'react-router-dom';
+import { NavLink, useLocation } from 'react-router-dom';
+import PublicBusinessWebsite from './PublicBusinessWebsite';
 import {
     CalendarMonth as BookingIcon,
     Business as BusinessIcon,
@@ -70,6 +71,14 @@ const FAQs = [
 ];
 
 const LandingPage = () => {
+    const location = useLocation();
+    const searchParams = new URLSearchParams(location.search);
+    const bizId = searchParams.get('biz');
+
+    if (bizId) {
+        return <PublicBusinessWebsite />;
+    }
+
     return (
         <Box sx={{ bgcolor: 'background.paper', minHeight: '100vh' }}>
             {/* Navbar */}

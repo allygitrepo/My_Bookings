@@ -13,6 +13,11 @@ export const getBusinessBySlug = async (slug) => {
     return response.data;
 };
 
+export const getBusinessByIdPublic = async (id) => {
+    const response = await axios.get(`${API_URL}/business/public/id/${id}`);
+    return response.data;
+};
+
 export const getBusinessById = async (id) => {
     const response = await axiosInstance.get(`/business/${id}`);
     return response.data;
