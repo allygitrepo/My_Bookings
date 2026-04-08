@@ -118,7 +118,7 @@ const TemplatePremium = ({ data }) => {
                 transition={{ duration: 0.35 }}
                 style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300, padding: '20px 0' }}
             >
-                <Container maxWidth="lg">
+                <Container maxWidth="xl">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <motion.div initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: 0.6, ease: EASE }}>
                             <Typography sx={{
@@ -164,36 +164,35 @@ const TemplatePremium = ({ data }) => {
                 <Box sx={{ position: 'absolute', top: 0, left: 60, width: 1, height: '100%', background: `linear-gradient(to bottom, ${ACCENT}20, transparent)`, opacity: .4, zIndex: 2 }} />
                 <Box sx={{ position: 'absolute', top: 0, right: 60, width: 1, height: '100%', background: `linear-gradient(to bottom, ${ACCENT}20, transparent)`, opacity: .4, zIndex: 2 }} />
 
-                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 3 }}>
+                <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 3 }}>
                     <motion.div style={{ y: heroY, opacity: heroOpacity }}>
-                        <Box sx={{ maxWidth: 780 }}>
+                        <Box sx={{ maxWidth: 1000 }}>
                             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.2 }}>
                                 <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1.5, mb: 4 }}>
-                                    <GoldLine width={32} mx="0" />
-                                    <Typography sx={{ fontSize: '.7rem', fontWeight: 600, letterSpacing: '3px', textTransform: 'uppercase', color: ACCENT }}>
+                                    <GoldLine width={48} mx="0" />
+                                    <Typography sx={{ fontSize: '.8rem', fontWeight: 600, letterSpacing: '4px', textTransform: 'uppercase', color: ACCENT }}>
                                         {business.business_type || 'Luxury Experience'}
                                     </Typography>
-                                    <GoldLine width={32} mx="0" />
+                                    <GoldLine width={48} mx="0" />
                                 </Box>
                             </motion.div>
 
                             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}>
                                 <Typography sx={{
                                     fontFamily: "'Cormorant Garamond', serif",
-                                    fontSize: { xs: '4rem', md: '6.5rem' },
-                                    fontWeight: 300, lineHeight: .92,
-                                    letterSpacing: '-1px', color: '#fff', mb: 1,
+                                    fontSize: { xs: '4.5rem', md: '8.5rem' },
+                                    fontWeight: 300, lineHeight: .9,
+                                    letterSpacing: '-2px', color: '#fff', mb: 2,
                                 }}>
                                     {business.business_name || 'Prestige'}
                                 </Typography>
-
                             </motion.div>
                             <div>
                                 <div></div>
                             </div>
                             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.5 }}>
-                                <Typography sx={{ fontSize: '1.05rem', color: 'rgba(255,255,255,.55)', mb: 7, fontWeight: 300, lineHeight: 1.8, maxWidth: 520, letterSpacing: '.2px' }}>
-                                    An uncompromising dedication to excellence — where craft meets luxury and every detail is curated for your distinction.
+                                <Typography sx={{ fontSize: '1.25rem', color: 'rgba(255,255,255,.6)', mb: 8, fontWeight: 300, lineHeight: 1.8, maxWidth: 650, letterSpacing: '.4px' }}>
+                                    An uncompromising dedication to excellence — where world-class craft meets modern luxury. Every detail is curated for your distinction.
                                 </Typography>
                             </motion.div>
 
@@ -206,14 +205,14 @@ const TemplatePremium = ({ data }) => {
                                         style={{
                                             display: 'inline-flex', alignItems: 'center', gap: 12,
                                             background: ACCENT, color: '#080b12',
-                                            border: 'none', padding: '18px 40px',
-                                            fontSize: '.8rem', fontWeight: 700,
+                                            border: 'none', padding: '22px 52px',
+                                            fontSize: '.9rem', fontWeight: 700,
                                             fontFamily: "'Jost', sans-serif", cursor: 'pointer',
-                                            letterSpacing: '2px', textTransform: 'uppercase',
+                                            letterSpacing: '2.5px', textTransform: 'uppercase',
                                         }}
                                     >
                                         Book Appointment
-                                        <ArrowIcon sx={{ fontSize: 16 }} />
+                                        <ArrowIcon sx={{ fontSize: 20 }} />
                                     </motion.button>
                                     <Typography component="a" href="#services"
                                         sx={{ fontSize: '.75rem', color: 'rgba(255,255,255,.45)', letterSpacing: '2px', textTransform: 'uppercase', textDecoration: 'none', cursor: 'pointer', '&:hover': { color: ACCENT }, transition: 'color .2s' }}
@@ -236,8 +235,8 @@ const TemplatePremium = ({ data }) => {
             </Box>
 
             {/* ══ STATS BAND ══════════════════════════════════════════════════ */}
-            <Box sx={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, py: 5, bgcolor: SURFACE }}>
-                <Container maxWidth="lg">
+            <Box sx={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, py: 8, bgcolor: SURFACE }}>
+                <Container maxWidth="xl">
                     <Grid container>
                         {[
                             { value: 2400, suffix: '+', label: 'Clients Served' },
@@ -253,8 +252,8 @@ const TemplatePremium = ({ data }) => {
                                     }}>
                                         <Typography sx={{
                                             fontFamily: "'Cormorant Garamond', serif",
-                                            fontSize: '2.8rem', fontWeight: 600,
-                                            color: ACCENT, lineHeight: 1, letterSpacing: '-1px',
+                                            fontSize: '4.5rem', fontWeight: 600,
+                                            color: ACCENT, lineHeight: 1, letterSpacing: '-2px',
                                         }}>
                                             <Counter to={s.value} suffix={s.suffix} />
                                         </Typography>
@@ -270,8 +269,8 @@ const TemplatePremium = ({ data }) => {
             </Box>
 
             {/* ══ SERVICES ════════════════════════════════════════════════════ */}
-            <Box id="services" sx={{ py: 16 }}>
-                <Container maxWidth="lg">
+            <Box id="services" sx={{ py: 22 }}>
+                <Container maxWidth="xl">
                     <Reveal>
                         <Box sx={{ textAlign: 'center', mb: 10 }}>
                             <GoldLine mb={3} />
@@ -280,8 +279,8 @@ const TemplatePremium = ({ data }) => {
                             </Typography>
                             <Typography sx={{
                                 fontFamily: "'Cormorant Garamond', serif",
-                                fontSize: { xs: '2.8rem', md: '3.8rem' },
-                                fontWeight: 300, letterSpacing: '-1px', color: '#fff', lineHeight: 1,
+                                fontSize: { xs: '3.5rem', md: '5.5rem' },
+                                fontWeight: 300, letterSpacing: '-2px', color: '#fff', lineHeight: 1,
                             }}>
                                 Our Curated Services
                             </Typography>
@@ -342,7 +341,7 @@ const TemplatePremium = ({ data }) => {
                                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                 <Typography sx={{
                                                     fontFamily: "'Space Mono', monospace",
-                                                    fontSize: '1.1rem', fontWeight: 700, color: ACCENT,
+                                                    fontSize: '1.35rem', fontWeight: 700, color: ACCENT,
                                                 }}>
                                                     ₹{svc.price.toLocaleString()}
                                                 </Typography>
@@ -386,8 +385,8 @@ const TemplatePremium = ({ data }) => {
             </Box>
 
             {/* ══ LOCATIONS & CONTACT ═════════════════════════════════════════ */}
-            <Box id="locations" sx={{ py: 16 }}>
-                <Container maxWidth="lg">
+            <Box id="locations" sx={{ py: 22 }}>
+                <Container maxWidth="xl">
                     <Reveal>
                         <Box sx={{ mb: 10 }}>
                             <GoldLine width={40} mx="0" mb={3} />
@@ -396,8 +395,8 @@ const TemplatePremium = ({ data }) => {
                             </Typography>
                             <Typography sx={{
                                 fontFamily: "'Cormorant Garamond', serif",
-                                fontSize: { xs: '2.8rem', md: '3.8rem' },
-                                fontWeight: 300, letterSpacing: '-1px', color: '#fff', lineHeight: 1,
+                                fontSize: { xs: '3.5rem', md: '5.5rem' },
+                                fontWeight: 300, letterSpacing: '-2px', color: '#fff', lineHeight: 1,
                             }}>
                                 Locations & Contact
                             </Typography>
@@ -522,8 +521,8 @@ const TemplatePremium = ({ data }) => {
             </Box>
 
             {/* ══ FOOTER ══════════════════════════════════════════════════════ */}
-            <Box sx={{ borderTop: `1px solid ${BORDER}`, py: 5 }}>
-                <Container maxWidth="lg">
+            <Box sx={{ borderTop: `1px solid ${BORDER}`, py: 8 }}>
+                <Container maxWidth="xl">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2 }}>
                         <Typography sx={{ fontFamily: "'Cormorant Garamond', serif", fontSize: '1.1rem', fontWeight: 600, color: 'rgba(255,255,255,.4)', letterSpacing: '1px' }}>
                             {business.business_name || 'Prestige Studio'}

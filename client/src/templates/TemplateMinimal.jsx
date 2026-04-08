@@ -92,29 +92,37 @@ const TemplateMinimal = ({ data }) => {
             {/* Google Font */}
             <style>{`@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;700;900&family=DM+Mono:wght@400;500&display=swap');`}</style>
 
-            <Container maxWidth="md">
-
-                {/* ── HERO ── */}
-                <Box sx={{ textAlign: 'center', mb: { xs: 7, md: 10 } }}>
-
+            {/* ── HERO ── */}
+            <Box
+                sx={{
+                    position: 'relative',
+                    bgcolor: '#f8fafc',
+                    pt: { xs: 10, md: 22 },
+                    pb: { xs: 10, md: 18 },
+                    textAlign: 'center',
+                    borderBottom: '1px solid #f1f5f9'
+                }}
+            >
+                <Container maxWidth="xl">
                     {/* Live badge */}
                     <Reveal delay={0}>
                         <Box
                             sx={{
                                 display: 'inline-flex', alignItems: 'center', gap: 1,
-                                bgcolor: '#f4f4f4', border: '0.5px solid #e8e8e8',
-                                borderRadius: '100px', px: 2, py: 0.75, mb: 3.5,
+                                bgcolor: '#fff', border: '1px solid #e2e8f0',
+                                borderRadius: '100px', px: 2.5, py: 1, mb: 4,
+                                boxShadow: '0 2px 10px rgba(0,0,0,0.02)'
                             }}
                         >
                             <Box
                                 sx={{
-                                    width: 7, height: 7, borderRadius: '50%', bgcolor: '#111',
+                                    width: 8, height: 8, borderRadius: '50%', bgcolor: '#0f172a',
                                     transition: 'opacity .4s',
                                     opacity: dotVisible ? 1 : 0.2,
                                 }}
                             />
-                            <Typography sx={{ fontSize: '.72rem', fontWeight: 600, letterSpacing: '.5px', color: '#555' }}>
-                                Now accepting appointments
+                            <Typography sx={{ fontSize: '.75rem', fontWeight: 700, letterSpacing: '.5px', color: '#1e293b' }}>
+                                LIVE & ACCEPTING APPOINTMENTS
                             </Typography>
                         </Box>
                     </Reveal>
@@ -125,12 +133,12 @@ const TemplateMinimal = ({ data }) => {
                             variant="h1"
                             sx={{
                                 fontFamily: "'DM Sans', sans-serif",
-                                fontSize: { xs: '2.6rem', md: '4rem' },
+                                fontSize: { xs: '3.5rem', md: '8.5rem' },
                                 fontWeight: 900,
-                                letterSpacing: '-2.5px',
-                                lineHeight: 1,
-                                color: '#0a0a0a',
-                                mb: 1.5,
+                                letterSpacing: '-5px',
+                                lineHeight: 0.9,
+                                color: '#0f172a',
+                                mb: 3,
                             }}
                         >
                             {business.business_name || 'The Craft Studio'}
@@ -138,8 +146,8 @@ const TemplateMinimal = ({ data }) => {
                     </Reveal>
 
                     <Reveal delay={0.15}>
-                        <Typography sx={{ fontSize: '1rem', color: '#999', mb: 5, fontWeight: 400, letterSpacing: '.3px' }}>
-                            {business.business_type || 'Premium Hair & Beauty Services'}
+                        <Typography sx={{ fontSize: '1.45rem', color: '#64748b', mb: 8, fontWeight: 400, letterSpacing: '.3px', maxWidth: 850, mx: 'auto', lineHeight: 1.6 }}>
+                            {business.business_type || 'Premium Professional Services'} · Trusted by 2,400+ clients across the globe.
                         </Typography>
                     </Reveal>
 
@@ -147,29 +155,26 @@ const TemplateMinimal = ({ data }) => {
                     <Reveal delay={0.22}>
                         <motion.button
                             className="mybookings-trigger"
-                            whileHover={{ y: -3, boxShadow: '0 18px 42px rgba(0,0,0,.18)' }}
+                            whileHover={{ y: -3, boxShadow: '0 25px 50px rgba(15,23,42,.18)' }}
                             whileTap={{ scale: 0.97 }}
                             style={{
-                                display: 'inline-flex', alignItems: 'center', gap: 10,
-                                background: '#0a0a0a', color: '#fff',
-                                border: 'none', padding: '16px 36px',
-                                fontSize: '.95rem', fontWeight: 700,
+                                display: 'inline-flex', alignItems: 'center', gap: 14,
+                                background: '#0f172a', color: '#fff',
+                                border: 'none', padding: '24px 64px',
+                                fontSize: '1.25rem', fontWeight: 900,
                                 fontFamily: "'DM Sans', sans-serif",
-                                borderRadius: 4, cursor: 'pointer',
+                                borderRadius: 12, cursor: 'pointer',
                                 letterSpacing: '.2px', transition: 'background .2s',
                             }}
                         >
                             Book Appointment
-                            <motion.span
-                                initial={{ x: 0 }}
-                                whileHover={{ x: 4 }}
-                                style={{ display: 'flex' }}
-                            >
-                                <ArrowIcon sx={{ fontSize: 18 }} />
-                            </motion.span>
+                            <ArrowIcon sx={{ fontSize: 28 }} />
                         </motion.button>
                     </Reveal>
-                </Box>
+                </Container>
+            </Box>
+
+            <Container maxWidth="xl" sx={{ mt: { xs: 10, md: 16 }, mb: 15 }}>
 
                 {/* ── STATS BAR ── */}
                 <Reveal delay={0.1}>
@@ -187,7 +192,7 @@ const TemplateMinimal = ({ data }) => {
                                     borderRight: i < stats.length - 1 ? '0.5px solid #ebebeb' : 'none',
                                 }}
                             >
-                                <Typography sx={{ fontSize: '1.55rem', fontWeight: 900, color: '#0a0a0a', letterSpacing: '-1px', lineHeight: 1.1 }}>
+                                <Typography sx={{ fontSize: '2.4rem', fontWeight: 900, color: '#0f172a', letterSpacing: '-2px', lineHeight: 1.1 }}>
                                     {s.num}
                                 </Typography>
                                 <Typography sx={{ fontSize: '.7rem', color: '#bbb', letterSpacing: '.8px', textTransform: 'uppercase', mt: .5, fontWeight: 500 }}>

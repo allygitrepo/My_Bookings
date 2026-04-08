@@ -56,7 +56,6 @@ const Customers = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Joined</TableCell>
                         </TableRow>
                     </TableHead>
@@ -87,7 +86,6 @@ const Customers = () => {
                                     </Box>
                                 </TableCell>
                                 <TableCell>{c.phone || '—'}</TableCell>
-                                <TableCell>{c.email || '—'}</TableCell>
                                 <TableCell>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</TableCell>
                             </TableRow>
                         ))}

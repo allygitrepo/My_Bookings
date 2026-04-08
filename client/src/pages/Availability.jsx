@@ -12,6 +12,7 @@ import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabil
 import { getStaff } from '../api/staff.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const dayColors = {
@@ -150,6 +151,7 @@ const Availability = () => {
     };
 
     const handleSave = async () => {
+        if (saving) return;
         // Validate all time slots for overlaps before saving
         const clashingDays = [];
         
@@ -162,7 +164,11 @@ const Availability = () => {
             toast.error(`Schedule conflict detected on: ${clashingDays.join(', ')}. Please adjust overlapping shifts.`);
             return;
         }
+
         setSaving(true);
+        setOpen(false); // Close immediately
+        showGlobalLoader('Updating availability...');
+
         try {
             // Remove all existing for this staff and re-create in bulk
             await deleteStaffAvailabilityByStaff(selectedStaff.id);
@@ -182,12 +188,12 @@ const Availability = () => {
                 await bulkCreateStaffAvailability(records);
             }
             toast.success('Availability updated successfully');
-            setOpen(false);
             fetchData();
         } catch (error) {
             toast.error('Failed to update availability');
         } finally {
             setSaving(false);
+            hideGlobalLoader();
         }
     };
 
@@ -319,7 +325,7 @@ const Availability = () => {
                 subtitle={`Set working hours for ${selectedStaff?.staff_name}`}
                 onSave={handleSave}
                 isLoading={saving}
-                saveLabel="Update Availability"
+                saveLabel={saving ? 'Updating...' : 'Update Availability'}
             >
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1, display: 'block' }}>

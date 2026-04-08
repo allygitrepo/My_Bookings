@@ -22,6 +22,8 @@ import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabil
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+import { validateName, validateMobile, blockEmoji } from '../utils/validators';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const PHOTO_SIZE_LIMIT = 500 * 1024; // 500 KB limit for base64
@@ -90,6 +92,7 @@ const Staff = () => {
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [isSubmitting, setIsSubmitting] = useState(false);
     const [filterDays, setFilterDays] = useState([]);
 
     useEffect(() => {
@@ -267,6 +270,7 @@ const Staff = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
         // Final check for any clashes before submitting
         const clashingDays = [];
         
@@ -296,6 +300,10 @@ const Staff = () => {
             return;
         }
 
+        setIsSubmitting(true);
+        setOpen(false); // Close immediately
+        showGlobalLoader(editId ? 'Updating staff member...' : 'Adding new staff...');
+
         try {
             let staffId;
             if (editId) {
@@ -317,9 +325,11 @@ const Staff = () => {
                     fetchData();
                 }
             }
-            setOpen(false);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Operation failed');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -500,7 +510,8 @@ const Staff = () => {
                 title={editId ? 'Edit Staff Member' : 'Add Staff Member'}
                 subtitle="Set staff details and their weekly availability schedule."
                 onSave={handleSubmit(onSubmit)}
-                saveLabel={editId ? 'Update Staff' : 'Add Staff'}
+                isLoading={isSubmitting}
+                saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Staff') : (isSubmitting ? 'Creating...' : 'Add Staff')}
                 width={540}
             >
                 {/* --- Assignment --- */}
@@ -558,31 +569,32 @@ const Staff = () => {
                 <FieldSection label="Staff Details">
                     <Controller name="staff_name" control={control}
                         rules={{
-                            required: 'Name is required',
-                            pattern: { value: /^[A-Za-z .]+$/, message: 'Name must not contain numbers' }
+                            validate: {
+                                required: v => v?.trim() ? true : 'Name is required',
+                                format: v => validateName(v),
+                                emoji: v => blockEmoji(v)
+                            }
                         }}
                         render={({ field }) => (
                             <TextField {...field} fullWidth label="Staff Name *" error={!!errors.staff_name} helperText={errors.staff_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Dr. Agarwal"
-                                onChange={(e) => {
-                                    // Strip digits on input
-                                    field.onChange(e.target.value.replace(/[0-9]/g, ''));
-                                }}
+                                onChange={(e) => field.onChange(e.target.value)}
                             />
                         )} />
                     <Grid container spacing={2}>
                         <Grid item xs={6}>
                             <Controller name="role" control={control}
-                                render={({ field }) => <TextField {...field} fullWidth label="Role" placeholder="e.g. Doctor" />} />
+                                rules={{ validate: blockEmoji }}
+                                render={({ field }) => <TextField {...field} fullWidth label="Role" placeholder="e.g. Doctor" error={!!errors.role} helperText={errors.role?.message} />} />
                         </Grid>
                         <Grid item xs={6}>
                             <Controller name="phone" control={control}
                                 rules={{
-                                    pattern: { value: /^\d{10}$/, message: 'Phone must be exactly 10 digits' }
+                                    validate: validateMobile
                                 }}
                                 render={({ field }) => (
                                     <TextField {...field} fullWidth label="Phone" placeholder="9876543210"
                                         error={!!errors.phone} helperText={errors.phone?.message}
-                                        inputProps={{ maxLength: 10, inputMode: 'numeric', pattern: '[0-9]*' }}
+                                        inputProps={{ maxLength: 10, inputMode: 'numeric' }}
                                         onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
                                     />
                                 )} />

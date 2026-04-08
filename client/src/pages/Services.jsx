@@ -17,6 +17,8 @@ import { getStaff } from '../api/staff.api';
 import { getStaffServices, createStaffService, deleteStaffService } from '../api/staffService.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+import { validateName, blockEmoji } from '../utils/validators';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -38,6 +40,7 @@ const Services = () => {
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setPage(0);
@@ -97,7 +100,12 @@ const Services = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
         const { assignedStaff, assignedLocations, ...svcData } = data;
+        setOpen(false);
+        showGlobalLoader(editId ? 'Updating service...' : 'Creating service...');
+
         try {
             let targetId;
             if (editId) {
@@ -123,9 +131,11 @@ const Services = () => {
                     fetchData();
                 }
             }
-            setOpen(false);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Operation failed');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -252,7 +262,15 @@ const Services = () => {
                 }}
             />
 
-            <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Service' : 'Add New Service'} subtitle="Define a service offering for your business." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Service' : 'Create Service'}>
+            <FormDrawer 
+                open={open} 
+                onClose={() => setOpen(false)} 
+                title={editId ? 'Edit Service' : 'Add New Service'} 
+                subtitle="Define a service offering for your business." 
+                onSave={handleSubmit(onSubmit)} 
+                isLoading={isSubmitting}
+                saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Service') : (isSubmitting ? 'Creating...' : 'Create Service')}
+            >
                 <FieldSection label="Assignment">
                     <Controller name="business_id" control={control} rules={{ required: true }}
                         render={({ field }) => (
@@ -307,7 +325,14 @@ const Services = () => {
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Service Details">
-                    <Controller name="service_name" control={control} rules={{ required: 'Service name is required' }}
+                    <Controller name="service_name" control={control} 
+                        rules={{ 
+                            validate: {
+                                required: v => v?.trim() ? true : 'Service name is required',
+                                format: v => validateName(v),
+                                emoji: v => blockEmoji(v)
+                            }
+                        }}
                         render={({ field }) => (
                             <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Full Body Checkup" />
                         )} />

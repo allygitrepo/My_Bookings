@@ -13,6 +13,8 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getBusinesses } from '../api/business.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+import { validateName, blockEmoji } from '../utils/validators';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import locationService from '../utils/locationService';
 
 const FieldSection = ({ label, children }) => (
@@ -35,6 +37,7 @@ const Locations = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
     const [filterState, setFilterState] = useState('All');
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setPage(0);
@@ -125,17 +128,30 @@ const Locations = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        setOpen(false);
+        showGlobalLoader(editId ? 'Updating location...' : 'Creating location...');
+
         try {
             if (editId) {
                 const response = await updateLocation(editId, data);
-                if (response.success) { toast.success('Location updated successfully'); fetchData(); }
+                if (response.success) {
+                    toast.success('Location updated successfully');
+                    fetchData();
+                }
             } else {
                 const response = await createLocation(data);
-                if (response.success) { toast.success('Location created successfully'); fetchData(); }
+                if (response.success) {
+                    toast.success('Location created successfully');
+                    fetchData();
+                }
             }
-            setOpen(false);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Operation failed');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -232,7 +248,15 @@ const Locations = () => {
                 }}
             />
 
-            <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Location' : 'Add New Location'} subtitle="Define where your business operates." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update Location' : 'Create Location'}>
+            <FormDrawer 
+                open={open} 
+                onClose={() => setOpen(false)} 
+                title={editId ? 'Edit Location' : 'Add New Location'} 
+                subtitle="Define where your business operates." 
+                onSave={handleSubmit(onSubmit)} 
+                isLoading={isSubmitting}
+                saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Location') : (isSubmitting ? 'Creating...' : 'Create Location')}
+            >
                 <FieldSection label="Assignment">
                     <Controller name="business_id" control={control} rules={{ required: 'Business is required' }}
                         render={({ field }) => (
@@ -252,13 +276,20 @@ const Locations = () => {
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Location Details">
-                    <Controller name="location_name" control={control} rules={{ required: 'Location name is required' }}
+                    <Controller name="location_name" control={control} 
+                        rules={{ 
+                            validate: {
+                                required: v => v?.trim() ? true : 'Location name is required',
+                                emoji: v => blockEmoji(v)
+                            }
+                        }}
                         render={({ field }) => (
                             <TextField {...field} fullWidth label="Location Name *" placeholder="e.g. Main Branch, City Center" error={!!errors.location_name} helperText={errors.location_name?.message} sx={{ mb: 2.5 }} />
                         )} />
                     <Controller name="address" control={control}
+                        rules={{ validate: blockEmoji }}
                         render={({ field }) => (
-                            <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" sx={{ mb: 2.5 }} />
+                            <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" sx={{ mb: 2.5 }} error={!!errors.address} helperText={errors.address?.message} />
                         )} />
 
                     {/* State — searchable dropdown */}

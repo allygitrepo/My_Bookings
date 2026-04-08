@@ -16,6 +16,7 @@ import { getApiKeys, createApiKey, updateApiKey, deleteApiKey } from '../api/api
 import { getBusinesses } from '../api/business.api';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const ApiKeys = () => {
     const [apiKeys, setApiKeys] = useState([]);
@@ -26,6 +27,7 @@ const ApiKeys = () => {
     const [visibleKeys, setVisibleKeys] = useState({});
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -55,6 +57,11 @@ const ApiKeys = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        setOpen(false);
+        showGlobalLoader(editId ? 'Updating API Key...' : 'Generating new API Key...');
+
         try {
             if (editId) {
                 const response = await updateApiKey(editId, data);
@@ -73,9 +80,11 @@ const ApiKeys = () => {
                     fetchData();
                 }
             }
-            setOpen(false);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Operation failed');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -191,7 +200,15 @@ const ApiKeys = () => {
                 }}
             />
 
-            <FormDrawer open={open} onClose={() => setOpen(false)} title="Generate API Key" subtitle="A unique API key will be generated for the selected business." onSave={handleSubmit(onSubmit)} saveLabel="Generate Key">
+            <FormDrawer 
+                open={open} 
+                onClose={() => setOpen(false)} 
+                title={editId ? "Edit API Key" : "Generate API Key"} 
+                subtitle="A unique API key will be generated for the selected business." 
+                onSave={handleSubmit(onSubmit)} 
+                isLoading={isSubmitting}
+                saveLabel={isSubmitting ? 'Processing...' : (editId ? 'Update Key' : 'Generate Key')}
+            >
                 <Box sx={{ mb: 3 }}>
                     <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5, display: 'block' }}>Business</Typography>
                     <Controller name="business_id" control={control} rules={{ required: true }}

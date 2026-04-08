@@ -19,6 +19,8 @@ import { refreshToken } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
+import { validateName, validateEmail, validatePhone, blockEmoji } from '../utils/validators';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const INDUSTRY_OPTIONS = [
     { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
@@ -49,6 +51,7 @@ const Businesses = () => {
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         setPage(0);
@@ -114,6 +117,11 @@ const Businesses = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
+        setIsSubmitting(true);
+        setOpen(false); // Close drawer immediately
+        showGlobalLoader(editId ? 'Updating business...' : 'Creating business...');
+
         try {
             if (editId) {
                 const response = await updateBusiness(editId, data);
@@ -128,7 +136,6 @@ const Businesses = () => {
                     fetchBusinesses();
 
                     // Refresh the JWT token to embed the new business_id.
-                    // This ensures all subsequent API calls use the correct tenant scope.
                     try {
                         const refreshed = await refreshToken();
                         if (refreshed.success) {
@@ -141,13 +148,15 @@ const Businesses = () => {
                             }));
                         }
                     } catch (e) {
-                        console.warn('Token refresh failed, user may need to re-login.', e);
+                        console.warn('Token refresh failed', e);
                     }
                 }
             }
-            setOpen(false);
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Operation failed');
+            toast.error(error.message || 'An error occurred');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -255,11 +264,19 @@ const Businesses = () => {
                 title={editId ? 'Edit Business' : 'Add New Business'}
                 subtitle="Fill in the details below to configure your business profile."
                 onSave={handleSubmit(onSubmit)}
-                saveLabel={editId ? 'Update Business' : 'Create Business'}
+                isLoading={isSubmitting}
+                saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Business') : (isSubmitting ? 'Creating...' : 'Create Business')}
             >
                 <FieldSection label="Business Identity">
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Controller name="business_name" control={control} rules={{ required: 'Business name is required' }}
+                        <Controller name="business_name" control={control} 
+                            rules={{ 
+                                validate: {
+                                    required: v => v?.trim() ? true : 'Business name is required',
+                                    format: v => validateName(v),
+                                    emoji: v => blockEmoji(v)
+                                }
+                            }}
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Business Name *" error={!!errors.business_name}
                                     helperText={errors.business_name?.message} placeholder="e.g. Shiv Clinic" />
@@ -298,26 +315,30 @@ const Businesses = () => {
                     <Grid container spacing={2.5}>
                         <Grid item xs={12}>
                             <Controller name="email" control={control}
+                                rules={{ validate: validateEmail }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" />
+                                    <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" error={!!errors.email} helperText={errors.email?.message} />
                                 )} />
                         </Grid>
                         <Grid item xs={12}>
                             <Controller name="phone" control={control}
+                                rules={{ validate: validatePhone }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Phone" placeholder="+91 98765 43210" />
+                                    <TextField {...field} fullWidth label="Phone" placeholder="+91 79 26543210" error={!!errors.phone} helperText={errors.phone?.message} />
                                 )} />
                         </Grid>
                         <Grid item xs={12}>
                             <Controller name="sync_email" control={control}
+                                rules={{ validate: validateEmail }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Sync Email (Calendar)" type="email" placeholder="calendar@example.com" />
+                                    <TextField {...field} fullWidth label="Sync Email (Calendar)" type="email" placeholder="calendar@example.com" error={!!errors.sync_email} helperText={errors.sync_email?.message} />
                                 )} />
                         </Grid>
                         <Grid item xs={12}>
                             <Controller name="upi_id" control={control}
+                                rules={{ validate: blockEmoji }}
                                 render={({ field }) => (
-                                    <TextField {...field} fullWidth label="UPI ID" placeholder="businessname@upi" />
+                                    <TextField {...field} fullWidth label="UPI ID" placeholder="businessname@upi" error={!!errors.upi_id} helperText={errors.upi_id?.message} />
                                 )} />
                         </Grid>
                     </Grid>

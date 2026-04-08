@@ -12,6 +12,7 @@ import { getStaffServices, createStaffService, updateStaffService, deleteStaffSe
 import { getStaff } from '../api/staff.api';
 import { getServices } from '../api/service.api';
 import toast from 'react-hot-toast';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -29,6 +30,7 @@ const StaffServices = () => {
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     const fetchData = async () => {
         setLoading(true);
@@ -62,6 +64,19 @@ const StaffServices = () => {
     };
 
     const onSubmit = async (data) => {
+        if (isSubmitting) return;
+
+        // Avoid duplicates client-side
+        const exists = staffServices.find(ss => ss.staff_id === data.staff_id && ss.service_id === data.service_id);
+        if (exists) {
+            toast.error('This assignment already exists');
+            return;
+        }
+
+        setIsSubmitting(true);
+        setOpen(false);
+        showGlobalLoader(editId ? 'Updating assignment...' : 'Assigning service...');
+
         try {
             if (editId) {
                 const response = await updateStaffService(editId, data);
@@ -70,21 +85,17 @@ const StaffServices = () => {
                     fetchData();
                 }
             } else {
-                // Avoid duplicates
-                const exists = staffServices.find(ss => ss.staff_id === data.staff_id && ss.service_id === data.service_id);
-                if (exists) {
-                    toast.error('This assignment already exists');
-                    return;
-                }
                 const response = await createStaffService(data);
                 if (response.success) {
                     toast.success('Service assigned to staff');
                     fetchData();
                 }
             }
-            setOpen(false);
         } catch (error) {
             toast.error(error.response?.data?.message || 'Operation failed');
+        } finally {
+            setIsSubmitting(false);
+            hideGlobalLoader();
         }
     };
 
@@ -159,7 +170,15 @@ const StaffServices = () => {
                 }}
             />
 
-            <FormDrawer open={open} onClose={() => setOpen(false)} title={editId ? 'Edit Assignment' : 'Assign Service to Staff'} subtitle="Link a staff member to a service they can perform." onSave={handleSubmit(onSubmit)} saveLabel={editId ? 'Update' : 'Assign'}>
+            <FormDrawer 
+                open={open} 
+                onClose={() => setOpen(false)} 
+                title={editId ? 'Edit Assignment' : 'Assign Service to Staff'} 
+                subtitle="Link a staff member to a service they can perform." 
+                onSave={handleSubmit(onSubmit)} 
+                isLoading={isSubmitting}
+                saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update') : (isSubmitting ? 'Assigning...' : 'Assign')}
+            >
                 <FieldSection label="Staff & Service">
                     <Grid container spacing={2.5}>
                         <Grid item xs={12}>

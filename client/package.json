@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
+    "dev": "vite --host",
     "build": "vite build",
     "build:widget": "set BUILD_WIDGET=true&& vite build",
     "build:all": "npm run build && npm run build:widget",

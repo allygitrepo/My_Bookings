@@ -12,8 +12,13 @@ const apiKeyRoutes = require("./apiKey.routes");
 const serviceLocationRoutes = require("./serviceLocation.routes");
 const googleAuthRoutes = require("./googleAuth.routes");
 
+const preventDuplicate = require("../middleware/preventDuplicate.middleware");
+
 const routes = (app) => {
     const prefix = "/mybookings";
+
+    // Global duplicate request prevention for POST/PUT/PATCH
+    app.use(preventDuplicate(2000));
 
     app.use(`${prefix}/users`, userRoutes);
     app.use(`${prefix}/business`, businessRoutes);

@@ -20,8 +20,9 @@ import { getBusinesses, updateBusiness, getBusinessById } from '../api/business.
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
-import toast from 'react-hot-toast';
 import { encodeBusinessId } from '../utils/obfuscation';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import toast from 'react-hot-toast';
 
 const WebsiteGenerator = () => {
     const [businesses, setBusinesses] = useState([]);
@@ -112,7 +113,13 @@ const WebsiteGenerator = () => {
     };
 
     const handleSave = async () => {
+        if (saving) return;
+        if (blockEmoji(settings.slug) !== true) {
+            toast.error('Slug contains emojis or invalid characters');
+            return;
+        }
         setSaving(true);
+        showGlobalLoader('Saving website settings...');
         try {
             const response = await updateBusiness(selectedBusinessId, settings);
             if (response.success) {
@@ -126,6 +133,7 @@ const WebsiteGenerator = () => {
             toast.error(error.response?.data?.message || 'Failed to save settings');
         } finally {
             setSaving(false);
+            hideGlobalLoader();
         }
     };
 
@@ -212,7 +220,14 @@ const WebsiteGenerator = () => {
                                     label="Website Username (Slug)"
                                     value={settings.slug}
                                     placeholder="e.g. shiv-clinic"
-                                    onChange={(e) => setSettings({ ...settings, slug: e.target.value })}
+                                    onChange={(e) => {
+                                        const val = e.target.value;
+                                        if (blockEmoji(val) === true) {
+                                            setSettings({ ...settings, slug: val });
+                                        } else {
+                                            toast.error('Emojis are not allowed');
+                                        }
+                                    }}
                                     helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${encodeBusinessId(selectedBusinessId)}` : 'Select a business and publish to get a live link'}
                                     sx={{ mt: 1 }}
                                 />

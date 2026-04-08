@@ -26,6 +26,7 @@ import { createPayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
 import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
+import { validateEmail, validateMobile, validateName, blockEmoji } from '../utils/validators';
 import { formatDate, getDayName } from '../utils/date';
 
 const steps = ['Location', 'Services', 'Staff', 'Date & Time', 'Your Details', 'Payment'];
@@ -128,7 +129,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         date: '',
         slot: '',
         paidAmount: 0,
-        customer: { name: '', phone: '' },
+        customer: { name: '', phone: '', email: '' },
     });
     const [detailErrors, setDetailErrors] = useState({});
     const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -236,7 +237,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             date: '',
             slot: '',
             paidAmount: 0,
-            customer: { name: '', phone: '' }
+            customer: { name: '', phone: '', email: '' }
         });
     };
 
@@ -826,11 +827,20 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             case 4: { // Your Details
                 const validateAndNext = () => {
                     const errs = {};
-                    const { name, phone } = bookingData.customer;
-                    if (!name.trim()) errs.name = 'Name is required';
-                    else if (!/^[A-Za-z .\-']+$/.test(name.trim())) errs.name = 'Name can only contain letters and spaces';
-                    if (!phone.trim()) errs.phone = 'Phone number is required';
-                    else if (!/^\d{10}$/.test(phone)) errs.phone = 'Enter exactly 10 digits';
+                    const { name, phone, email } = bookingData.customer;
+                    
+                    const nameRes = validateName(name);
+                    if (nameRes !== true) errs.name = nameRes;
+                    
+                    const mobileRes = validateMobile(phone);
+                    if (mobileRes !== true) errs.phone = mobileRes;
+
+                    const emailRes = validateEmail(email);
+                    if (emailRes !== true) errs.email = emailRes;
+
+                    const nameEmoji = blockEmoji(name);
+                    if (nameEmoji !== true) errs.name = nameEmoji;
+
                     setDetailErrors(errs);
                     if (Object.keys(errs).length === 0) handleNext();
                 };
@@ -855,11 +865,23 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 <TextField fullWidth label="Phone Number *" value={bookingData.customer.phone}
                                     error={!!detailErrors.phone}
                                     helperText={detailErrors.phone}
+                                    placeholder="e.g. 9876543210"
                                     inputProps={{ maxLength: 10, inputMode: 'numeric' }}
                                     onChange={e => {
                                         const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
                                         if (detailErrors.phone) setDetailErrors(p => ({ ...p, phone: undefined }));
+                                    }} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <TextField fullWidth label="Email Address *" value={bookingData.customer.email}
+                                    error={!!detailErrors.email}
+                                    helperText={detailErrors.email}
+                                    placeholder="e.g. john@example.com"
+                                    onChange={e => {
+                                        const val = e.target.value.trim();
+                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, email: val } });
+                                        if (detailErrors.email) setDetailErrors(p => ({ ...p, email: undefined }));
                                     }} />
                             </Grid>
                         </Grid>
