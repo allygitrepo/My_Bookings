@@ -7,6 +7,7 @@ import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
 import BookingWidget from '../widgets/BookingWidget';
 import PageTransition from '../components/PageTransition';
+import { decodeBusinessId } from '../utils/obfuscation';
 
 const PublicBusinessWebsite = () => {
     // ... existing state ...
@@ -19,7 +20,11 @@ const PublicBusinessWebsite = () => {
 
     // Get biz ID from query string if it exists
     const searchParams = new URLSearchParams(location.search);
-    const bizId = searchParams.get('biz');
+    let bizId = searchParams.get('biz');
+    if (bizId) {
+        // Decode business ID using secure utility
+        bizId = decodeBusinessId(bizId);
+    }
 
     useEffect(() => {
         // ... fetching logic ...

@@ -21,6 +21,7 @@ import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
 import toast from 'react-hot-toast';
+import { encodeBusinessId } from '../utils/obfuscation';
 
 const WebsiteGenerator = () => {
     const [businesses, setBusinesses] = useState([]);
@@ -212,8 +213,23 @@ const WebsiteGenerator = () => {
                                     value={settings.slug}
                                     placeholder="e.g. shiv-clinic"
                                     onChange={(e) => setSettings({ ...settings, slug: e.target.value })}
-                                    helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${selectedBusinessId}` : 'Select a business and publish to get a live link'}
+                                    helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${encodeBusinessId(selectedBusinessId)}` : 'Select a business and publish to get a live link'}
                                     sx={{ mt: 1 }}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size="small"
+                                            checked={settings.website_enabled}
+                                            onChange={(e) => setSettings({ ...settings, website_enabled: e.target.checked })}
+                                        />
+                                    }
+                                    label={
+                                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>
+                                            {settings.website_enabled ? '🌐 Website is Publicly Visible' : '🔒 Internal Draft (Hidden)'}
+                                        </Typography>
+                                    }
+                                    sx={{ mt: 2, display: 'flex' }}
                                 />
                             </Box>
 
@@ -315,51 +331,29 @@ const WebsiteGenerator = () => {
                                 </Box>
                             </Box> */}
 
-                                <Box sx={{ 
-                                    p: 1.5, 
-                                    bgcolor: 'action.hover', 
-                                    borderRadius: 4, 
-                                    display: 'flex', 
-                                    alignItems: 'center', 
-                                    justifyContent: 'space-between',
-                                    gap: 2
-                                }}>
-                                    <FormControlLabel
-                                        sx={{ m: 0 }}
-                                        control={
-                                            <Switch
-                                                size="small"
-                                                checked={settings.website_enabled}
-                                                onChange={(e) => setSettings({ ...settings, website_enabled: e.target.checked })}
-                                            />
-                                        }
-                                        label={
-                                            <Box>
-                                                <Typography sx={{ fontSize: '0.8rem', fontWeight: 800, lineHeight: 1.2 }}>Live Site</Typography>
-                                                <Typography variant="caption" sx={{ fontSize: '0.65rem', color: 'text.secondary', display: 'block' }}>
-                                                    {settings.website_enabled ? 'Public' : 'Hidden'}
-                                                </Typography>
-                                            </Box>
-                                        }
-                                    />
+                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 'auto' }}>
                                     <Button
                                         variant="contained"
-                                        size="small"
-                                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '14px !important' }} />}
+                                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '16px !important' }} />}
                                         disabled={saving}
                                         onClick={handleSave}
                                         sx={{ 
-                                            px: 3, 
-                                            py: 1, 
+                                            px: 4,
+                                            py: 1.2, 
                                             borderRadius: 2.5, 
                                             fontWeight: 900, 
-                                            fontSize: '0.75rem', 
-                                            whiteSpace: 'nowrap',
+                                            fontSize: '0.8rem', 
                                             textTransform: 'none',
-                                            boxShadow: '0 4px 12px rgba(99,102,241,0.2)'
+                                            background: settings.website_enabled ? 'linear-gradient(45deg, #6366f1, #8b5cf6)' : 'primary.main',
+                                            boxShadow: '0 8px 16px rgba(99,102,241,0.15)',
+                                            '&:hover': {
+                                                boxShadow: '0 12px 24px rgba(99,102,241,0.25)',
+                                                transform: 'translateY(-1px)'
+                                            },
+                                            transition: 'all 0.2s'
                                         }}
                                     >
-                                        {saving ? 'Wait...' : 'Publish'}
+                                        {saving ? 'Saving...' : 'Save & Publish'}
                                     </Button>
                                 </Box>
                             </Box>
@@ -379,7 +373,7 @@ const WebsiteGenerator = () => {
                                     </Box>
                                     {settings.website_enabled && settings.slug && (
                                         <Tooltip title="View Live Site">
-                                            <IconButton size="small" onClick={() => window.open(`/?biz=${selectedBusinessId}`, '_blank')} sx={{ bgcolor: 'action.hover' }}>
+                                            <IconButton size="small" onClick={() => window.open(`/?biz=${encodeBusinessId(selectedBusinessId)}`, '_blank')} sx={{ bgcolor: 'action.hover' }}>
                                                 <OpenIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
