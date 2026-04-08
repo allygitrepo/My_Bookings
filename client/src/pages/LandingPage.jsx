@@ -24,6 +24,7 @@ import {
     ExpandMore as ExpandMoreIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
+import Logo from '../components/Logo';
 
 // Simple icon wrapper for missing imports
 const CalendarMonthIcon = (props) => <BookingIcon {...props} />;
@@ -85,9 +86,7 @@ const LandingPage = () => {
             <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid #e2e8f0' }}>
                 <Container maxWidth="lg">
                     <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
-                        <Typography variant="h5" color="primary" fontWeight={800}>
-                            MyBookings
-                        </Typography>
+                        <Logo size={42} />
                         <Stack direction="row" spacing={2} alignItems="center">
                             {/* <Button color="inherit" sx={{ display: { xs: 'none', md: 'inline-flex' } }}>Features</Button> */}
                             <Button variant="contained" component={NavLink} to="/dashboard" sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}>
@@ -233,9 +232,7 @@ const LandingPage = () => {
                 <Container maxWidth="xl">
                     <Grid container spacing={4} alignItems="center" justifyContent="space-between">
                         <Grid item xs={12} md={5}>
-                            <Typography variant="h5" color="primary" fontWeight={900} letterSpacing="-0.5px">
-                                MyBookings
-                            </Typography>
+                            <Logo size={40} />
                             <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
                                 Empowering businesses with smart, unified booking solutions. <br />
                                 Managed and developed with excellence by Allysoft Solutions.

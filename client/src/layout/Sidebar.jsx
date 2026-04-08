@@ -11,6 +11,7 @@ import {
     Box,
     Divider,
 } from '@mui/material';
+import Logo from '../components/Logo';
 import {
     Dashboard as DashboardIcon,
     Business as BusinessIcon,
@@ -46,10 +47,8 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
-            <Box sx={{ p: 3, display: 'flex', alignItems: 'center' }}>
-                <Typography variant="h5" color="primary" fontWeight="bold">
-                    MyBookings
-                </Typography>
+            <Box sx={{ p: 3 }}>
+                <Logo size={32} />
             </Box>
             <Divider />
             <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
