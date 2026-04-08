@@ -104,20 +104,6 @@ const TemplatePremium = ({ data }) => {
         return () => window.removeEventListener('scroll', fn);
     }, []);
 
-    // Load External Booking Widget Script
-    useEffect(() => {
-        const scriptId = 'mybookings-widget-script';
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = "https://mybookings.allysoftsolutions.com/widget.js";
-            script.dataset.businessId = business.api_key || "pk_live_2a3364a2d6ac4db497371edfbe156dbd";
-            script.dataset.theme = "dark";
-            script.async = true;
-            document.body.appendChild(script);
-        }
-    }, [business.api_key]);
-
     return (
         <Box sx={{ bgcolor: '#080b12', minHeight: '100vh', color: '#fff', fontFamily: "'Jost', sans-serif", overflowX: 'hidden' }}>
             <FontImport />
@@ -226,7 +212,7 @@ const TemplatePremium = ({ data }) => {
                                             letterSpacing: '2px', textTransform: 'uppercase',
                                         }}
                                     >
-                                        Explore
+                                        Book Appointment
                                         <ArrowIcon sx={{ fontSize: 16 }} />
                                     </motion.button>
                                     <Typography component="a" href="#services"

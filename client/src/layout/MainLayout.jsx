@@ -17,7 +17,12 @@ const MainLayout = () => {
         setIsSidebarOpen(!isSidebarOpen);
     };
 
-    const isBookingsPage = location.pathname.startsWith('/bookings');
+    const showWidget = [
+        '/bookings',
+        '/api-keys',
+        '/widget-script',
+        '/website-builder'
+    ].some(path => location.pathname.startsWith(path));
 
     return (
         <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
@@ -36,7 +41,7 @@ const MainLayout = () => {
                     transition: theme.transitions.create(['margin', 'width'], {
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
-                    }),
+                        }),
                 }}
             >
                 <Navbar
@@ -47,8 +52,8 @@ const MainLayout = () => {
                 <Box sx={{ mt: 10 }}>
                     <Outlet />
                 </Box>
-                {/* Widget Preview for Admin - Only on Bookings Page */}
-                {isBookingsPage && (
+                {/* Widget Preview for Admin - Show on relevant pages */}
+                {showWidget && (
                     <BookingWidget 
                         isSidebarOpen={isSidebarOpen && !isMobile} 
                         drawerWidth={DRAWER_WIDTH} 

@@ -79,21 +79,6 @@ const TemplateMinimal = ({ data }) => {
         return () => clearInterval(id);
     }, []);
 
-    // Load External Booking Widget Script
-    useEffect(() => {
-        const scriptId = 'mybookings-widget-script';
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = "https://mybookings.allysoftsolutions.com/widget.js";
-            // Use business API key if available, otherwise fallback to the one provided
-            script.dataset.businessId = business.api_key || "pk_live_2a3364a2d6ac4db497371edfbe156dbd";
-            script.dataset.theme = "light";
-            script.async = true;
-            document.body.appendChild(script);
-        }
-    }, [business.api_key]);
-
     return (
         <Box
             sx={{
@@ -174,7 +159,7 @@ const TemplateMinimal = ({ data }) => {
                                 letterSpacing: '.2px', transition: 'background .2s',
                             }}
                         >
-                            Explore
+                            Book Appointment
                             <motion.span
                                 initial={{ x: 0 }}
                                 whileHover={{ x: 4 }}

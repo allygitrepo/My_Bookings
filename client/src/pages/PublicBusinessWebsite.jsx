@@ -5,9 +5,11 @@ import { getBusinessBySlug, getBusinessByIdPublic } from '../api/business.api';
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
+import BookingWidget from '../widgets/BookingWidget';
 import PageTransition from '../components/PageTransition';
 
 const PublicBusinessWebsite = () => {
+    // ... existing state ...
     const { slug } = useParams();
     const navigate = useNavigate();
     const location = useLocation();
@@ -20,6 +22,7 @@ const PublicBusinessWebsite = () => {
     const bizId = searchParams.get('biz');
 
     useEffect(() => {
+        // ... fetching logic ...
         const fetchWebsiteData = async () => {
             setLoading(true);
             try {
@@ -99,6 +102,7 @@ const PublicBusinessWebsite = () => {
     return (
         <PageTransition>
             {renderTemplate()}
+            <BookingWidget businessId={businessData.business.api_key || businessData.business.id} />
         </PageTransition>
     );
 };

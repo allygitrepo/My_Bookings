@@ -17,20 +17,6 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TemplatePremium = ({ data }) => {
     const { business = {}, services = [], locations = [] } = data || {};
 
-    // Load External Booking Widget Script
-    React.useEffect(() => {
-        const scriptId = 'mybookings-widget-script';
-        if (!document.getElementById(scriptId)) {
-            const script = document.createElement('script');
-            script.id = scriptId;
-            script.src = "https://mybookings.allysoftsolutions.com/widget.js";
-            script.dataset.businessId = business.api_key || "pk_live_2a3364a2d6ac4db497371edfbe156dbd";
-            script.dataset.theme = "dark";
-            script.async = true;
-            document.body.appendChild(script);
-        }
-    }, [business.api_key]);
-
     return (
         <Box sx={{ bgcolor: '#020617', minHeight: '100vh', color: '#fff', fontFamily: "'Outfit', sans-serif" }}>
             {/* Hero Section */}
@@ -85,12 +71,12 @@ const TemplatePremium = ({ data }) => {
                                     fontWeight: 800,
                                     textTransform: 'none',
                                     fontSize: '1.1rem',
-                                    boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)',
+                                    boxShadow: '0 0 20px rgba(56, 189, 248, 0.15)',
                                     '&:hover': { bgcolor: '#fff', transform: 'translateY(-2px)', color: '#020617' },
                                     transition: 'all 0.3s'
                                 }}
                             >
-                                Explore
+                                Book Now
                             </Button>
                         </Box>
                     </motion.div>
@@ -156,7 +142,7 @@ const TemplatePremium = ({ data }) => {
                                                                 '&:hover': { bgcolor: '#38bdf8', color: '#020617' }
                                                             }}
                                                         >
-
+                                                            <ArrowIcon fontSize="small" />
                                                         </IconButton>
                                                     </Box>
                                                 </CardContent>

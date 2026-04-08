@@ -205,6 +205,21 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         if (open) fetchData();
     }, [open, businessId]);
 
+    // Handle clicks on elements with the 'mybookings-trigger' class
+    useEffect(() => {
+        const handleTriggerClick = (e) => {
+            // Find if the clicked element or any of its parents has the trigger class
+            const trigger = e.target.closest('.mybookings-trigger');
+            if (trigger) {
+                e.preventDefault();
+                setOpen(true);
+            }
+        };
+
+        document.addEventListener('click', handleTriggerClick);
+        return () => document.removeEventListener('click', handleTriggerClick);
+    }, []);
+
     const handleNext = () => setActiveStep(p => p + 1);
     const handleBack = () => setActiveStep(p => p - 1);
 
