@@ -3,6 +3,7 @@ const Staff = require("../models/staff.model");
 const { Op } = require("sequelize");
 
 const getBusinessId = (req) => {
+    if (req.body?.business_id) return req.body.business_id;
     if (req.isWidget) return req.business_id ?? -1;
     return req.user?.business_id ?? -1;
 };
@@ -73,11 +74,23 @@ const staffAvailabilityController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 200;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+            const whereClause = { status: true };
 
-            // Get staff IDs belonging to this business
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
+
+            // Get staff IDs belonging to these businesses
             const businessStaff = await Staff.findAll({
-                where: { business_id, status: true },
+                where: whereClause,
                 attributes: ['id']
             });
             const staffIds = businessStaff.map(s => s.id);
@@ -114,7 +127,18 @@ const staffAvailabilityController = {
     },
     getById: async (req, res) => {
         try {
-            const row = await StaffAvailability.findByPk(req.params.id);
+            const row = await StaffAvailability.findOne({ 
+                where: { id: req.params.id, status: true },
+                include: [{
+                    model: Staff,
+                    required: true,
+                    include: [{
+                        model: Business,
+                        where: { user_id: req.user.user_id, status: true },
+                        required: true
+                    }]
+                }]
+            });
             if (!row) return res.status(404).json({ success: false, message: "StaffAvailability not found" });
             res.json({ success: true, message: "StaffAvailability fetched successfully", data: row });
         } catch (error) {
@@ -123,7 +147,18 @@ const staffAvailabilityController = {
     },
     update: async (req, res) => {
         try {
-            const row = await StaffAvailability.findByPk(req.params.id);
+            const row = await StaffAvailability.findOne({ 
+                where: { id: req.params.id, status: true },
+                include: [{
+                    model: Staff,
+                    required: true,
+                    include: [{
+                        model: Business,
+                        where: { user_id: req.user.user_id, status: true },
+                        required: true
+                    }]
+                }]
+            });
             if (!row) return res.status(404).json({ success: false, message: "StaffAvailability not found" });
             
             const updatedData = { ...row.toJSON(), ...req.body };
@@ -164,7 +199,18 @@ const staffAvailabilityController = {
     },
     delete: async (req, res) => {
         try {
-            const row = await StaffAvailability.findByPk(req.params.id);
+            const row = await StaffAvailability.findOne({ 
+                where: { id: req.params.id, status: true },
+                include: [{
+                    model: Staff,
+                    required: true,
+                    include: [{
+                        model: Business,
+                        where: { user_id: req.user.user_id, status: true },
+                        required: true
+                    }]
+                }]
+            });
             if (!row) return res.status(404).json({ success: false, message: "StaffAvailability not found" });
             await row.update({ status: false });
             res.json({ success: true, message: "StaffAvailability deleted successfully" });

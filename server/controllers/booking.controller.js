@@ -7,6 +7,7 @@ const Location = require("../models/location.model");
 const { syncBookingToGoogle } = require("../services/googleCalendar.service");
 
 const getBusinessId = (req) => {
+    if (req.body?.business_id) return req.body.business_id;
     if (req.isWidget) return req.business_id ?? -1;
     return req.user?.business_id ?? -1;
 };
@@ -59,10 +60,23 @@ const bookingController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+
+            const whereClause = { }; // Bookings don't use 'status: true' consistently or at all? 
+            // In getAll original it didn't have status: true.
+
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
 
             const { count, rows } = await Booking.findAndCountAll({
-                where: { business_id },
+                where: whereClause,
                 limit,
                 offset
             });
@@ -81,8 +95,16 @@ const bookingController = {
     },
     getById: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Booking.findOne({ where: { id: req.params.id, business_id } });
+            const whereClause = { id: req.params.id };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Booking.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Booking not found" });
             res.json({ success: true, message: "Booking fetched successfully", data: row });
         } catch (error) {
@@ -91,10 +113,23 @@ const bookingController = {
     },
     update: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Booking.findOne({ where: { id: req.params.id, business_id } });
+            const whereClause = { id: req.params.id };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Booking.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Booking not found" });
+            
             const { business_id: _, ...safeBody } = req.body;
+            if (req.body.business_id) {
+                safeBody.business_id = req.body.business_id;
+            }
+
             await row.update(safeBody);
             res.json({ success: true, message: "Booking updated successfully", data: row });
         } catch (error) {
@@ -103,9 +138,18 @@ const bookingController = {
     },
     delete: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Booking.findOne({ where: { id: req.params.id, business_id } });
+            const whereClause = { id: req.params.id };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Booking.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Booking not found" });
+            
             await row.update({ status: false });
             res.json({ success: true, message: "Booking deleted successfully" });
         } catch (error) {

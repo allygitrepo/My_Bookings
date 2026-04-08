@@ -1,6 +1,7 @@
 const Customer = require("../models/customer.model");
 
 const getBusinessId = (req) => {
+    if (req.body?.business_id) return req.body.business_id;
     if (req.isWidget) return req.business_id ?? -1;
     return req.user?.business_id ?? -1;
 };
@@ -21,10 +22,23 @@ const customerController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 50;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+
+            const whereClause = { status: true };
+
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
 
             const { count, rows } = await Customer.findAndCountAll({
-                where: { status: true, business_id },
+                where: whereClause,
                 limit,
                 offset
             });
@@ -43,8 +57,17 @@ const customerController = {
     },
     getById: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Customer.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Customer.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Customer not found" });
             res.json({ success: true, message: "Customer fetched successfully", data: row });
         } catch (error) {
@@ -53,10 +76,24 @@ const customerController = {
     },
     update: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Customer.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Customer.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Customer not found" });
+            
             const { business_id: _, ...safeBody } = req.body;
+            if (req.body.business_id) {
+                safeBody.business_id = req.body.business_id;
+            }
+
             await row.update(safeBody);
             res.json({ success: true, message: "Customer updated successfully", data: row });
         } catch (error) {
@@ -65,9 +102,19 @@ const customerController = {
     },
     delete: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Customer.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Customer.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Customer not found" });
+            
             await row.update({ status: false });
             res.json({ success: true, message: "Customer deleted successfully" });
         } catch (error) {

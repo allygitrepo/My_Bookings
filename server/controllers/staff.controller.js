@@ -3,6 +3,7 @@ const StaffLocation = require("../models/staffLocation.model");
 
 // Returns business_id for the current requester. Returns -1 if unknown (prevents leak).
 const getBusinessId = (req) => {
+    if (req.body?.business_id) return req.body.business_id;
     if (req.isWidget) return req.business_id ?? -1;
     return req.user?.business_id ?? -1;
 };
@@ -38,10 +39,22 @@ const staffController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 50;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+            
+            const whereClause = { status: true };
+
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
 
             const { count, rows } = await Staff.findAndCountAll({
-                where: { status: true, business_id },
+                where: whereClause,
                 include: [
                     {
                         model: Location,
@@ -73,8 +86,16 @@ const staffController = {
     },
     getById: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Staff.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Staff.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Staff not found" });
             res.json({ success: true, message: "Staff fetched successfully", data: row });
         } catch (error) {
@@ -83,11 +104,23 @@ const staffController = {
     },
     update: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Staff.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Staff.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Staff not found" });
             
             const { business_id: _, location_ids, ...safeBody } = req.body;
+            if (req.body.business_id) {
+                safeBody.business_id = req.body.business_id;
+            }
+
             await row.update(safeBody);
             
             if (location_ids && Array.isArray(location_ids)) {
@@ -110,9 +143,18 @@ const staffController = {
     },
     delete: async (req, res) => {
         try {
-            const business_id = getBusinessId(req);
-            const row = await Staff.findOne({ where: { id: req.params.id, status: true, business_id } });
+            const whereClause = { id: req.params.id, status: true };
+            
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                whereClause.business_id = businesses.map(b => b.id);
+            }
+
+            const row = await Staff.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Staff not found" });
+            
             await row.update({ status: false });
             res.json({ success: true, message: "Staff deleted successfully" });
         } catch (error) {

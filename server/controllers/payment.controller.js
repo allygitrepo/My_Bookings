@@ -21,11 +21,23 @@ const paymentController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+            const whereClause = { };
 
-            // Filter payments via bookings belonging to this business
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
+
+            // Filter payments via bookings belonging to these businesses
             const businessBookings = await Booking.findAll({
-                where: { business_id },
+                where: whereClause,
                 attributes: ['id']
             });
             const bookingIds = businessBookings.map(b => b.id);

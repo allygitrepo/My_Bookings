@@ -12,6 +12,7 @@ import PageTransition from '../components/PageTransition';
 import { getLocations, createLocation, updateLocation, deleteLocation } from '../api/location.api';
 import { getBusinesses } from '../api/business.api';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -26,6 +27,7 @@ const FieldSection = ({ label, children }) => (
 
 const Locations = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [locations, setLocations] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -44,6 +46,9 @@ const Locations = () => {
     }, [searchQuery]);
 
     const filteredLocations = locations.filter(loc => {
+        const matchesBusiness = selectedBusinessId === 'all' || loc.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
         const bizName = businesses.find(b => b.id === loc.business_id)?.business_name || '';
         const matchesSearch = loc.location_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             bizName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -122,7 +127,7 @@ const Locations = () => {
 
         reset(loc
             ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
-            : { business_id: businesses[0]?.id || '', location_name: '', address: '', city: '', state: '' }
+            : { business_id: (selectedBusinessId !== 'all' ? selectedBusinessId : businesses[0]?.id) || '', location_name: '', address: '', city: '', state: '' }
         );
         setOpen(true);
     };
