@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button,
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button, FormHelperText,
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -303,19 +303,20 @@ const Services = () => {
                 saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Service') : (isSubmitting ? 'Creating...' : 'Create Service')}
             >
                 <FieldSection label="Assignment">
-                    <Controller name="business_id" control={control} rules={{ required: true }}
+                    <Controller name="business_id" control={control} rules={{ required: 'Business is required' }}
                         render={({ field }) => (
-                            <FormControl fullWidth>
+                            <FormControl fullWidth error={!!errors.business_id}>
                                 <InputLabel>Business *</InputLabel>
                                 <Select {...field} label="Business *">
                                     {businesses.map(b => <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>)}
                                 </Select>
+                                {errors.business_id && <FormHelperText>{errors.business_id.message}</FormHelperText>}
                             </FormControl>
                         )} />
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Availability Locations">
-                    <Controller name="assignedLocations" control={control}
+                    <Controller name="assignedLocations" control={control} rules={{ required: 'At least one location is required' }}
                         render={({ field }) => {
                             const selectedIds = field.value || [];
                             const isAllSelected = selectedIds.length > 0 && selectedIds.length === availableLocations.length;
@@ -341,6 +342,8 @@ const Services = () => {
                                             <TextField
                                                 {...params}
                                                 label="Select Locations *"
+                                                error={!!errors.assignedLocations}
+                                                helperText={errors.assignedLocations?.message}
                                                 placeholder={selectedIds.length === 0 ? 'Search and select locations...' : ''}
                                             />
                                         )}
@@ -424,7 +427,15 @@ const Services = () => {
                                             );
                                         })
                                     }
-                                    renderInput={(params) => <TextField {...params} label="Assign Staff" placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''} />}
+                                    renderInput={(params) => (
+                                        <TextField 
+                                            {...params} 
+                                            label="Assign Staff" 
+                                            error={!!errors.assignedStaff}
+                                            helperText={errors.assignedStaff?.message}
+                                            placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''} 
+                                        />
+                                    )}
                                 />
                             );
                         }} />

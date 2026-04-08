@@ -21,10 +21,23 @@ const serviceLocationController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 200;
             const offset = (page - 1) * limit;
-            const business_id = getBusinessId(req);
+            
+            const whereClause = { status: true };
+
+            if (req.isWidget) {
+                whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.user_id) {
+                // Fetch all businesses owned by this user
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+            } else {
+                whereClause.business_id = -1;
+            }
 
             const businessServices = await Service.findAll({
-                where: { business_id, status: true },
+                where: whereClause,
                 attributes: ['id']
             });
             const serviceIds = businessServices.map(s => s.id);
