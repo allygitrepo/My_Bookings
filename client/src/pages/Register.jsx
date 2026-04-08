@@ -348,7 +348,6 @@ const Register = () => {
                                 </Box>
                             )}
 
-                            {/* Submit */}
                             <Button
                                 type="submit"
                                 variant="contained"

@@ -4,9 +4,9 @@ import {
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
     Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination,
 } from '@mui/material';
-import { 
-    Edit as EditIcon, 
-    Delete as DeleteIcon, 
+import {
+    Edit as EditIcon,
+    Delete as DeleteIcon,
     Business as BusinessIcon,
     OpenInNew as OpenIcon,
 } from '@mui/icons-material';
@@ -67,12 +67,12 @@ const Businesses = () => {
     );
 
     const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
-        defaultValues: { 
-            business_name: '', 
-            business_type: '', 
-            email: '', 
-            phone: '', 
-            upi_id: '', 
+        defaultValues: {
+            business_name: '',
+            business_type: '',
+            email: '',
+            phone: '',
+            upi_id: '',
             sync_email: '',
         },
     });
@@ -105,12 +105,12 @@ const Businesses = () => {
             phone: biz.phone || '',
             upi_id: biz.upi_id || '',
             sync_email: biz.sync_email || '',
-        } : { 
-            business_name: '', 
-            business_type: '', 
-            email: '', 
-            phone: '', 
-            upi_id: '', 
+        } : {
+            business_name: '',
+            business_type: '',
+            email: '',
+            phone: '',
+            upi_id: '',
             sync_email: '',
         });
         setOpen(true);
@@ -192,7 +192,7 @@ const Businesses = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Type</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Sync Email</TableCell>
+                            {/* <TableCell sx={{ fontWeight: 600 }}>Sync Email</TableCell> */}
                             <TableCell sx={{ fontWeight: 600 }}>UPI ID</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
@@ -222,13 +222,13 @@ const Businesses = () => {
                                 <TableCell>{biz.business_type}</TableCell>
                                 <TableCell>{biz.phone}</TableCell>
                                 <TableCell>{biz.email}</TableCell>
-                                <TableCell>{biz.sync_email || '—'}</TableCell>
+                                {/* <TableCell>{biz.sync_email || '—'}</TableCell> */}
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{biz.upi_id || '—'}</TableCell>
                                 <TableCell align="right">
                                     {biz.website_enabled && biz.slug && (
-                                        <IconButton 
-                                            onClick={() => window.open(`/${biz.slug}`, '_blank')} 
-                                            color="secondary" 
+                                        <IconButton
+                                            onClick={() => window.open(`/${biz.slug}`, '_blank')}
+                                            color="secondary"
                                             size="small"
                                             title="Visit Website"
                                         >
@@ -269,8 +269,8 @@ const Businesses = () => {
             >
                 <FieldSection label="Business Identity">
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Controller name="business_name" control={control} 
-                            rules={{ 
+                        <Controller name="business_name" control={control}
+                            rules={{
                                 validate: {
                                     required: v => v?.trim() ? true : 'Business name is required',
                                     format: v => validateName(v),
@@ -281,7 +281,7 @@ const Businesses = () => {
                                 <TextField {...field} fullWidth label="Business Name *" error={!!errors.business_name}
                                     helperText={errors.business_name?.message} placeholder="e.g. Shiv Clinic" />
                             )} />
-                        
+
                         <Controller name="business_type" control={control} rules={{ required: 'Business type is required' }}
                             render={({ field }) => (
                                 <FormControl fullWidth error={!!errors.business_type} variant="outlined">
@@ -318,7 +318,7 @@ const Businesses = () => {
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" error={!!errors.email} helperText={errors.email?.message} />
                             )} />
-                        
+
                         <Controller name="phone" control={control}
                             rules={{ validate: validatePhone }}
                             render={({ field }) => (
@@ -333,7 +333,7 @@ const Businesses = () => {
                     </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
-                
+
             </FormDrawer>
         </PageTransition>
     );
