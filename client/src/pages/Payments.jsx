@@ -9,12 +9,14 @@ import PageTransition from '../components/PageTransition';
 import { getPayments } from '../api/payment.api';
 import { getBookings } from '../api/booking.api';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 
 const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error', Refunded: 'default' };
 
 const Payments = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [payments, setPayments] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -23,14 +25,17 @@ const Payments = () => {
 
     useEffect(() => {
         setPage(0);
-    }, [searchQuery]);
+    }, [searchQuery, selectedBusinessId]);
 
-    const filteredPayments = payments.filter(p =>
-        p.amount?.toString().includes(searchQuery) ||
-        p.paid_amount?.toString().includes(searchQuery) ||
-        p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredPayments = payments.filter(p => {
+        const matchesBusiness = selectedBusinessId === 'all' || p.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
+        return p.amount?.toString().includes(searchQuery) ||
+            p.paid_amount?.toString().includes(searchQuery) ||
+            p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     const fetchData = async () => {
         setLoading(true);

@@ -8,10 +8,12 @@ import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getCustomers, createCustomer, updateCustomer, deleteCustomer } from '../api/customer.api';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 
 const Customers = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
@@ -19,13 +21,16 @@ const Customers = () => {
 
     useEffect(() => {
         setPage(0);
-    }, [searchQuery]);
+    }, [searchQuery, selectedBusinessId]);
 
-    const filteredCustomers = customers.filter(c =>
-        c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        c.email?.toLowerCase().includes(searchQuery.toLowerCase())
-    );
+    const filteredCustomers = customers.filter(c => {
+        const matchesBusiness = selectedBusinessId === 'all' || c.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
+        return c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.phone?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.email?.toLowerCase().includes(searchQuery.toLowerCase());
+    });
 
     const fetchData = async () => {
         setLoading(true);

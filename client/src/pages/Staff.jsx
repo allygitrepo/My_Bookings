@@ -21,6 +21,7 @@ import { getLocations } from '../api/location.api';
 import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabilityByStaff } from '../api/staffAvailability.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { validateName, validateMobile, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -83,6 +84,7 @@ const FieldSection = ({ label, children }) => (
 
 const Staff = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [staffList, setStaffList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -97,9 +99,12 @@ const Staff = () => {
 
     useEffect(() => {
         setPage(0);
-    }, [searchQuery]);
+    }, [searchQuery, selectedBusinessId]);
 
     const filteredStaff = staffList.filter(s => {
+        const matchesBusiness = selectedBusinessId === 'all' || s.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
         const matchesSearch = s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.phone?.toLowerCase().includes(searchQuery.toLowerCase());
@@ -155,7 +160,7 @@ const Staff = () => {
     const handleOpen = (s = null) => {
         setEditId(s?.id || null);
         const sLocIds = s?.locations?.map(l => l.id) || [];
-        const initialBizId = s?.business_id || businesses[0]?.id || '';
+        const initialBizId = s?.business_id || (selectedBusinessId !== 'all' ? selectedBusinessId : businesses[0]?.id) || '';
         
         reset(s
             ? { business_id: initialBizId, location_ids: sLocIds, staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30', photo: s.photo || '' }

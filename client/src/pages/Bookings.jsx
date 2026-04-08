@@ -33,6 +33,7 @@ import { getCustomers } from '../api/customer.api';
 import { getPayments } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import { formatDate } from '../utils/date';
 import dayjs from 'dayjs';
 
@@ -142,6 +143,7 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
 
 const Bookings = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [view, setView] = useState(localStorage.getItem('bookingsView') || 'table');
     const [bookings, setBookings] = useState([]);
     const [businesses, setBusinesses] = useState([]);
@@ -179,19 +181,6 @@ const Bookings = () => {
     const handleToggleSync = () => { };
     const markAsSynced = () => { };
     const login = () => { };
-    /*
-    const handleToggleSync = async () => {
-        ... existing code ...
-    };
-
-    const markAsSynced = (id) => {
-        ... existing code ...
-    };
-
-    const login = useGoogleLogin({
-        ... existing code ...
-    });
-    */
 
     useEffect(() => {
         if (businesses.length > 0 && businesses[0].google_refresh_token) {
@@ -201,7 +190,7 @@ const Bookings = () => {
 
     useEffect(() => {
         setPage(0);
-    }, [filterStatus, startDate, endDate, searchQuery]);
+    }, [filterStatus, startDate, endDate, searchQuery, selectedBusinessId]);
 
     const handleViewChange = (event, nextView) => {
         if (nextView !== null) {
@@ -238,6 +227,10 @@ const Bookings = () => {
     }, []);
 
     const filteredBookings = [...bookings].reverse().filter(b => {
+        // Business Filter
+        const matchesBusiness = selectedBusinessId === 'all' || b.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
         const customer = customers.find(c => c.id === b.customer_id);
         const service = services.find(s => s.id === b.service_id);
         const staffMember = staff.find(s => s.id === b.staff_id);

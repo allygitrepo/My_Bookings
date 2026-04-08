@@ -16,6 +16,7 @@ import { getBusinesses } from '../api/business.api';
 import { getStaff } from '../api/staff.api';
 import { getStaffServices, createStaffService, deleteStaffService } from '../api/staffService.api';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -29,6 +30,7 @@ const FieldSection = ({ label, children }) => (
 
 const Services = () => {
     const { searchQuery } = useSearch();
+    const { selectedBusinessId } = useBusiness();
     const [servicesList, setServicesList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -44,13 +46,16 @@ const Services = () => {
 
     useEffect(() => {
         setPage(0);
-    }, [searchQuery]);
+    }, [searchQuery, selectedBusinessId]);
 
-    const filteredServices = servicesList.filter(svc =>
-        svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        svc.price?.toString().includes(searchQuery) ||
-        svc.duration_minutes?.toString().includes(searchQuery)
-    );
+    const filteredServices = servicesList.filter(svc => {
+        const matchesBusiness = selectedBusinessId === 'all' || svc.business_id === selectedBusinessId;
+        if (!matchesBusiness) return false;
+
+        return svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            svc.price?.toString().includes(searchQuery) ||
+            svc.duration_minutes?.toString().includes(searchQuery);
+    });
 
     const fetchData = async () => {
         setLoading(true);
@@ -94,7 +99,17 @@ const Services = () => {
                 assignedLocations: assignedL
             });
         } else {
-            reset({ business_id: businesses[0]?.id || '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: locations.map(l => l.id) }); // Default to all locations for new service
+            const bizId = selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || '');
+            const bizLocs = locations.filter(l => !bizId || l.business_id === bizId);
+            reset({ 
+                business_id: bizId, 
+                service_name: '', 
+                duration_minutes: '', 
+                price: '', 
+                minimum_booking_charge: '', 
+                assignedStaff: [], 
+                assignedLocations: bizLocs.map(l => l.id) 
+            }); 
         }
         setOpen(true);
     };

@@ -22,13 +22,14 @@ import {
 import { getBusinesses } from '../api/business.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 
 const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
     const { searchQuery, setSearchQuery } = useSearch();
+    const { selectedBusinessId, setSelectedBusinessId } = useBusiness();
     const [businesses, setBusinesses] = useState([]);
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const [selectedBusiness, setSelectedBusiness] = useState('');
     const [anchorEl, setAnchorEl] = useState(null);
     const navigate = useNavigate();
 
@@ -37,9 +38,6 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
             const response = await getBusinesses();
             if (response.success) {
                 setBusinesses(response.data);
-                if (response.data.length > 0 && !selectedBusiness) {
-                    setSelectedBusiness(response.data[0].id);
-                }
             }
         } catch (error) {
             console.error('Failed to fetch businesses');
@@ -86,13 +84,14 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                         <MenuIcon />
                     </IconButton>
 
-                    <FormControl variant="standard" sx={{ minWidth: 200, display: { xs: 'none', md: businesses.length > 0 ? 'block' : 'none' }, mr: 4 }}>
+                    <FormControl variant="standard" sx={{ minWidth: 200, display: { xs: 'none', md: 'block' }, mr: 4 }}>
                         <Select
-                            value={selectedBusiness}
-                            onChange={(e) => setSelectedBusiness(e.target.value)}
+                            value={selectedBusinessId}
+                            onChange={(e) => setSelectedBusinessId(e.target.value)}
                             disableUnderline
                             sx={{ fontWeight: 600, fontSize: '1.1rem' }}
                         >
+                            <MenuItem value="all">All Businesses</MenuItem>
                             {businesses.map((b) => (
                                 <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>
                             ))}

@@ -8,6 +8,7 @@ import theme from './theme';
 import MainLayout from './layout/MainLayout';
 import AuthGuard from './components/AuthGuard';
 import { SearchProvider } from './context/SearchContext';
+import { BusinessProvider } from './context/BusinessContext';
 import axiosInstance from './api/axiosInstance';
 
 import Dashboard from './pages/Dashboard';
@@ -67,36 +68,38 @@ function App() {
         <CssBaseline />
         <LocalizationProvider dateAdapter={AdapterDayjs}>
           <SearchProvider>
-            <Router>
-              <Toaster position="top-right" />
-              <Routes>
-                {/* Public Routes */}
-                <Route path="/" element={<LandingPage />} />
-                <Route path="/login" element={<Login />} />
-                <Route path="/register" element={<Register />} />
+            <BusinessProvider>
+              <Router>
+                <Toaster position="top-right" />
+                <Routes>
+                  {/* Public Routes */}
+                  <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<Login />} />
+                  <Route path="/register" element={<Register />} />
 
-                {/* Protected Dashboard Routes */}
-                <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/businesses" element={<Businesses />} />
-                  <Route path="/locations" element={<Locations />} />
-                  <Route path="/staff" element={<Staff />} />
-                  <Route path="/services" element={<Services />} />
-                  <Route path="/staff-services" element={<StaffServices />} />
-                  <Route path="/availability" element={<Availability />} />
-                  <Route path="/customers" element={<Customers />} />
-                  <Route path="/bookings" element={<Bookings />} />
-                  <Route path="/payments" element={<Payments />} />
-                  <Route path="/api-keys" element={<ApiKeys />} />
-                  <Route path="/widget-script" element={<WidgetScript />} />
-                  <Route path="/website-builder" element={<WebsiteGenerator />} />
-                  <Route path="/profile" element={<Profile />} />
-                </Route>
+                  {/* Protected Dashboard Routes */}
+                  <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
+                    <Route path="/dashboard" element={<Dashboard />} />
+                    <Route path="/businesses" element={<Businesses />} />
+                    <Route path="/locations" element={<Locations />} />
+                    <Route path="/staff" element={<Staff />} />
+                    <Route path="/services" element={<Services />} />
+                    <Route path="/staff-services" element={<StaffServices />} />
+                    <Route path="/availability" element={<Availability />} />
+                    <Route path="/customers" element={<Customers />} />
+                    <Route path="/bookings" element={<Bookings />} />
+                    <Route path="/payments" element={<Payments />} />
+                    <Route path="/api-keys" element={<ApiKeys />} />
+                    <Route path="/widget-script" element={<WidgetScript />} />
+                    <Route path="/website-builder" element={<WebsiteGenerator />} />
+                    <Route path="/profile" element={<Profile />} />
+                  </Route>
 
-                <Route path="/:slug" element={<PublicBusinessWebsite />} />
-                <Route path="*" element={<Navigate to="/login" replace />} />
-              </Routes>
-            </Router>
+                  <Route path="/:slug" element={<PublicBusinessWebsite />} />
+                  <Route path="*" element={<Navigate to="/login" replace />} />
+                </Routes>
+              </Router>
+            </BusinessProvider>
           </SearchProvider>
         </LocalizationProvider>
       </ThemeProvider>

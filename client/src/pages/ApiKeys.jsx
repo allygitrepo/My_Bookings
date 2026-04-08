@@ -14,11 +14,13 @@ import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { getApiKeys, createApiKey, updateApiKey, deleteApiKey } from '../api/apiKey.api';
 import { getBusinesses } from '../api/business.api';
+import { useBusiness } from '../context/BusinessContext';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const ApiKeys = () => {
+    const { selectedBusinessId } = useBusiness();
     const [apiKeys, setApiKeys] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -28,6 +30,15 @@ const ApiKeys = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
     const [isSubmitting, setIsSubmitting] = useState(false);
+
+    useEffect(() => {
+        setPage(0);
+    }, [selectedBusinessId]);
+
+    const filteredKeys = apiKeys.filter(k => {
+        const matchesBusiness = selectedBusinessId === 'all' || k.business_id === selectedBusinessId;
+        return matchesBusiness;
+    });
 
     const fetchData = async () => {
         setLoading(true);
@@ -52,7 +63,8 @@ const ApiKeys = () => {
 
     const handleOpen = (k = null) => {
         setEditId(k?.id || null);
-        reset(k ? { business_id: k.business_id || '' } : { business_id: businesses[0]?.id || '' });
+        const bizId = selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || '');
+        reset(k ? { business_id: k.business_id || '' } : { business_id: bizId });
         setOpen(true);
     };
 
@@ -143,11 +155,11 @@ const ApiKeys = () => {
                                     <Typography color="text.secondary">Loading API keys...</Typography>
                                 </TableCell>
                             </TableRow>
-                        ) : apiKeys.length === 0 ? (
+                        ) : filteredKeys.length === 0 ? (
                             <TableRow><TableCell colSpan={5} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                No API Keys generated yet. Click "Generate New Key" to create one.
+                                No API Keys found for the selected business.
                             </TableCell></TableRow>
-                        ) : apiKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((k, index) => {
+                        ) : filteredKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((k, index) => {
                             const biz = businesses.find(b => b.id === k.business_id);
                             const isVisible = visibleKeys[k.id];
                             return (
@@ -188,7 +200,7 @@ const ApiKeys = () => {
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"
-                count={apiKeys.length}
+                count={filteredKeys.length}
                 rowsPerPage={rowsPerPage}
                 page={page}
                 onPageChange={(e, p) => setPage(p)}
