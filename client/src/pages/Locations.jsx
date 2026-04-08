@@ -276,24 +276,25 @@ const Locations = () => {
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Location Details">
-                    <Controller name="location_name" control={control} 
-                        rules={{ 
-                            validate: {
-                                required: v => v?.trim() ? true : 'Location name is required',
-                                emoji: v => blockEmoji(v)
-                            }
-                        }}
-                        render={({ field }) => (
-                            <TextField {...field} fullWidth label="Location Name *" placeholder="e.g. Main Branch, City Center" error={!!errors.location_name} helperText={errors.location_name?.message} sx={{ mb: 2.5 }} />
-                        )} />
-                    <Controller name="address" control={control}
-                        rules={{ validate: blockEmoji }}
-                        render={({ field }) => (
-                            <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" sx={{ mb: 2.5 }} error={!!errors.address} helperText={errors.address?.message} />
-                        )} />
-
-                    {/* State — searchable dropdown */}
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="location_name" control={control} 
+                            rules={{ 
+                                validate: {
+                                    required: v => v?.trim() ? true : 'Location name is required',
+                                    emoji: v => blockEmoji(v)
+                                }
+                            }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Location Name *" placeholder="e.g. Main Branch, City Center" error={!!errors.location_name} helperText={errors.location_name?.message} />
+                            )} />
+                        
+                        <Controller name="address" control={control}
+                            rules={{ validate: blockEmoji }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" error={!!errors.address} helperText={errors.address?.message} />
+                            )} />
+
+                        {/* State — searchable dropdown */}
                         <Controller name="state" control={control} rules={{ required: 'State is required' }}
                             render={({ field }) => (
                                 <Autocomplete

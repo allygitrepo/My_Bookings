@@ -512,7 +512,6 @@ const Staff = () => {
                 onSave={handleSubmit(onSubmit)}
                 isLoading={isSubmitting}
                 saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Staff') : (isSubmitting ? 'Creating...' : 'Add Staff')}
-                width={540}
             >
                 {/* --- Assignment --- */}
                 <FieldSection label="Assignment">
@@ -567,39 +566,39 @@ const Staff = () => {
 
                 {/* --- Staff Details --- */}
                 <FieldSection label="Staff Details">
-                    <Controller name="staff_name" control={control}
-                        rules={{
-                            validate: {
-                                required: v => v?.trim() ? true : 'Name is required',
-                                format: v => validateName(v),
-                                emoji: v => blockEmoji(v)
-                            }
-                        }}
-                        render={({ field }) => (
-                            <TextField {...field} fullWidth label="Staff Name *" error={!!errors.staff_name} helperText={errors.staff_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Dr. Agarwal"
-                                onChange={(e) => field.onChange(e.target.value)}
-                            />
-                        )} />
-                    <Grid container spacing={2}>
-                        <Grid item xs={6}>
-                            <Controller name="role" control={control}
-                                rules={{ validate: blockEmoji }}
-                                render={({ field }) => <TextField {...field} fullWidth label="Role" placeholder="e.g. Doctor" error={!!errors.role} helperText={errors.role?.message} />} />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <Controller name="phone" control={control}
-                                rules={{
-                                    validate: validateMobile
-                                }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Phone" placeholder="9876543210"
-                                        error={!!errors.phone} helperText={errors.phone?.message}
-                                        inputProps={{ maxLength: 10, inputMode: 'numeric' }}
-                                        onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                                    />
-                                )} />
-                        </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="staff_name" control={control}
+                            rules={{
+                                validate: {
+                                    required: v => v?.trim() ? true : 'Name is required',
+                                    format: v => validateName(v),
+                                    emoji: v => blockEmoji(v)
+                                }
+                            }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Staff Name *" error={!!errors.staff_name} helperText={errors.staff_name?.message} placeholder="e.g. Dr. Agarwal"
+                                    onChange={(e) => field.onChange(e.target.value)}
+                                />
+                            )} />
+                        
+                        <Controller name="role" control={control}
+                            rules={{ validate: blockEmoji }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Role" placeholder="e.g. Doctor" error={!!errors.role} helperText={errors.role?.message} />
+                            )} />
+                        
+                        <Controller name="phone" control={control}
+                            rules={{
+                                validate: validateMobile
+                            }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Phone" placeholder="9876543210"
+                                    error={!!errors.phone} helperText={errors.phone?.message}
+                                    inputProps={{ maxLength: 10, inputMode: 'numeric' }}
+                                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                />
+                            )} />
+                    </Box>
                 </FieldSection>
 
                 <Divider sx={{ my: 2.5 }} />
@@ -714,50 +713,87 @@ const Staff = () => {
                                             const isClashing = daySlots.some((other, j) => idx !== j && checkOverlap(slot, other));
                                             
                                             return (
-                                                <Box key={idx} sx={{ 
-                                                    display: 'flex', alignItems: 'center', gap: 1.5, p: 1.5, 
+                                                <Grid container spacing={1} sx={{ 
+                                                    alignItems: 'center', p: 1, 
                                                     borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
                                                     borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
-                                                    flexWrap: { xs: 'wrap', sm: 'nowrap' }
+                                                    mb: 1
                                                 }}>
-                                                    <FormControl size="small" sx={{ minWidth: 160, flex: 1 }}>
-                                                        <InputLabel>Location</InputLabel>
-                                                        <Select
-                                                            value={slot.location_id}
-                                                            label="Location"
-                                                            onChange={(e) => updateSlot(day, idx, 'location_id', e.target.value)}
-                                                            error={!slot.location_id}
+                                                    <Grid item xs={5} sx={{ minWidth: 0 }}>
+                                                        <FormControl size="small" fullWidth>
+                                                            <InputLabel sx={{ fontSize: '0.8rem' }}>Location</InputLabel>
+                                                            <Select
+                                                                value={slot.location_id}
+                                                                label="Location"
+                                                                onChange={(e) => updateSlot(day, idx, 'location_id', e.target.value)}
+                                                                error={!slot.location_id}
+                                                                sx={{ height: 36, fontSize: '0.8rem' }}
+                                                            >
+                                                                {locations.filter(l => selectedLocationIds.includes(l.id)).map(l => (
+                                                                    <MenuItem key={l.id} value={l.id} sx={{ fontSize: '0.8rem' }}>{l.location_name}</MenuItem>
+                                                                ))}
+                                                            </Select>
+                                                        </FormControl>
+                                                    </Grid>
+
+                                                    <Grid item xs={3} sx={{ minWidth: 0 }}>
+                                                        <MobileTimePicker
+                                                            label="From"
+                                                            value={dayjs(slot.start_time, 'HH:mm')}
+                                                            onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
+                                                            slotProps={{ 
+                                                                textField: { 
+                                                                    size: 'small', 
+                                                                    fullWidth: true,
+                                                                    error: !!slotErr || isClashing,
+                                                                    sx: { 
+                                                                        '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' },
+                                                                        '& .MuiInputLabel-root': { fontSize: '0.8rem' }
+                                                                    }
+                                                                } 
+                                                            }}
+                                                        />
+                                                    </Grid>
+
+                                                    <Grid item xs={3} sx={{ minWidth: 0 }}>
+                                                        <MobileTimePicker
+                                                            label="To"
+                                                            value={dayjs(slot.end_time, 'HH:mm')}
+                                                            onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
+                                                            slotProps={{ 
+                                                                textField: { 
+                                                                    size: 'small', 
+                                                                    fullWidth: true,
+                                                                    error: !!slotErr || isClashing,
+                                                                    sx: { 
+                                                                        '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' },
+                                                                        '& .MuiInputLabel-root': { fontSize: '0.8rem' }
+                                                                    }
+                                                                } 
+                                                            }}
+                                                        />
+                                                    </Grid>
+
+                                                    <Grid item xs={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                                        <IconButton 
+                                                            size="small" 
+                                                            sx={{ 
+                                                                color: 'error.main', 
+                                                                width: 36, height: 36,
+                                                                '&:hover': { bgcolor: 'error.lighter' }
+                                                            }} 
+                                                            onClick={() => removeSlot(day, idx)}
                                                         >
-                                                            {locations.filter(l => selectedLocationIds.includes(l.id)).map(l => (
-                                                                <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>
-                                                            ))}
-                                                        </Select>
-                                                    </FormControl>
-
-                                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                            <MobileTimePicker
-                                                                label="From"
-                                                                value={dayjs(slot.start_time, 'HH:mm')}
-                                                                onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
-                                                                slotProps={{ textField: { size: 'small', sx: { width: 140 }, error: !!slotErr || isClashing } }}
-                                                            />
-                                                            <Typography variant="body2" color="text.secondary">to</Typography>
-                                                            <MobileTimePicker
-                                                                label="To"
-                                                                value={dayjs(slot.end_time, 'HH:mm')}
-                                                                onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
-                                                                slotProps={{ textField: { size: 'small', sx: { width: 140 }, error: !!slotErr || isClashing } }}
-                                                            />
-                                                        </Box>
-                                                        {slotErr && <Typography variant="caption" color="error" sx={{ fontWeight: 600 }}>{slotErr}</Typography>}
-                                                    </Box>
-
-                                                    <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)}>
-                                                        <RemoveIcon fontSize="small" />
-                                                    </IconButton>
-                                                </Box>
+                                                            <DeleteIcon fontSize="inherit" sx={{ fontSize: '1.2rem' }} />
+                                                        </IconButton>
+                                                    </Grid>
+                                                    {slotErr && (
+                                                        <Grid item xs={12}>
+                                                            <Typography variant="caption" color="error" sx={{ fontWeight: 600, ml: 1 }}>{slotErr}</Typography>
+                                                        </Grid>
+                                                    )}
+                                                </Grid>
                                             );
                                         })}
                                         <Button

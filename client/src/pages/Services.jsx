@@ -325,46 +325,49 @@ const Services = () => {
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Service Details">
-                    <Controller name="service_name" control={control} 
-                        rules={{ 
-                            validate: {
-                                required: v => v?.trim() ? true : 'Service name is required',
-                                format: v => validateName(v),
-                                emoji: v => blockEmoji(v)
-                            }
-                        }}
-                        render={({ field }) => (
-                            <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} sx={{ mb: 2.5 }} placeholder="e.g. Full Body Checkup" />
-                        )} />
-                    <Grid container spacing={2}>
-                        <Grid item xs={12}>
-                            <Controller name="duration_minutes" control={control}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Duration (minutes)" type="number" placeholder="30" InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }} />
-                                )} />
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="service_name" control={control} 
+                            rules={{ 
+                                validate: {
+                                    required: v => v?.trim() ? true : 'Service name is required',
+                                    format: v => validateName(v),
+                                    emoji: v => blockEmoji(v)
+                                }
+                            }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} placeholder="e.g. Full Body Checkup" />
+                            )} />
+                        
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <Controller name="duration_minutes" control={control}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Duration (minutes)" type="number" placeholder="30" InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }} />
+                                    )} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Controller name="price" control={control} rules={{ required: 'Price is required', min: { value: 1, message: 'Price must be > 0' } }}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                    )} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Controller name="minimum_booking_charge" control={control}
+                                    rules={{
+                                        validate: v => {
+                                            const price = parseFloat(watch('price'));
+                                            const charge = parseFloat(v);
+                                            if (!v || isNaN(charge)) return true;
+                                            if (charge >= price) return 'Booking charge must be less than price';
+                                            return true;
+                                        }
+                                    }}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                    )} />
+                            </Grid>
                         </Grid>
-                        <Grid item xs={6}>
-                            <Controller name="price" control={control} rules={{ required: 'Price is required', min: { value: 1, message: 'Price must be > 0' } }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
-                                )} />
-                        </Grid>
-                        <Grid item xs={6}>
-                            <Controller name="minimum_booking_charge" control={control}
-                                rules={{
-                                    validate: v => {
-                                        const price = parseFloat(watch('price'));
-                                        const charge = parseFloat(v);
-                                        if (!v || isNaN(charge)) return true;
-                                        if (charge >= price) return 'Booking charge must be less than price';
-                                        return true;
-                                    }
-                                }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
-                                )} />
-                        </Grid>
-                    </Grid>
+                    </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Assign Staff">

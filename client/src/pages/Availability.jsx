@@ -370,19 +370,56 @@ const Availability = () => {
                                             const isClashing = schedule[day].some((other, j) => idx !== j && checkOverlap(slot, other));
                                             
                                             return (
-                                                <Box key={idx} sx={{ mb: 1.5 }}>
-                                                    <Box sx={{ 
-                                                        display: 'flex', alignItems: 'center', gap: 1, p: 1, 
-                                                        borderRadius: 1, bgcolor: 'white', border: '1px solid',
-                                                        borderColor: (slotErr || isClashing) ? 'error.light' : 'divider'
-                                                    }}>
-                                                        <TextField type="time" size="small" value={slot.start_time} onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} InputLabelProps={{ shrink: true }} label="Start" sx={{ width: 130 }} error={!!slotErr || isClashing} />
-                                                        <Typography variant="caption" color="text.disabled">to</Typography>
-                                                        <TextField type="time" size="small" value={slot.end_time} onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} InputLabelProps={{ shrink: true }} label="End" sx={{ width: 130 }} error={!!slotErr || isClashing} />
-                                                        <IconButton size="small" color="error" onClick={() => removeSlot(day, idx)} disabled={schedule[day].length === 1}><RemoveIcon fontSize="small" /></IconButton>
-                                                    </Box>
-                                                    {slotErr && <Typography variant="caption" color="error" sx={{ pl: 0.5 }}>{slotErr}</Typography>}
-                                                </Box>
+                                                <Grid container spacing={1} key={idx} sx={{ 
+                                                    alignItems: 'center', p: 1, 
+                                                    borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
+                                                    borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
+                                                    boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
+                                                    mb: 1
+                                                }}>
+                                                    <Grid item xs={5.5}>
+                                                        <TextField 
+                                                            type="time" 
+                                                            size="small" 
+                                                            fullWidth
+                                                            value={slot.start_time} 
+                                                            onChange={(e) => updateSlot(day, idx, 'start_time', e.target.value)} 
+                                                            InputLabelProps={{ shrink: true, sx: { fontSize: '0.8rem' } }} 
+                                                            label="Start" 
+                                                            error={!!slotErr || isClashing}
+                                                            sx={{ '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' } }}
+                                                        />
+                                                    </Grid>
+                                                    <Grid item xs={5.5}>
+                                                        <TextField 
+                                                            type="time" 
+                                                            size="small" 
+                                                            fullWidth
+                                                            value={slot.end_time} 
+                                                            onChange={(e) => updateSlot(day, idx, 'end_time', e.target.value)} 
+                                                            InputLabelProps={{ shrink: true, sx: { fontSize: '0.8rem' } }} 
+                                                            label="End" 
+                                                            error={!!slotErr || isClashing}
+                                                            sx={{ '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' } }}
+                                                        />
+                                                    </Grid>
+                                                    <Grid item xs={1} sx={{ display: 'flex', justifyContent: 'center' }}>
+                                                        <IconButton 
+                                                            size="small" 
+                                                            color="error" 
+                                                            onClick={() => removeSlot(day, idx)} 
+                                                            disabled={schedule[day].length === 1}
+                                                            sx={{ width: 36, height: 36 }}
+                                                        >
+                                                            <DeleteIcon fontSize="inherit" sx={{ fontSize: '1.2rem' }} />
+                                                        </IconButton>
+                                                    </Grid>
+                                                    {slotErr && (
+                                                        <Grid item xs={12}>
+                                                            <Typography variant="caption" color="error" sx={{ fontWeight: 600, ml: 1 }}>{slotErr}</Typography>
+                                                        </Grid>
+                                                    )}
+                                                </Grid>
                                             );
                                         })}
                                         <Button size="small" startIcon={<AddIcon />} onClick={() => addSlot(day)} sx={{ fontSize: '0.75rem', fontWeight: 700 }}>Add slot</Button>

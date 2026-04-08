@@ -312,38 +312,25 @@ const Businesses = () => {
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Contact Information">
-                    <Grid container spacing={2.5}>
-                        <Grid item xs={12}>
-                            <Controller name="email" control={control}
-                                rules={{ validate: validateEmail }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" error={!!errors.email} helperText={errors.email?.message} />
-                                )} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <Controller name="phone" control={control}
-                                rules={{ validate: validatePhone }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Phone" placeholder="+91 79 26543210" error={!!errors.phone} helperText={errors.phone?.message} />
-                                )} />
-                        </Grid>
-                        {/* 
-                        <Grid item xs={12}>
-                            <Controller name="sync_email" control={control}
-                                rules={{ validate: validateEmail }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="Sync Email (Calendar)" type="email" placeholder="calendar@example.com" error={!!errors.sync_email} helperText={errors.sync_email?.message} />
-                                )} />
-                        </Grid> 
-                        */}
-                        <Grid item xs={12}>
-                            <Controller name="upi_id" control={control}
-                                rules={{ validate: blockEmoji }}
-                                render={({ field }) => (
-                                    <TextField {...field} fullWidth label="UPI ID" placeholder="businessname@upi" error={!!errors.upi_id} helperText={errors.upi_id?.message} />
-                                )} />
-                        </Grid>
-                    </Grid>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="email" control={control}
+                            rules={{ validate: validateEmail }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Email Address" type="email" placeholder="business@example.com" error={!!errors.email} helperText={errors.email?.message} />
+                            )} />
+                        
+                        <Controller name="phone" control={control}
+                            rules={{ validate: validatePhone }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Phone" placeholder="+91 79 26543210" error={!!errors.phone} helperText={errors.phone?.message} />
+                            )} />
+
+                        <Controller name="upi_id" control={control}
+                            rules={{ validate: blockEmoji }}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="UPI ID" placeholder="businessname@upi" error={!!errors.upi_id} helperText={errors.upi_id?.message} />
+                            )} />
+                    </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
                 

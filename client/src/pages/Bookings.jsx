@@ -4,7 +4,7 @@ import axiosInstance from '../api/axiosInstance';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
-    TextField, MenuItem
+    TextField, MenuItem, Card
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -39,12 +39,106 @@ import dayjs from 'dayjs';
 const statusColors = { Confirmed: 'success', Completed: 'info', Cancelled: 'error', Pending: 'warning' };
 const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default', Failed: 'error' };
 
-/*
-// Calendar Sync Disabled
 const CalendarView = ({ bookings, customers, services, staff }) => {
-    ... existing code ...
+    const [currentDate, setCurrentDate] = React.useState(dayjs());
+
+    const startOfMonth = currentDate.startOf('month');
+    const daysInMonth = currentDate.daysInMonth();
+    const firstDayOfMonth = startOfMonth.day();
+
+    const days = [];
+    for (let i = 0; i < firstDayOfMonth; i++) days.push(null);
+    for (let i = 1; i <= daysInMonth; i++) days.push(i);
+
+    const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+    const DAY_LABELS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+    const getBookingsByDay = (day) => {
+        if (!day) return [];
+        const dateStr = currentDate.date(day).format('YYYY-MM-DD');
+        return bookings.filter(b => b.booking_date === dateStr);
+    };
+
+    return (
+        <Paper sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
+                <Typography variant="h5" fontWeight={800} color="primary">
+                    {MONTH_NAMES[currentDate.month()]} {currentDate.year()}
+                </Typography>
+                <Box sx={{ display: 'flex', gap: 1 }}>
+                    <IconButton onClick={() => setCurrentDate(currentDate.subtract(1, 'month'))} size="small" sx={{ border: '1px solid', borderColor: 'divider' }}>
+                        <PrevIcon />
+                    </IconButton>
+                    <Button variant="outlined" size="small" onClick={() => setCurrentDate(dayjs())} sx={{ fontWeight: 600 }}>Today</Button>
+                    <IconButton onClick={() => setCurrentDate(currentDate.add(1, 'month'))} size="small" sx={{ border: '1px solid', borderColor: 'divider' }}>
+                        <NextIcon />
+                    </IconButton>
+                </Box>
+            </Box>
+
+            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1.5 }}>
+                {DAY_LABELS.map(label => (
+                    <Box key={label} sx={{ textAlign: 'center', py: 1 }}>
+                        <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1 }}>{label}</Typography>
+                    </Box>
+                ))}
+                {days.map((day, idx) => {
+                    const dayBookings = getBookingsByDay(day);
+                    const isToday = day && currentDate.date(day).isSame(dayjs(), 'day');
+                    
+                    return (
+                        <Card key={idx} sx={{ 
+                            minHeight: 120, 
+                            p: 1.5, 
+                            border: '1px solid', 
+                            borderColor: isToday ? 'primary.main' : 'divider',
+                            bgcolor: day ? 'background.paper' : 'transparent',
+                            boxShadow: 'none',
+                            opacity: day ? 1 : 1,
+                            transition: 'all 0.2s',
+                            '&:hover': day ? { bgcolor: 'action.hover', transform: 'translateY(-4px)', zIndex: 1, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } : {}
+                        }}>
+                            {day && (
+                                <>
+                                    <Typography variant="body2" fontWeight={isToday ? 800 : 700} color={isToday ? 'primary.main' : 'text.primary'} mb={1.5}>
+                                        {day}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                        {dayBookings.slice(0, 3).map(b => (
+                                            <Tooltip key={b.id} title={`${services.find(s => s.id === b.service_id)?.service_name || 'Service'} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
+                                                <Box sx={{ 
+                                                    fontSize: '0.68rem', 
+                                                    p: 0.7, 
+                                                    borderRadius: 1.5, 
+                                                    bgcolor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
+                                                    color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
+                                                    fontWeight: 700,
+                                                    whiteSpace: 'nowrap',
+                                                    overflow: 'hidden',
+                                                    textOverflow: 'ellipsis',
+                                                    border: '1px solid',
+                                                    borderColor: (b.status === true || b.status === 1) ? 'success.main' : 'error.main',
+                                                    opacity: 0.9
+                                                }}>
+                                                    {b.start_time?.slice(0, 5)} {services.find(s => s.id === b.service_id)?.service_name}
+                                                </Box>
+                                            </Tooltip>
+                                        ))}
+                                        {dayBookings.length > 3 && (
+                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 800, pl: 0.5, pt: 0.5 }}>
+                                                +{dayBookings.length - 3} more
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                </>
+                            )}
+                        </Card>
+                    );
+                })}
+            </Box>
+        </Paper>
+    );
 };
-*/
 
 const Bookings = () => {
     const { searchQuery } = useSearch();
@@ -82,9 +176,9 @@ const Bookings = () => {
     }, [businesses]);
 
     // Calendar Sync Disabled
-    const handleToggleSync = () => {};
-    const markAsSynced = () => {};
-    const login = () => {};
+    const handleToggleSync = () => { };
+    const markAsSynced = () => { };
+    const login = () => { };
     /*
     const handleToggleSync = async () => {
         ... existing code ...
@@ -246,13 +340,12 @@ const Bookings = () => {
                                 <ViewListIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Table
                             </ToggleButton>
-                            {/* 
-                            // Calendar Sync Disabled
+
                             <ToggleButton value="calendar">
                                 <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Calendar
-                            </ToggleButton> 
-                            */}
+                            </ToggleButton>
+
                         </ToggleButtonGroup>
                     </Box>
                 }
@@ -310,10 +403,7 @@ const Bookings = () => {
             )}
 
             {view === 'calendar' ? (
-                <Box sx={{ p: 4, textAlign: 'center' }}>
-                    {/* // Calendar Sync Disabled */}
-                    <Typography variant="body2" color="text.secondary">Calendar View is currently disabled.</Typography>
-                </Box>
+                <CalendarView bookings={filteredBookings} customers={customers} services={services} staff={staff} />
             ) : (
                 <>
                     <TableContainer component={Paper}>

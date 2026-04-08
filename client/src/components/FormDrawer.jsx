@@ -3,7 +3,7 @@ import { Drawer, Box, Typography, IconButton, Button, Divider, CircularProgress 
 import { Close as CloseIcon } from '@mui/icons-material';
 import { motion, AnimatePresence } from 'framer-motion';
 
-const DRAWER_WIDTH = 480;
+const DRAWER_WIDTH = 768; // max-w-3xl equivalent
 
 /**
  * Premium slide-in FormDrawer with Framer Motion entrance and sticky header/footer.
