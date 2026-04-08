@@ -80,9 +80,25 @@ const Services = () => {
         fetchData();
     }, []);
 
-    const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
+    const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
         defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: [] },
     });
+
+    const watchedBusinessId = watch('business_id');
+
+    // Filter data based on form selection
+    const availableLocations = locations.filter(l => !watchedBusinessId || l.business_id === watchedBusinessId);
+    const availableStaff = staff.filter(s => !watchedBusinessId || s.business_id === watchedBusinessId);
+
+    // Reset assignments if business changes in form
+    useEffect(() => {
+        if (!editId && watchedBusinessId) {
+            // Only auto-fill locations for new services when business changes
+            const bizLocs = locations.filter(l => l.business_id === watchedBusinessId);
+            setValue('assignedLocations', bizLocs.map(l => l.id));
+            setValue('assignedStaff', []);
+        }
+    }, [watchedBusinessId, editId, setValue]);
 
     const handleOpen = (svc = null) => {
         setEditId(svc?.id || null);
@@ -302,15 +318,15 @@ const Services = () => {
                     <Controller name="assignedLocations" control={control}
                         render={({ field }) => {
                             const selectedIds = field.value || [];
-                            const isAllSelected = selectedIds.length > 0 && selectedIds.length === locations.length;
+                            const isAllSelected = selectedIds.length > 0 && selectedIds.length === availableLocations.length;
                             return (
                                 <Box>
                                     <Autocomplete
                                         multiple
-                                        options={locations}
+                                        options={availableLocations}
                                         getOptionLabel={(o) => o.location_name}
                                         isOptionEqualToValue={(o, v) => o.id === v.id}
-                                        value={locations.filter(l => selectedIds.includes(l.id))}
+                                        value={availableLocations.filter(l => selectedIds.includes(l.id))}
                                         onChange={(_, newVal) => field.onChange(newVal.map(l => l.id))}
                                         filterSelectedOptions
                                         renderTags={(value, getTagProps) =>
@@ -330,7 +346,7 @@ const Services = () => {
                                         )}
                                     />
                                     <Box sx={{ mt: 1, display: 'flex', gap: 1 }}>
-                                        <Button size="small" variant="text" onClick={() => field.onChange(locations.map(l => l.id))} disabled={isAllSelected}>Select All</Button>
+                                        <Button size="small" variant="text" onClick={() => field.onChange(availableLocations.map(l => l.id))} disabled={isAllSelected}>Select All</Button>
                                         <Button size="small" variant="text" color="error" onClick={() => field.onChange([])} disabled={selectedIds.length === 0}>Clear All</Button>
                                     </Box>
                                 </Box>
@@ -389,12 +405,12 @@ const Services = () => {
                     <Controller name="assignedStaff" control={control}
                         render={({ field }) => {
                             const selectedIds = field.value || [];
-                            const selectedStaff = staff.filter(s => selectedIds.includes(s.id));
-                            const availableOptions = staff.filter(s => !selectedIds.includes(s.id));
+                            const selectedStaff = availableStaff.filter(s => selectedIds.includes(s.id));
+                            const unselectedAvailable = availableStaff.filter(s => !selectedIds.includes(s.id));
                             return (
                                 <Autocomplete
                                     multiple
-                                    options={availableOptions}
+                                    options={unselectedAvailable}
                                     getOptionLabel={(o) => `${o.staff_name}${o.role ? ` — ${o.role}` : ''}`}
                                     isOptionEqualToValue={(o, v) => o.id === v.id}
                                     value={selectedStaff}
@@ -413,8 +429,6 @@ const Services = () => {
                             );
                         }} />
                 </FieldSection>
-                <Divider sx={{ my: 2.5 }} />
-
             </FormDrawer>
         </PageTransition>
     );
