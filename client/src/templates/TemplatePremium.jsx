@@ -17,87 +17,80 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TemplatePremium = ({ data }) => {
     const { business = {}, services = [], locations = [] } = data || {};
 
+    // Load External Booking Widget Script
+    React.useEffect(() => {
+        const scriptId = 'mybookings-widget-script';
+        if (!document.getElementById(scriptId)) {
+            const script = document.createElement('script');
+            script.id = scriptId;
+            script.src = "https://mybookings.allysoftsolutions.com/widget.js";
+            script.dataset.businessId = business.api_key || "pk_live_2a3364a2d6ac4db497371edfbe156dbd";
+            script.dataset.theme = "dark";
+            script.async = true;
+            document.body.appendChild(script);
+        }
+    }, [business.api_key]);
+
     return (
         <Box sx={{ bgcolor: '#020617', minHeight: '100vh', color: '#fff', fontFamily: "'Outfit', sans-serif" }}>
             {/* Hero Section */}
             <Box sx={{
-                height: '100vh',
+                height: '85vh',
                 display: 'flex',
                 alignItems: 'center',
                 position: 'relative',
-                background: 'linear-gradient(rgba(2, 6, 23, 0.4), rgba(2, 6, 23, 0.9)), url("https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop")',
+                background: 'linear-gradient(rgba(2, 6, 23, 0.5), rgba(2, 6, 23, 1)), url("https://images.unsplash.com/photo-1497366216548-37526070297c?q=80&w=2069&auto=format&fit=crop")',
                 backgroundSize: 'cover',
                 backgroundPosition: 'center',
                 overflow: 'hidden'
             }}>
-                <Container maxWidth="xl" sx={{ position: 'relative', zIndex: 2 }}>
+                <Container maxWidth="lg" sx={{ position: 'relative', zIndex: 2 }}>
                     <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, ease: "easeOut" }}
                     >
-                        <Box sx={{ maxWidth: 1000 }}>
+                        <Box sx={{ maxWidth: 700 }}>
                             <Chip
-                                label="THE GOLD STANDARD"
+                                label="Exclusive Preview"
                                 size="small"
                                 sx={{
-                                    mb: 5,
-                                    bgcolor: 'rgba(56, 189, 248, 0.2)',
+                                    mb: 3,
+                                    bgcolor: 'rgba(56, 189, 248, 0.1)',
                                     color: '#38bdf8',
-                                    borderColor: 'rgba(56, 189, 248, 0.4)',
-                                    fontWeight: 900,
-                                    borderRadius: '6px',
+                                    borderColor: 'rgba(56, 189, 248, 0.2)',
+                                    fontWeight: 700,
+                                    borderRadius: 1,
                                     textTransform: 'uppercase',
-                                    letterSpacing: 4,
-                                    fontSize: '0.8rem',
-                                    px: 2, height: 32
+                                    letterSpacing: 2,
+                                    fontSize: '0.65rem'
                                 }}
                             />
-                            <Typography variant="h1" fontWeight={900} sx={{ 
-                                fontSize: { xs: '4.5rem', md: '9.5rem' }, 
-                                mb: 4, 
-                                lineHeight: 0.85, 
-                                color: '#fff', 
-                                letterSpacing: -5 
-                            }}>
-                                {business.business_name || 'Prestige'}
+                            <Typography variant="h1" fontWeight={900} sx={{ fontSize: { xs: '3.5rem', md: '5.5rem' }, mb: 3, lineHeight: 1, color: '#fff', letterSpacing: -2 }}>
+                                {business.business_name}
                             </Typography>
-                            <Typography variant="h6" sx={{ 
-                                color: 'rgba(148, 163, 184, 0.9)', 
-                                mb: 10, 
-                                fontWeight: 400, 
-                                fontSize: '1.6rem', 
-                                lineHeight: 1.6, 
-                                maxWidth: 750,
-                                letterSpacing: '0.5px'
-                            }}>
-                                Unparalleled excellence in {business.business_type?.toLowerCase() || 'professional services'}. We define the new benchmark of luxury and distinction.
+                            <Typography variant="h6" sx={{ color: '#94a3b8', mb: 6, fontWeight: 400, fontSize: '1.2rem', lineHeight: 1.6, maxWidth: 600 }}>
+                                Experience unparalleled {business.business_type?.toLowerCase() || 'service'} excellence. Bespoke solutions tailored for your professional needs.
                             </Typography>
                             <Button
                                 variant="contained"
                                 size="large"
                                 className="mybookings-trigger"
-                                endIcon={<ArrowIcon sx={{ fontSize: 32 }} />}
+                                endIcon={<ArrowIcon />}
                                 sx={{
                                     bgcolor: '#38bdf8',
                                     color: '#020617',
-                                    px: 10, py: 3.5,
-                                    borderRadius: '6px',
-                                    fontWeight: 900,
-                                    textTransform: 'uppercase',
-                                    fontSize: '1.15rem',
-                                    letterSpacing: 3,
-                                    boxShadow: '0 25px 50px rgba(56, 189, 248, 0.3)',
-                                    '&:hover': { 
-                                        bgcolor: '#fff', 
-                                        transform: 'translateY(-6px)', 
-                                        color: '#020617',
-                                        boxShadow: '0 40px 80px rgba(56, 189, 248, 0.5)'
-                                    },
-                                    transition: 'all 0.5s cubic-bezier(0.165, 0.84, 0.44, 1)'
+                                    px: 5, py: 2.2,
+                                    borderRadius: 0,
+                                    fontWeight: 800,
+                                    textTransform: 'none',
+                                    fontSize: '1.1rem',
+                                    boxShadow: '0 0 20px rgba(56, 189, 248, 0.3)',
+                                    '&:hover': { bgcolor: '#fff', transform: 'translateY(-2px)', color: '#020617' },
+                                    transition: 'all 0.3s'
                                 }}
                             >
-                                Start Your Journey
+                                Explore
                             </Button>
                         </Box>
                     </motion.div>
@@ -108,7 +101,7 @@ const TemplatePremium = ({ data }) => {
             </Box>
 
             {/* Content Section */}
-            <Container maxWidth="xl" sx={{ py: { xs: 10, md: 24 } }}>
+            <Container maxWidth="lg" sx={{ py: 15 }}>
                 <Grid container spacing={10}>
                     <Grid item xs={12} md={8}>
                         <motion.div
@@ -117,11 +110,7 @@ const TemplatePremium = ({ data }) => {
                             viewport={{ once: true }}
                             transition={{ duration: 0.6 }}
                         >
-                            <Typography variant="h2" fontWeight={900} gutterBottom sx={{ 
-                                fontSize: { xs: '2.5rem', md: '4.5rem' }, 
-                                mb: 8, 
-                                letterSpacing: -2 
-                            }}>
+                            <Typography variant="h4" fontWeight={900} gutterBottom sx={{ mb: 6, letterSpacing: -1 }}>
                                 Our Specialized Services
                             </Typography>
                             <Grid container spacing={4}>
@@ -147,15 +136,15 @@ const TemplatePremium = ({ data }) => {
                                                     boxShadow: '0 20px 40px rgba(0,0,0,0.4)'
                                                 }
                                             }}>
-                                                <CardContent sx={{ p: 5 }}>
-                                                    <Typography variant="h5" fontWeight={900} gutterBottom sx={{ color: '#fff', fontSize: '1.75rem', mb: 1.5 }}>
+                                                <CardContent sx={{ p: 4 }}>
+                                                    <Typography variant="h6" fontWeight={800} gutterBottom sx={{ color: '#fff' }}>
                                                         {svc.service_name}
                                                     </Typography>
-                                                    <Typography variant="body1" sx={{ color: '#64748b', mb: 4, fontWeight: 500, fontSize: '1.1rem' }}>
+                                                    <Typography variant="body2" sx={{ color: '#64748b', mb: 3, fontWeight: 500 }}>
                                                         Duration • {svc.duration_minutes} min
                                                     </Typography>
                                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                        <Typography variant="h4" fontWeight={900} sx={{ color: '#38bdf8', fontSize: '2.2rem' }}>
+                                                        <Typography variant="h5" fontWeight={900} sx={{ color: '#38bdf8' }}>
                                                             ₹{svc.price}
                                                         </Typography>
                                                         <IconButton
@@ -167,7 +156,7 @@ const TemplatePremium = ({ data }) => {
                                                                 '&:hover': { bgcolor: '#38bdf8', color: '#020617' }
                                                             }}
                                                         >
-                                                            <ArrowIcon fontSize="small" />
+
                                                         </IconButton>
                                                     </Box>
                                                 </CardContent>
@@ -195,15 +184,15 @@ const TemplatePremium = ({ data }) => {
                                 position: 'sticky',
                                 top: 40
                             }}>
-                                <Typography variant="h4" fontWeight={900} gutterBottom sx={{ mb: 5, fontSize: '2.5rem' }}>
+                                <Typography variant="h5" fontWeight={900} gutterBottom sx={{ mb: 4 }}>
                                     Visit & Contact
                                 </Typography>
 
                                 <Box sx={{ mb: 6 }}>
                                     {locations.map(loc => (
                                         <Box key={loc.id} sx={{ mb: 4 }}>
-                                            <Typography variant="h6" fontWeight={800} sx={{ color: '#fff', mb: 1.5, fontSize: '1.4rem' }}>{loc.location_name}</Typography>
-                                            <Typography variant="body1" sx={{ color: '#64748b', lineHeight: 1.8, fontSize: '1.1rem' }}>
+                                            <Typography variant="subtitle1" fontWeight={800} sx={{ color: '#fff', mb: 1 }}>{loc.location_name}</Typography>
+                                            <Typography variant="body2" sx={{ color: '#64748b', lineHeight: 1.6 }}>
                                                 {loc.address}, {loc.city}<br />
                                                 {loc.state}
                                             </Typography>

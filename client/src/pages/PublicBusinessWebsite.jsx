@@ -27,6 +27,12 @@ const PublicBusinessWebsite = () => {
     }
 
     useEffect(() => {
+        if (businessData?.business?.business_name) {
+            document.title = businessData.business.business_name;
+        }
+    }, [businessData]);
+
+    useEffect(() => {
         // ... fetching logic ...
         const fetchWebsiteData = async () => {
             setLoading(true);

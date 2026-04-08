@@ -48,7 +48,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
             <Box sx={{ p: 3 }}>
-                <Logo size={32} />
+                <Logo size={40} />
             </Box>
             <Divider />
             <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
