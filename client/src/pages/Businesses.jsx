@@ -327,13 +327,15 @@ const Businesses = () => {
                                     <TextField {...field} fullWidth label="Phone" placeholder="+91 79 26543210" error={!!errors.phone} helperText={errors.phone?.message} />
                                 )} />
                         </Grid>
+                        {/* 
                         <Grid item xs={12}>
                             <Controller name="sync_email" control={control}
                                 rules={{ validate: validateEmail }}
                                 render={({ field }) => (
                                     <TextField {...field} fullWidth label="Sync Email (Calendar)" type="email" placeholder="calendar@example.com" error={!!errors.sync_email} helperText={errors.sync_email?.message} />
                                 )} />
-                        </Grid>
+                        </Grid> 
+                        */}
                         <Grid item xs={12}>
                             <Controller name="upi_id" control={control}
                                 rules={{ validate: blockEmoji }}

@@ -27,6 +27,9 @@ const createOAuth2Client = () => {
  * @param {string} code - Auth code from frontend
  */
 const saveRefreshToken = async (businessId, code) => {
+    // Calendar Sync Disabled
+    return { success: false, message: 'Google Calendar Sync is currently disabled.' };
+    /*
     const oauth2Client = createOAuth2Client();
     try {
         const { tokens } = await oauth2Client.getToken(code);
@@ -58,12 +61,16 @@ const saveRefreshToken = async (businessId, code) => {
         console.error('Error exchanging auth code:', error);
         throw new Error('Failed to exchange Google Auth code');
     }
+    */
 };
 
 /**
  * Creates an event in Google Calendar using stored refresh token.
  */
 const syncBookingToGoogle = async (booking, context = {}) => {
+    // Calendar Sync Disabled
+    return null;
+    /*
     const { business, customer, service, staff, location } = context;
 
     if (!business || !business.google_refresh_token) {
@@ -111,6 +118,7 @@ const syncBookingToGoogle = async (booking, context = {}) => {
         console.error('[GoogleSync] Error creating event:', error.message);
         throw error;
     }
+    */
 };
 
 module.exports = {

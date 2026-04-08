@@ -19,6 +19,8 @@ const bookingController = {
             
             const row = await Booking.create({ ...req.body, business_id });
             
+            /* 
+            // Calendar Sync Disabled
             // Background Sync to Google Calendar
             try {
                 const [business, customer, service, staff, location] = await Promise.all([
@@ -45,6 +47,7 @@ const bookingController = {
             } catch (syncErr) {
                 console.error('[GoogleSync] Preparation error:', syncErr.message);
             }
+            */
 
             res.status(201).json({ success: true, message: "Booking created successfully", data: row });
         } catch (error) {

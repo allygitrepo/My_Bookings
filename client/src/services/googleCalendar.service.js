@@ -13,6 +13,9 @@ const GOOGLE_CALENDAR_API_BASE = 'https://www.googleapis.com/calendar/v3';
  * @returns {Promise<Object>} - The created event
  */
 export const createCalendarEvent = async (accessToken, eventData, calendarId = 'primary') => {
+    // Calendar Sync Disabled
+    return null;
+    /*
     try {
         const response = await fetch(`${GOOGLE_CALENDAR_API_BASE}/calendars/${calendarId}/events`, {
             method: 'POST',
@@ -33,6 +36,7 @@ export const createCalendarEvent = async (accessToken, eventData, calendarId = '
         console.error('Google Calendar Service Error:', error);
         throw error;
     }
+    */
 };
 
 /**
@@ -42,6 +46,9 @@ export const createCalendarEvent = async (accessToken, eventData, calendarId = '
  * @returns {Object} - Google Calendar Event object
  */
 export const formatBookingToEvent = (booking, context = {}) => {
+    // Calendar Sync Disabled
+    return {};
+    /*
     const { customer, service, staff, location } = context;
     
     // Google Calendar expects ISO strings: 2023-05-28T09:00:00Z (or with offset)
@@ -65,4 +72,5 @@ export const formatBookingToEvent = (booking, context = {}) => {
             'useDefault': true,
         },
     };
+    */
 };

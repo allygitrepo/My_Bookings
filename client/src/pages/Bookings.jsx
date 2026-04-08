@@ -39,118 +39,12 @@ import dayjs from 'dayjs';
 const statusColors = { Confirmed: 'success', Completed: 'info', Cancelled: 'error', Pending: 'warning' };
 const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default', Failed: 'error' };
 
+/*
+// Calendar Sync Disabled
 const CalendarView = ({ bookings, customers, services, staff }) => {
-    const [currentDate, setCurrentDate] = useState(dayjs());
-
-    const startOfMonth = currentDate.startOf('month');
-    const endOfMonth = currentDate.endOf('month');
-    const startDay = startOfMonth.startOf('week');
-    const endDay = endOfMonth.endOf('week');
-
-    const days = [];
-    let day = startDay;
-    while (day.isBefore(endDay)) {
-        days.push(day);
-        day = day.add(1, 'day');
-    }
-
-    const bookingsByDate = bookings.reduce((acc, b) => {
-        const date = dayjs(b.booking_date).format('YYYY-MM-DD');
-        if (!acc[date]) acc[date] = [];
-        acc[date].push(b);
-        return acc;
-    }, {});
-
-    return (
-        <Paper sx={{ p: 3, borderRadius: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 3 }}>
-                <Typography variant="h6" fontWeight={700}>
-                    {currentDate.format('MMMM YYYY')}
-                </Typography>
-                <Box sx={{ display: 'flex', gap: 1 }}>
-                    <IconButton onClick={() => setCurrentDate(currentDate.subtract(1, 'month'))}>
-                        <PrevIcon />
-                    </IconButton>
-                    <Button variant="outlined" size="small" onClick={() => setCurrentDate(dayjs())}>Today</Button>
-                    <IconButton onClick={() => setCurrentDate(currentDate.add(1, 'month'))}>
-                        <NextIcon />
-                    </IconButton>
-                </Box>
-            </Box>
-
-            <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1 }}>
-                {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
-                    <Typography key={d} variant="subtitle2" textAlign="center" sx={{ fontWeight: 600, color: 'text.secondary', py: 1 }}>
-                        {d}
-                    </Typography>
-                ))}
-                {days.map((d, i) => {
-                    const isToday = d.isSame(dayjs(), 'day');
-                    const isCurrentMonth = d.isSame(currentDate, 'month');
-                    const dateStr = d.format('YYYY-MM-DD');
-                    const dayBookings = bookingsByDate[dateStr] || [];
-
-                    return (
-                        <Box
-                            key={i}
-                            sx={{
-                                minHeight: 120,
-                                p: 1,
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                bgcolor: isCurrentMonth ? 'background.paper' : 'action.hover',
-                                borderRadius: 1,
-                                transition: '0.2s',
-                                '&:hover': { bgcolor: 'action.selected' }
-                            }}
-                        >
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    fontWeight: isToday ? 800 : 500,
-                                    color: isToday ? 'primary.main' : isCurrentMonth ? 'text.primary' : 'text.disabled',
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    width: 24,
-                                    height: 24,
-                                    borderRadius: '50%',
-                                    bgcolor: isToday ? 'primary.lighter' : 'transparent',
-                                    mb: 0.5
-                                }}
-                            >
-                                {d.date()}
-                            </Typography>
-                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                {dayBookings.map(b => {
-                                    const service = services.find(s => s.id === b.service_id);
-                                    const customer = customers.find(c => c.id === b.customer_id);
-                                    return (
-                                        <Tooltip key={b.id} title={`${customer?.name || 'Customer'} - ${service?.service_name || 'Service'} (${b.start_time})`}>
-                                            <Chip
-                                                label={service?.service_name || 'Booking'}
-                                                size="small"
-                                                sx={{
-                                                    fontSize: '0.65rem',
-                                                    height: 20,
-                                                    bgcolor: (b.status === true || b.status === 1) ? 'success.lighter' : 'error.lighter',
-                                                    color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
-                                                    border: '1px solid',
-                                                    borderColor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
-                                                    '& .MuiChip-label': { px: 1 }
-                                                }}
-                                            />
-                                        </Tooltip>
-                                    );
-                                })}
-                            </Box>
-                        </Box>
-                    );
-                })}
-            </Box>
-        </Paper>
-    );
+    ... existing code ...
 };
+*/
 
 const Bookings = () => {
     const { searchQuery } = useSearch();
@@ -187,55 +81,23 @@ const Bookings = () => {
         }
     }, [businesses]);
 
+    // Calendar Sync Disabled
+    const handleToggleSync = () => {};
+    const markAsSynced = () => {};
+    const login = () => {};
+    /*
     const handleToggleSync = async () => {
-        const businessId = businesses[0]?.id;
-        if (!businessId) return;
-
-        const newStatus = !isSyncEnabled;
-        try {
-            // Correct format: /business/update/:id (verified in business.routes.js)
-            await axiosInstance.put(`/business/update/${businessId}`, {
-                google_sync_enabled: newStatus
-            });
-            setIsSyncEnabled(newStatus);
-            toast.success(`Auto-sync ${newStatus ? 'enabled' : 'disabled'}`);
-        } catch (err) {
-            console.error('Toggle Sync Error:', err);
-            toast.error('Failed to update sync status');
-        }
+        ... existing code ...
     };
 
     const markAsSynced = (id) => {
-        setSyncedIds(prev => {
-            const next = [...new Set([...prev, id])];
-            localStorage.setItem('syncedBookingIds', JSON.stringify(next));
-            return next;
-        });
+        ... existing code ...
     };
 
     const login = useGoogleLogin({
-        onSuccess: async (codeResponse) => {
-            console.log('Google Auth Code received:', codeResponse);
-            try {
-                const businessId = businesses[0]?.id;
-                if (!businessId) {
-                    toast.error('No business ID found');
-                    return;
-                }
-                await axios.post(`${import.meta.env.VITE_API_BASE_URL}/google/auth-code`, {
-                    businessId,
-                    code: codeResponse.code
-                });
-                setIsGoogleConnected(true);
-                toast.success('Google Calendar connected for truly automatic background syncing!');
-            } catch (err) {
-                console.error('Failed to connect Google:', err);
-                toast.error('Failed to connect Google Calendar');
-            }
-        },
-        flow: 'auth-code',
-        scope: 'https://www.googleapis.com/auth/calendar.events',
+        ... existing code ...
     });
+    */
 
     useEffect(() => {
         if (businesses.length > 0 && businesses[0].google_refresh_token) {
@@ -324,7 +186,9 @@ const Bookings = () => {
                 subtitle="All customer appointments. Bookings are created via the widget."
                 extraActions={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        {/* {isGoogleConnected && (
+                        {/* 
+                        // Calendar Sync Disabled
+                        isGoogleConnected && (
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -341,8 +205,10 @@ const Bookings = () => {
                                 }
                                 sx={{ mr: 1 }}
                             />
-                        )} */}
-                        {/* {isGoogleConnected ? (
+                        ) */}
+                        {/* 
+                        // Calendar Sync Disabled
+                        isGoogleConnected ? (
                             <Tooltip 
                                 title={businesses[0]?.sync_email || 'Account details unavailable. Re-link to verify email.'} 
                                 arrow 
@@ -368,7 +234,7 @@ const Bookings = () => {
                             >
                                 Link Google Calendar
                             </Button>
-                        )} */}
+                        ) */}
                         <ToggleButtonGroup
                             value={view}
                             exclusive
@@ -380,10 +246,13 @@ const Bookings = () => {
                                 <ViewListIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Table
                             </ToggleButton>
+                            {/* 
+                            // Calendar Sync Disabled
                             <ToggleButton value="calendar">
                                 <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Calendar
-                            </ToggleButton>
+                            </ToggleButton> 
+                            */}
                         </ToggleButtonGroup>
                     </Box>
                 }
@@ -441,12 +310,10 @@ const Bookings = () => {
             )}
 
             {view === 'calendar' ? (
-                <CalendarView
-                    bookings={filteredBookings}
-                    customers={customers}
-                    services={services}
-                    staff={staff}
-                />
+                <Box sx={{ p: 4, textAlign: 'center' }}>
+                    {/* // Calendar Sync Disabled */}
+                    <Typography variant="body2" color="text.secondary">Calendar View is currently disabled.</Typography>
+                </Box>
             ) : (
                 <>
                     <TableContainer component={Paper}>
@@ -463,7 +330,7 @@ const Bookings = () => {
                                     <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>Sync</TableCell>
+                                    {/* <TableCell sx={{ fontWeight: 500 }}>Sync</TableCell> */}
                                 </TableRow>
                             </TableHead>
                             <TableBody>
@@ -475,7 +342,7 @@ const Bookings = () => {
                                     </TableRow>
                                 ) : filteredBookings.length === 0 ? (
                                     <TableRow><TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
-                                        <CalendarIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
+                                        {/* <CalendarIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} /> */}
                                         <Typography variant="body2" color="text.secondary">
                                             {searchQuery ? 'No bookings match your search.' : 'No bookings yet.'}
                                         </Typography>
@@ -528,6 +395,8 @@ const Bookings = () => {
                                                     color={(b.status === true || b.status === 1) ? 'success' : 'error'}
                                                 />
                                             </TableCell>
+                                            {/* 
+                                            // Calendar Sync Disabled
                                             <TableCell>
                                                 {b.google_event_id ? (
                                                     <Tooltip title="Synced to Google Calendar">
@@ -547,6 +416,7 @@ const Bookings = () => {
                                                     <Typography variant="caption" color="text.disabled">—</Typography>
                                                 )}
                                             </TableCell>
+                                            */}
                                         </TableRow>
                                     );
                                 })}

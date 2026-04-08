@@ -403,6 +403,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         }
     };
 
+    /*
+    // Calendar Sync Disabled
     // Google Calendar Sync Logic for Widget
     const [googleToken, setGoogleToken] = useState(null);
     const [isSyncing, setIsSyncing] = useState(false);
@@ -464,6 +466,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             googleLogin();
         }
     };
+    */
+    const isSyncing = false;
+    const isSynced = false;
+    const handleGoogleSync = () => {};
 
     const renderStep = () => {
         switch (activeStep) {
@@ -1013,7 +1019,9 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             <Typography variant="caption" color="success.main">{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
-                            {!isSynced ? (
+                            {/* 
+                            // Calendar Sync Disabled
+                            !isSynced ? (
                                 <Button 
                                     variant="contained" 
                                     color="primary" 
@@ -1034,7 +1042,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 <Typography variant="body2" color="success.main" sx={{ fontWeight: 700, display: 'flex', alignItems: 'center', gap: 0.5 }}>
                                     <SuccessIcon fontSize="small" /> Added to Calendar
                                 </Typography>
-                            )}
+                            ) 
+                            */}
                             <Button variant="outlined" onClick={resetBooking} sx={{ borderRadius: 2, textTransform: 'none' }}>
                                 Close
                             </Button>
