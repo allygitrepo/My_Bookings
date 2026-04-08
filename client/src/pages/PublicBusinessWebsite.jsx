@@ -39,13 +39,19 @@ const PublicBusinessWebsite = () => {
                 }
 
                 if (response?.success) {
+                    // Check if website is enabled
+                    if (!response.data.business?.website_enabled) {
+                        setError('This website is currently in draft mode and is not public.');
+                        setLoading(false);
+                        return;
+                    }
                     setBusinessData(response.data);
                 } else {
                     setError(response?.message || 'Website not found');
                 }
             } catch (err) {
                 console.error('Error fetching website data:', err);
-                setError('Failed to load website. It may be disabled or the link is incorrect.');
+                setError('Failed to load website. The link is incorrect.');
             } finally {
                 setLoading(false);
             }
@@ -77,13 +83,13 @@ const PublicBusinessWebsite = () => {
                 <Typography variant="body1" color="text.secondary" paragraph>
                     {error || "The booking-enabled website you are looking for doesn't exist or has been disabled by the owner."}
                 </Typography>
-                <Button 
+                {/* <Button 
                     variant="contained" 
                     onClick={() => navigate('/')}
                     sx={{ mt: 2, borderRadius: 2, px: 4 }}
                 >
                     Back to MyBookings
-                </Button>
+                </Button> */}
             </Container>
         );
     }
@@ -91,7 +97,7 @@ const PublicBusinessWebsite = () => {
     // Dynamic Template Picker
     const renderTemplate = () => {
         const template = businessData.business.selected_template || 'template1';
-        
+
         switch (template) {
             case 'template1':
                 return <TemplateMinimal data={businessData} />;

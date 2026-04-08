@@ -216,21 +216,6 @@ const WebsiteGenerator = () => {
                                     helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${encodeBusinessId(selectedBusinessId)}` : 'Select a business and publish to get a live link'}
                                     sx={{ mt: 1 }}
                                 />
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            size="small"
-                                            checked={settings.website_enabled}
-                                            onChange={(e) => setSettings({ ...settings, website_enabled: e.target.checked })}
-                                        />
-                                    }
-                                    label={
-                                        <Typography sx={{ fontSize: '0.75rem', fontWeight: 700, ml: 1 }}>
-                                            {settings.website_enabled ? '🌐 Website is Publicly Visible' : '🔒 Internal Draft (Hidden)'}
-                                        </Typography>
-                                    }
-                                    sx={{ mt: 2, display: 'flex' }}
-                                />
                             </Box>
 
                             <Box>
@@ -312,51 +297,6 @@ const WebsiteGenerator = () => {
                                     })}
                                 </Box>
                             </Box>
-
-                            <Divider />
-
-                            <Box sx={{ mt: 'auto' }}>
-                                {/* <Box sx={{ p: 2, bgcolor: 'primary.light', color: 'primary.contrastText', borderRadius: 3, mb: 3, display: 'flex', alignItems: 'center', gap: 2 }}>
-                                <Avatar sx={{ width: 32, height: 32, bgcolor: 'primary.main', fontSize: '0.8rem' }}>
-                                    {JSON.parse(localStorage.getItem('currentUser'))?.name?.charAt(0) || 'U'}
-                                </Avatar>
-                                <Box>
-                                    <Typography variant="caption" sx={{ display: 'block', fontWeight: 700, lineHeight: 1 }}>Logged in as</Typography>
-                                    <Typography variant="body2" sx={{ fontWeight: 700, opacity: 0.9 }}>
-                                        {JSON.parse(localStorage.getItem('currentUser'))?.name || 'User'}
-                                    </Typography>
-                                    <Typography variant="caption" sx={{ display: 'block', opacity: 0.7, fontSize: '0.7rem' }}>
-                                        {JSON.parse(localStorage.getItem('currentUser'))?.email || ''}
-                                    </Typography>
-                                </Box>
-                            </Box> */}
-
-                                <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 'auto' }}>
-                                    <Button
-                                        variant="contained"
-                                        startIcon={saving ? <CircularProgress size={16} color="inherit" /> : <SaveIcon sx={{ fontSize: '16px !important' }} />}
-                                        disabled={saving}
-                                        onClick={handleSave}
-                                        sx={{ 
-                                            px: 4,
-                                            py: 1.2, 
-                                            borderRadius: 2.5, 
-                                            fontWeight: 900, 
-                                            fontSize: '0.8rem', 
-                                            textTransform: 'none',
-                                            background: settings.website_enabled ? 'linear-gradient(45deg, #6366f1, #8b5cf6)' : 'primary.main',
-                                            boxShadow: '0 8px 16px rgba(99,102,241,0.15)',
-                                            '&:hover': {
-                                                boxShadow: '0 12px 24px rgba(99,102,241,0.25)',
-                                                transform: 'translateY(-1px)'
-                                            },
-                                            transition: 'all 0.2s'
-                                        }}
-                                    >
-                                        {saving ? 'Saving...' : 'Save & Publish'}
-                                    </Button>
-                                </Box>
-                            </Box>
                         </Paper>
                     </Grid>
 
@@ -368,8 +308,46 @@ const WebsiteGenerator = () => {
                                     <Typography sx={{ fontSize: '1.25rem', fontWeight: 900, background: 'linear-gradient(90deg, #1e293b, #64748b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                         Live Preview
                                     </Typography>
-                                    <Box sx={{ px: 1, py: 0.25, borderRadius: 1.5, bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2', color: settings.website_enabled ? '#166534' : '#991b1b', fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase' }}>
-                                        {settings.website_enabled ? 'Live' : 'Draft'}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Box sx={{ 
+                                            px: 1.5, py: 0.5, borderRadius: 1.5, 
+                                            bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2', 
+                                            color: settings.website_enabled ? '#166534' : '#991b1b', 
+                                            fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', 
+                                            letterSpacing: 1, border: '1px solid', 
+                                            borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca',
+                                            transition: 'all 0.3s'
+                                        }}>
+                                            {settings.website_enabled ? 'Published' : 'Draft'}
+                                        </Box>
+                                        <Switch
+                                            size="small"
+                                            checked={settings.website_enabled}
+                                            onChange={async (e) => {
+                                                const newEnabled = e.target.checked;
+                                                setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
+                                                
+                                                // Trigger auto-save
+                                                setSaving(true);
+                                                try {
+                                                    const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
+                                                    if (response.success) {
+                                                        toast.success(newEnabled ? 'Website Published!' : 'Website Moved to Draft');
+                                                        setBusinesses(prev => prev.map(b =>
+                                                            String(b.id) === String(selectedBusinessId) ? { ...b, ...settings, website_enabled: newEnabled } : b
+                                                        ));
+                                                    }
+                                                } catch (error) {
+                                                    toast.error('Auto-save failed.');
+                                                } finally {
+                                                    setSaving(false);
+                                                }
+                                            }}
+                                            sx={{ 
+                                                '& .MuiSwitch-switchBase.Mui-checked': { color: '#22c55e' },
+                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#22c55e' }
+                                            }}
+                                        />
                                     </Box>
                                     {settings.website_enabled && settings.slug && (
                                         <Tooltip title="View Live Site">
