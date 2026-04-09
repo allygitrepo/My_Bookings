@@ -111,12 +111,12 @@ const Reports = () => {
 
         const bDate = dayjs(b.booking_date);
         const matchesDate = bDate.isAfter(startDate.subtract(1, 'day')) && bDate.isBefore(endDate.add(1, 'day'));
-        
+
         const isConfirmedInDb = (b.status === true || b.status === 1);
         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
         const isPast = bookingDateTime.isBefore(dayjs());
         const status = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-        
+
         const matchesStatus = filterStatus === 'All' || status === filterStatus;
         const matchesService = filterService === 'All' || b.service_id === filterService;
 
@@ -133,14 +133,16 @@ const Reports = () => {
     const ledgerData = customers.map(customer => {
         const customerBookings = filteredBookings.filter(b => b.customer_id === customer.id);
         const customerPayments = payments.filter(p => p.booking_id && customerBookings.some(b => b.id === p.booking_id));
-        
+
         const totalDue = customerBookings.reduce((sum, b) => {
+            const payment = payments.find(p => p.booking_id === b.id);
             const service = services.find(s => s.id === b.service_id);
-            return sum + Number(service?.price || 0);
+            // Use the price recorded in the payment, otherwise fallback to current service price
+            return sum + Number(payment?.amount || service?.price || 0);
         }, 0);
 
         const totalPaid = customerPayments.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
-        
+
         return {
             ...customer,
             bookingsCount: customerBookings.length,
@@ -163,7 +165,7 @@ const Reports = () => {
     const generatePDF = async () => {
         const doc = new jsPDF();
         const business = businesses.find(b => b.id === filterBusiness) || { business_name: 'All Businesses' };
-        
+
         // Add Header Background
         doc.setFillColor(99, 102, 241);
         doc.rect(0, 0, 210, 40, 'F');
@@ -187,9 +189,9 @@ const Reports = () => {
         // Add Report Title
         doc.setTextColor(31, 41, 55);
         doc.setFontSize(16);
-        const reportTitle = reportType === 'bookings' ? 'Bookings Summary Report' : 
-                          reportType === 'payments' ? 'Payments Transaction Report' : 
-                          'Customer Ledger Statement';
+        const reportTitle = reportType === 'bookings' ? 'Bookings Summary Report' :
+            reportType === 'payments' ? 'Payments Transaction Report' :
+                'Customer Ledger Statement';
         doc.text(reportTitle, 15, 55);
 
         // Table Generation based on Type
@@ -221,7 +223,7 @@ const Reports = () => {
                 ];
             });
         } else {
-            headers = [['Customer', 'Appts', 'Total Due', 'Paid', 'Balance']];
+            headers = [['Customer', 'Appts', 'Total Due', 'Paid', 'Pending']];
             body = ledgerData.map(c => [
                 c.name,
                 c.bookingsCount,
@@ -349,8 +351,8 @@ const Reports = () => {
             </Paper>
 
             <Box sx={{ mb: 4 }}>
-                <Tabs 
-                    value={reportType} 
+                <Tabs
+                    value={reportType}
                     onChange={(e, val) => setReportType(val)}
                     sx={{
                         borderBottom: 1, borderColor: 'divider',
@@ -389,7 +391,7 @@ const Reports = () => {
                                     const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
                                     const isPast = bookingDateTime.isBefore(dayjs());
                                     const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                                    
+
                                     return (
                                         <TableRow key={b.id} hover>
                                             <TableCell>{formatDate(b.booking_date)}</TableCell>
@@ -462,7 +464,7 @@ const Reports = () => {
                                     <TableCell align="center" sx={{ fontWeight: 700 }}>Bookings</TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 700 }}>Total Due</TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 700 }}>Amount Paid</TableCell>
-                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Balance</TableCell>
+                                    <TableCell align="right" sx={{ fontWeight: 700 }}>Pending Amount</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
