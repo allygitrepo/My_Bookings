@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Box, Typography, Divider,
-    Autocomplete, Chip, TablePagination,
+    Autocomplete, Chip, TablePagination, CircularProgress, Card
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -193,22 +193,27 @@ const Locations = () => {
                     </TextField>
                 }
             />
-            <TableContainer component={Paper}>
+            {/* Desktop Table */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Location Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Address</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>City</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>State</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Location Name</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Business</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Address</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>City</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>State</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {loading ? (
-                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6 }}><Typography color="text.secondary">Loading locations...</Typography></TableCell></TableRow>
+                            <TableRow>
+                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
+                                    <CircularProgress size={32} />
+                                </TableCell>
+                            </TableRow>
                         ) : filteredLocations.length === 0 ? (
                             <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 {searchQuery ? 'No locations match your search.' : (
@@ -222,12 +227,12 @@ const Locations = () => {
                             const biz = businesses.find(b => b.id === loc.business_id);
                             return (
                                 <TableRow key={loc.id} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{loc.location_name}</TableCell>
-                                    <TableCell>{biz?.business_name || '—'}</TableCell>
-                                    <TableCell>{loc.address}</TableCell>
-                                    <TableCell>{loc.city}</TableCell>
-                                    <TableCell>{loc.state}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>{loc.location_name}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{biz?.business_name || '—'}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{loc.address}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{loc.city}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{loc.state}</TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(loc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
                                         <IconButton onClick={() => handleDelete(loc.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
@@ -238,6 +243,42 @@ const Locations = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : filteredLocations.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No locations found</Typography>
+                    </Paper>
+                ) : filteredLocations.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((loc) => (
+                    <Card key={loc.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                            <Box>
+                                <Typography variant="subtitle1" fontWeight={900}>{loc.location_name}</Typography>
+                                <Typography variant="caption" color="text.secondary">{businesses.find(b => b.id === loc.business_id)?.business_name}</Typography>
+                            </Box>
+                            <Box>
+                                <IconButton onClick={() => handleOpen(loc)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
+                                <IconButton onClick={() => handleDelete(loc.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                            </Box>
+                        </Box>
+                        
+                        <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+                        
+                        <Box sx={{ mb: 1.5 }}>
+                            <Typography variant="caption" color="text.secondary" display="block">Address</Typography>
+                            <Typography variant="body2" fontWeight={600}>{loc.address}</Typography>
+                        </Box>
+
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Chip label={loc.city} size="small" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                            <Chip label={loc.state} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                        </Box>
+                    </Card>
+                ))}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

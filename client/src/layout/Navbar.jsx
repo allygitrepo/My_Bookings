@@ -84,16 +84,16 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                         <MenuIcon />
                     </IconButton>
 
-                    <FormControl variant="standard" sx={{ minWidth: 200, display: { xs: 'none', md: 'block' }, mr: 4 }}>
+                    <FormControl variant="standard" sx={{ minWidth: 200, display: { xs: 'none', md: 'block' }, mr: 3 }}>
                         <Select
                             value={selectedBusinessId}
                             onChange={(e) => setSelectedBusinessId(e.target.value)}
                             disableUnderline
-                            sx={{ fontWeight: 600, fontSize: '1.1rem' }}
+                            sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'primary.main' }}
                         >
                             <MenuItem value="all">All Businesses</MenuItem>
                             {businesses.map((b) => (
-                                <MenuItem key={b.id} value={b.id}>{b.business_name}</MenuItem>
+                                <MenuItem key={b.id} value={b.id} sx={{ fontWeight: 600 }}>{b.business_name}</MenuItem>
                             ))}
                         </Select>
                     </FormControl>
@@ -104,16 +104,24 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                         display: 'flex',
                         alignItems: 'center',
                         bgcolor: 'action.hover',
-                        borderRadius: 2,
-                        px: 2,
-                        py: 0.5,
-                        width: { xs: '100%', sm: 400 },
+                        borderRadius: 2.5,
+                        px: { xs: 1.5, sm: 2 },
+                        py: 0.75,
+                        flex: { xs: 1, sm: 'none' },
+                        width: { sm: 300, md: 400 },
                         maxWidth: 600,
-                        ml: { xs: 0, md: 2 }
+                        ml: { xs: 0, md: 1 },
+                        border: '1px solid transparent',
+                        '&:focus-within': {
+                            borderColor: 'primary.main',
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 0 0 4px rgba(99,102,241,0.1)'
+                        },
+                        transition: 'all 0.2s'
                     }}>
-                        <SearchIcon sx={{ color: 'text.secondary', fontSize: 20, mr: 1.5 }} />
+                        <SearchIcon sx={{ color: 'text.secondary', fontSize: 18, mr: 1 }} />
                         <input
-                            placeholder="Search records..."
+                            placeholder="Search..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
                             style={{
@@ -121,9 +129,9 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                                 background: 'transparent',
                                 outline: 'none',
                                 width: '100%',
-                                fontSize: '0.9rem',
+                                fontSize: '0.85rem',
                                 color: 'inherit',
-                                fontWeight: 500
+                                fontWeight: 600
                             }}
                         />
                     </Box>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button, FormHelperText,
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button, FormHelperText, CircularProgress, Card
 } from '@mui/material';
 import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
@@ -213,59 +213,59 @@ const Services = () => {
     return (
         <PageTransition>
             <PageHeader title="Services" subtitle="Define the services you offer and assign staff." onAddClick={() => handleOpen()} buttonText="Add Service" />
-            <TableContainer component={Paper}>
+            {/* Desktop Table */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Service Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Duration (min)</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Price</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Min. Charge</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Locations</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Assigned Staff</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Service Name</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Duration (min)</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Min. Charge</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Locations</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Assigned Staff</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                                    <Typography color="text.secondary">Loading services...</Typography>
+                                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                                    <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredServices.length === 0 ? (
-                            <TableRow><TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                            <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                 {searchQuery ? 'No services match your search.' : (
                                     <>
                                         <ServiceIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No services added yet.
                                     </>
                                 )}
                             </TableCell></TableRow>
-                        ) : null}
-                        {filteredServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((svc, index) => {
+                        ) : filteredServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((svc, index) => {
                             const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
                             const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
                             return (
                                 <TableRow key={svc.id} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{svc.service_name}</TableCell>
-                                    <TableCell>{svc.duration_minutes} min</TableCell>
-                                    <TableCell>₹{svc.price}</TableCell>
-                                    <TableCell>₹{svc.minimum_booking_charge}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>{svc.service_name}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{svc.duration_minutes} min</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>₹{svc.price}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                             {locNames.length > 0 ? (
-                                                locNames.length === locations.length ? <Chip label="All Locations" size="small" color="success" variant="outlined" /> :
-                                                    locNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" />)
+                                                locNames.length === locations.filter(l => l.business_id === svc.business_id).length ? <Chip label="All Locations" size="small" color="success" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} /> :
+                                                    locNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" sx={{ fontWeight: 600, borderRadius: 1.5 }} />)
                                             ) : <Typography variant="caption" color="text.disabled">None</Typography>}
                                         </Box>
                                     </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                            {assignedNames.length > 0 ? assignedNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" />) : <Typography variant="caption" color="text.disabled">None</Typography>}
+                                            {assignedNames.length > 0 ? assignedNames.map(n => <Chip key={n} label={n} size="small" variant="outlined" sx={{ fontWeight: 600, borderRadius: 1.5 }} />) : <Typography variant="caption" color="text.disabled">None</Typography>}
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
@@ -278,6 +278,57 @@ const Services = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : filteredServices.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No services found</Typography>
+                    </Paper>
+                ) : filteredServices.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((svc) => {
+                    const assignedIds = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
+                    const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
+                    const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
+                    const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
+
+                    return (
+                        <Card key={svc.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                <Box>
+                                    <Typography variant="subtitle1" fontWeight={900} color="primary.main">{svc.service_name}</Typography>
+                                    <Typography variant="caption" color="text.secondary">{svc.duration_minutes} Minutes Duration</Typography>
+                                </Box>
+                                <Box>
+                                    <IconButton onClick={() => handleOpen(svc)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(svc.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                </Box>
+                            </Box>
+                            
+                            <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+                            
+                            <Grid container spacing={1}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Price</Typography>
+                                    <Typography variant="body2" fontWeight={800}>₹{svc.price}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Min. Charge</Typography>
+                                    <Typography variant="body2" fontWeight={800}>₹{svc.minimum_booking_charge}</Typography>
+                                </Grid>
+                            </Grid>
+
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Assigned Staff:</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {assignedNames.length > 0 ? assignedNames.map(n => <Chip key={n} label={n} size="small" variant="filled" color="primary" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }} />) : <Typography variant="caption" color="text.disabled">None</Typography>}
+                                </Box>
+                            </Box>
+                        </Card>
+                    );
+                })}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

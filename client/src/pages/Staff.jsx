@@ -4,7 +4,7 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
     Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination, Avatar,
-    Autocomplete, Chip,
+    Autocomplete, Chip, CircularProgress, Card
 } from '@mui/material';
 import { MobileTimePicker } from '@mui/x-date-pickers';
 import {
@@ -401,26 +401,27 @@ const Staff = () => {
                 }
             />
 
-            <TableContainer component={Paper}>
+            {/* Desktop Table */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Staff Name</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Role</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Location</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Phone</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Slot</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Working Days</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Staff Name</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Business</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Location</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Phone</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Slot</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Working Days</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
                         {loading ? (
                             <TableRow>
                                 <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
-                                    <Typography color="text.secondary">Loading staff members...</Typography>
+                                    <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredStaff.length === 0 ? (
@@ -436,11 +437,10 @@ const Staff = () => {
                             </TableRow>
                         ) : filteredStaff.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((s, index) => {
                             const biz = businesses.find(b => b.id === s.business_id);
-                            const loc = locations.find(l => l.id === s.location_id);
                             const workingDays = [...new Set(availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.slice(0, 3)))];
                             return (
                                 <TableRow key={s.id} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Avatar
@@ -449,7 +449,7 @@ const Staff = () => {
                                             >
                                                 {s.staff_name.charAt(0)}
                                             </Avatar>
-                                            <Typography variant="body2" fontWeight={600}>{s.staff_name}</Typography>
+                                            <Typography variant="body2" fontWeight={700}>{s.staff_name}</Typography>
                                         </Box>
                                     </TableCell>
                                     <TableCell>
@@ -457,18 +457,18 @@ const Staff = () => {
                                             {s.role || '—'}
                                         </Box>
                                     </TableCell>
-                                    <TableCell>{biz?.business_name || '—'}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{biz?.business_name || '—'}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                                             {s.locations?.length > 0 
                                                 ? s.locations.map(l => (
-                                                    <Chip key={l.id} label={l.location_name} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20 }} />
+                                                    <Chip key={l.id} label={l.location_name} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600, borderRadius: 1 }} />
                                                 ))
                                                 : '—'
                                             }
                                         </Box>
                                     </TableCell>
-                                    <TableCell>{s.phone}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{s.phone}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'inline-block', px: 1.5, py: 0.3, borderRadius: 1, bgcolor: 'info.50', color: 'info.dark', fontSize: '0.75rem', fontWeight: 700, whiteSpace: 'nowrap' }}>
                                             {s.slot_duration_minutes || 30} min
@@ -478,7 +478,7 @@ const Staff = () => {
                                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
                                             {workingDays.length > 0
                                                 ? workingDays.map(d => (
-                                                    <Box key={d} sx={{ px: 1, py: 0.2, borderRadius: 1, bgcolor: 'success.50', color: 'success.dark', fontSize: '0.7rem', fontWeight: 700 }}>{d}</Box>
+                                                    <Box key={d} sx={{ px: 1, py: 0.2, borderRadius: 1, bgcolor: 'success.50', color: 'success.dark', fontSize: '0.7rem', fontWeight: 700, textTransform: 'capitalize' }}>{d}</Box>
                                                 ))
                                                 : <Typography variant="caption" color="text.disabled">Not set</Typography>
                                             }
@@ -494,6 +494,54 @@ const Staff = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : filteredStaff.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No staff members found</Typography>
+                    </Paper>
+                ) : filteredStaff.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((s) => {
+                    const workingDays = [...new Set(availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.slice(0, 3)))];
+                    return (
+                        <Card key={s.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
+                                <Avatar src={s.photo} sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: 'primary.main', fontWeight: 800 }}>{s.staff_name.charAt(0)}</Avatar>
+                                <Box sx={{ flex: 1 }}>
+                                    <Typography variant="subtitle1" fontWeight={900}>{s.staff_name}</Typography>
+                                    <Typography variant="caption" color="primary.main" fontWeight={700}>{s.role || 'Staff member'}</Typography>
+                                </Box>
+                                <Box>
+                                    <IconButton onClick={() => handleOpen(s)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(s.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                </Box>
+                            </Box>
+                            
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Phone</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{s.phone}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Slot Duration</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{s.slot_duration_minutes || 30} min</Typography>
+                                </Grid>
+                            </Grid>
+
+                            <Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 0.5 }}>Working Days:</Typography>
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {workingDays.length > 0 ? workingDays.map(d => (
+                                        <Chip key={d} label={d.toUpperCase()} size="small" color="success" variant="filled" sx={{ height: 20, fontSize: '0.65rem', fontWeight: 900 }} />
+                                    )) : <Typography variant="caption" color="text.disabled">Not set</Typography>}
+                                </Box>
+                            </Box>
+                        </Card>
+                    );
+                })}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

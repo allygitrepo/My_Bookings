@@ -4,7 +4,7 @@ import axiosInstance from '../api/axiosInstance';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
-    TextField, MenuItem, Card
+    TextField, MenuItem, Card, CircularProgress, Grid, Divider
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -381,10 +381,23 @@ const Bookings = () => {
             {/* --- Filters Bar --- */}
             {showFilters && (
                 <LocalizationProvider dateAdapter={AdapterDayjs}>
-                    <Paper sx={{ p: 2, mb: 3, borderRadius: 2, display: 'flex', gap: 2, flexWrap: 'wrap', alignItems: 'center', animation: 'fadeIn 0.3s ease-in-out' }}>
+                    <Paper sx={{ 
+                        p: 2, 
+                        mb: 3, 
+                        borderRadius: 3, 
+                        display: 'flex', 
+                        flexDirection: { xs: 'column', sm: 'row' },
+                        gap: 2, 
+                        flexWrap: 'wrap', 
+                        alignItems: { xs: 'stretch', sm: 'center' }, 
+                        animation: 'fadeIn 0.3s ease-in-out',
+                        border: '1px solid',
+                        borderColor: 'divider',
+                        boxShadow: 'none'
+                    }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                             <FilterIcon size="small" color="action" />
-                            <Typography variant="body2" fontWeight={600} color="text.secondary">Filters:</Typography>
+                            <Typography variant="body2" fontWeight={800} color="text.secondary">FILTERS:</Typography>
                         </Box>
 
                         <TextField
@@ -393,7 +406,7 @@ const Bookings = () => {
                             label="Status"
                             value={filterStatus}
                             onChange={(e) => setFilterStatus(e.target.value)}
-                            sx={{ minWidth: 130 }}
+                            sx={{ minWidth: { xs: '100%', sm: 140 } }}
                         >
                             <MenuItem value="All">All Status</MenuItem>
                             <MenuItem value="Confirmed">Confirmed</MenuItem>
@@ -406,7 +419,7 @@ const Bookings = () => {
                             value={startDate}
                             onChange={(val) => setStartDate(val)}
                             format="DD/MM/YYYY"
-                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                            slotProps={{ textField: { size: 'small', sx: { width: { xs: '100%', sm: 150 } } } }}
                         />
 
                         <DatePicker
@@ -414,7 +427,7 @@ const Bookings = () => {
                             value={endDate}
                             onChange={(val) => setEndDate(val)}
                             format="DD/MM/YYYY"
-                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                            slotProps={{ textField: { size: 'small', sx: { width: { xs: '100%', sm: 150 } } } }}
                         />
 
                         <Button
@@ -424,7 +437,7 @@ const Bookings = () => {
                                 setStartDate(null);
                                 setEndDate(null);
                             }}
-                            sx={{ textTransform: 'none', ml: 'auto' }}
+                            sx={{ textTransform: 'none', ml: { sm: 'auto' }, fontWeight: 700 }}
                         >
                             Reset Filters
                         </Button>
@@ -436,37 +449,35 @@ const Bookings = () => {
                 <CalendarView bookings={filteredBookings} customers={customers} services={services} staff={staff} />
             ) : (
                 <>
-                    <TableContainer component={Paper}>
+                    {/* Desktop Table View */}
+                    <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                         <Table>
                             <TableHead sx={{ bgcolor: 'background.default' }}>
                                 <TableRow>
-                                    <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Time</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Total</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Paid</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
-                                    {/* <TableCell sx={{ fontWeight: 500 }}>Sync</TableCell> */}
+                                    <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Staff</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Time</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Total</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Paid</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Remaining</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
                                         <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
-                                            <Typography color="text.secondary">Loading bookings...</Typography>
+                                            <CircularProgress size={32} />
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredBookings.length === 0 ? (
                                     <TableRow><TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
-                                        {/* <CalendarIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} /> */}
                                         <Typography variant="body2" color="text.secondary">
                                             {searchQuery ? 'No bookings match your search.' : 'No bookings yet.'}
                                         </Typography>
-                                        <Typography variant="caption" color="text.disabled">Bookings appear here after customers book via the widget.</Typography>
                                     </TableCell></TableRow>
                                 ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b, index) => {
                                     const customer = customers.find(c => c.id === b.customer_id);
@@ -474,81 +485,110 @@ const Bookings = () => {
                                     const staffMember = staff.find(s => s.id === b.staff_id);
                                     const payment = payments.find(p => p.booking_id === b.id);
 
-                                    // Use the actual amount quoted at booking (from payment record) if available, 
-                                    // otherwise fallback to current service price
                                     const totalAmount = Number(payment?.amount || service?.price || 0);
                                     const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
                                     const remainingAmount = totalAmount - paidAmount;
+                                    const isConfirmedInDb = (b.status === true || b.status === 1);
+                                    const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+                                    const isPast = bookingDateTime.isBefore(dayjs());
+                                    const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                                    const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
 
                                     return (
                                         <TableRow key={b.id} hover>
-                                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                             <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                    <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', bgcolor: 'primary.light', color: 'primary.dark' }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <Avatar sx={{ width: 32, height: 32, fontSize: '0.8rem', bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 700 }}>
                                                         {customer?.name?.charAt(0)}
                                                     </Avatar>
                                                     <Box>
-                                                        <Typography variant="body2" fontWeight={500}>{customer?.name || '—'}</Typography>
+                                                        <Typography variant="body2" fontWeight={700}>{customer?.name || '—'}</Typography>
                                                         <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>{service?.service_name || '—'}</TableCell>
-                                            <TableCell>{staffMember?.staff_name || '—'}</TableCell>
-                                            <TableCell>{formatDate(b.booking_date)}</TableCell>
-                                            <TableCell sx={{ whiteSpace: 'nowrap' }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={600}>₹{totalAmount}</Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={700} color="success.main">₹{paidAmount}</Typography>
-
-                                            </TableCell>
-                                            <TableCell>
-                                                <Typography variant="body2" fontWeight={700} color={remainingAmount > 0 ? 'error.main' : 'text.disabled'}>
-                                                    ₹{remainingAmount.toFixed(2)}
-                                                </Typography>
-                                            </TableCell>
-                                            <TableCell>
-                                                {(() => {
-                                                    const isConfirmedInDb = (b.status === true || b.status === 1);
-                                                    const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-                                                    const isPast = bookingDateTime.isBefore(dayjs());
-
-                                                    if (isConfirmedInDb && isPast) return <Chip label="Completed" size="small" color="info" />;
-                                                    if (isConfirmedInDb) return <Chip label="Confirmed" size="small" color="success" />;
-                                                    return <Chip label="Cancelled" size="small" color="error" />;
-                                                })()}
-                                            </TableCell>
-                                            {/* 
-                                            // Calendar Sync Disabled
-                                            <TableCell>
-                                                {b.google_event_id ? (
-                                                    <Tooltip title="Synced to Google Calendar">
-                                                        <CheckCircleIcon color="success" sx={{ fontSize: 18, opacity: 0.8 }} />
-                                                    </Tooltip>
-                                                ) : isGoogleConnected ? (
-                                                    isSyncEnabled ? (
-                                                        <Tooltip title="Sync Pending">
-                                                            <ClockIcon color="warning" sx={{ fontSize: 18, opacity: 0.8 }} />
-                                                        </Tooltip>
-                                                    ) : (
-                                                        <Tooltip title="Auto-sync Disabled">
-                                                            <SyncDisabledIcon color="disabled" sx={{ fontSize: 18, opacity: 0.8 }} />
-                                                        </Tooltip>
-                                                    )
-                                                ) : (
-                                                    <Typography variant="caption" color="text.disabled">—</Typography>
-                                                )}
-                                            </TableCell>
-                                            */}
+                                            <TableCell sx={{ fontWeight: 500 }}>{service?.service_name || '—'}</TableCell>
+                                            <TableCell sx={{ fontWeight: 500 }}>{staffMember?.staff_name || '—'}</TableCell>
+                                            <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
+                                            <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 500 }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>₹{totalAmount}</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmount}</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: remainingAmount > 0 ? 'error.main' : 'text.disabled' }}>₹{remainingAmount.toFixed(2)}</TableCell>
+                                            <TableCell><Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 700, borderRadius: 1.5 }} /></TableCell>
                                         </TableRow>
                                     );
                                 })}
                             </TableBody>
                         </Table>
                     </TableContainer>
+
+                    {/* Mobile Card View */}
+                    <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                        {loading ? (
+                            <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                        ) : filteredBookings.length === 0 ? (
+                            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 4, border: '1px dashed', borderColor: 'divider', boxShadow: 'none' }}>
+                                <Typography variant="body2" color="text.secondary">No bookings found</Typography>
+                            </Paper>
+                        ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => {
+                            const customer = customers.find(c => c.id === b.customer_id);
+                            const service = services.find(s => s.id === b.service_id);
+                            const staffMember = staff.find(s => s.id === b.staff_id);
+                            const payment = payments.find(p => p.booking_id === b.id);
+
+                            const totalAmount = Number(payment?.amount || service?.price || 0);
+                            const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
+                            const remainingAmount = totalAmount - paidAmount;
+                            const isConfirmedInDb = (b.status === true || b.status === 1);
+                            const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+                            const isPast = bookingDateTime.isBefore(dayjs());
+                            const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                            const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+
+                            return (
+                                <Card key={b.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 800 }}>{customer?.name?.charAt(0)}</Avatar>
+                                            <Box>
+                                                <Typography variant="subtitle2" fontWeight={800}>{customer?.name || 'Guest'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{formatDate(b.booking_date)} • {b.start_time?.slice(0, 5)}</Typography>
+                                            </Box>
+                                        </Box>
+                                        <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
+                                    </Box>
+
+                                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                                        <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block">Service</Typography>
+                                            <Typography variant="body2" fontWeight={700}>{service?.service_name || '—'}</Typography>
+                                        </Grid>
+                                        <Grid item xs={6}>
+                                            <Typography variant="caption" color="text.secondary" display="block">Staff</Typography>
+                                            <Typography variant="body2" fontWeight={700}>{staffMember?.staff_name || '—'}</Typography>
+                                        </Grid>
+                                    </Grid>
+
+                                    <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" display="block">Amount</Typography>
+                                            <Typography variant="body2" fontWeight={800}>₹{totalAmount}</Typography>
+                                        </Box>
+                                        <Box sx={{ textAlign: 'right' }}>
+                                            <Typography variant="caption" color="text.secondary" display="block">Balance</Typography>
+                                            <Typography variant="body2" fontWeight={800} color={remainingAmount > 0 ? 'error.main' : 'success.main'}>
+                                                ₹{remainingAmount.toFixed(0)}
+                                            </Typography>
+                                        </Box>
+                                    </Box>
+                                </Card>
+                            );
+                        })}
+                    </Box>
+
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 20, 30, 50]}
                         component="div"

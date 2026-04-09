@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Typography, TablePagination,
+    Paper, Chip, Typography, TablePagination, Box, Grid, Card, Divider, CircularProgress,
 } from '@mui/material';
 import { Payments as PayIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -63,7 +63,7 @@ const Payments = () => {
                 title="Payments"
                 subtitle="Payment records are created automatically when a booking is completed via the widget."
             />
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
@@ -81,12 +81,12 @@ const Payments = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center" sx={{ py: 8 }}>
-                                    <Typography color="text.secondary">Loading payments...</Typography>
+                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                                    <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredPayments.length === 0 ? (
-                            <TableRow><TableCell colSpan={8} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                            <TableRow><TableCell colSpan={9} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                 <PayIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
                                 <Typography variant="body2" color="text.secondary">
                                     {searchQuery ? 'No payments match your search.' : 'No payment records yet.'}
@@ -124,6 +124,68 @@ const Payments = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : filteredPayments.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No payment records found</Typography>
+                    </Paper>
+                ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p) => {
+                    const booking = bookings.find(b => b.id === p.booking_id);
+                    const customer = customers.find(c => c.id === booking?.customer_id);
+                    const isPaid = (p.payment_status === true || p.payment_status === 1);
+                    const remaining = (Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(0);
+
+                    return (
+                        <Card key={p.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={800}>{customer?.name || '—'}</Typography>
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                                    </Typography>
+                                </Box>
+                                <Chip 
+                                    label={isPaid ? 'Paid' : 'Pending'} 
+                                    size="small" 
+                                    color={isPaid ? 'success' : 'warning'} 
+                                    variant={isPaid ? 'contained' : 'outlined'}
+                                    sx={{ fontWeight: 800, borderRadius: 1.5 }} 
+                                />
+                            </Box>
+
+                            <Grid container spacing={2} sx={{ mb: 2 }}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Paid Amount</Typography>
+                                    <Typography variant="body2" fontWeight={800} color="success.main">₹{p.paid_amount || p.amount}</Typography>
+                                </Grid>
+                                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Method</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{p.payment_method}</Typography>
+                                </Grid>
+                            </Grid>
+
+                            <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary" display="block">Total Due</Typography>
+                                    <Typography variant="body2" fontWeight={700}>₹{p.amount}</Typography>
+                                </Box>
+                                <Box sx={{ textAlign: 'right' }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Balance</Typography>
+                                    <Typography variant="body2" fontWeight={900} color={Number(remaining) > 0 ? 'error.main' : 'success.main'}>
+                                        ₹{remaining}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Card>
+                    );
+                })}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

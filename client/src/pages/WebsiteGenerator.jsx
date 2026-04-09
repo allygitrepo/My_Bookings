@@ -176,26 +176,28 @@ const WebsiteGenerator = () => {
                         <Paper
                             elevation={0}
                             sx={{
-                                p: 2,
+                                p: { xs: 2, sm: 3 },
                                 borderRadius: 4,
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 height: 'fit-content',
-                                position: 'sticky',
+                                position: { xs: 'static', lg: 'sticky' },
                                 top: 24,
                                 display: 'flex',
                                 flexDirection: 'column',
                                 gap: 3.5,
-                                bgcolor: 'background.paper'
+                                bgcolor: 'background.paper',
+                                mb: { xs: 2, lg: 0 }
                             }}
                         >
                             <Box>
-                                <Typography variant="subtitle2" fontWeight={700} gutterBottom color="primary">
+                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                     1. Select Business
                                 </Typography>
                                 <TextField
                                     select
                                     fullWidth
+                                    size="small"
                                     value={selectedBusinessId}
                                     onChange={handleBusinessChange}
                                     variant="outlined"
@@ -212,11 +214,12 @@ const WebsiteGenerator = () => {
                             <Divider />
 
                             <Box>
-                                <Typography variant="subtitle2" fontWeight={700} gutterBottom color="primary">
+                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                     2. Website Identity
                                 </Typography>
                                 <TextField
                                     fullWidth
+                                    size="small"
                                     label="Website Username (Slug)"
                                     value={settings.slug}
                                     placeholder="e.g. shiv-clinic"
@@ -228,7 +231,7 @@ const WebsiteGenerator = () => {
                                             toast.error('Emojis are not allowed');
                                         }
                                     }}
-                                    helperText={selectedBusinessId ? `Your site will be at: ${window.location.origin}/?biz=${encodeBusinessId(selectedBusinessId)}` : 'Select a business and publish to get a live link'}
+                                    helperText={selectedBusinessId ? `Link: ${window.location.origin}/?biz=...` : 'Select a business to get a live link'}
                                     sx={{ mt: 1 }}
                                 />
                             </Box>
@@ -237,7 +240,7 @@ const WebsiteGenerator = () => {
                                 <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'text.secondary', mb: 1.5 }}>
                                     3. Choose Style
                                 </Typography>
-                                <Box sx={{ display: 'flex', gap: 1.5 }}>
+                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
                                     {[
                                         { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
                                         { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
@@ -249,7 +252,6 @@ const WebsiteGenerator = () => {
                                                 key={tmpl.id}
                                                 onClick={() => setSettings({ ...settings, selected_template: tmpl.id })}
                                                 sx={{
-                                                    flex: 1,
                                                     cursor: 'pointer',
                                                     borderRadius: 3,
                                                     position: 'relative',
@@ -268,7 +270,7 @@ const WebsiteGenerator = () => {
                                                     borderRadius: 2,
                                                     overflow: 'hidden',
                                                     aspectRatio: '1/1',
-                                                    boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.15)' : 'none'
+                                                    boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
                                                 }}>
                                                     <CardMedia
                                                         component="img"
@@ -297,14 +299,14 @@ const WebsiteGenerator = () => {
                                                 </Typography>
                                                 {isSelected && (
                                                     <Box sx={{
-                                                        position: 'absolute', top: -6, right: -6,
+                                                        position: 'absolute', top: -4, right: -4,
                                                         bgcolor: 'primary.main', color: 'white',
-                                                        borderRadius: '50%', width: 18, height: 18,
+                                                        borderRadius: '50%', width: 16, height: 16,
                                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                                         boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
                                                         zIndex: 2
                                                     }}>
-                                                        <CheckIcon sx={{ fontSize: 12, fontWeight: 900 }} />
+                                                        <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
                                                     </Box>
                                                 )}
                                             </Box>
@@ -318,22 +320,21 @@ const WebsiteGenerator = () => {
                     {/* Right Panel: Full-Width Preview */}
                     <Grid item xs={12} lg={8}>
                         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <Box sx={{ mb: 3, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                                    <Typography sx={{ fontSize: '1.25rem', fontWeight: 900, background: 'linear-gradient(90deg, #1e293b, #64748b)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
+                            <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
                                         Live Preview
                                     </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Box sx={{ 
-                                            px: 1.5, py: 0.5, borderRadius: 1.5, 
+                                            px: 1, py: 0.3, borderRadius: 1.5, 
                                             bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2', 
                                             color: settings.website_enabled ? '#166534' : '#991b1b', 
-                                            fontSize: '0.7rem', fontWeight: 900, textTransform: 'uppercase', 
-                                            letterSpacing: 1, border: '1px solid', 
-                                            borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca',
-                                            transition: 'all 0.3s'
+                                            fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', 
+                                            letterSpacing: 0.5, border: '1px solid', 
+                                            borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca'
                                         }}>
-                                            {settings.website_enabled ? 'Published' : 'Draft'}
+                                            {settings.website_enabled ? 'Live' : 'Draft'}
                                         </Box>
                                         <Switch
                                             size="small"
@@ -342,7 +343,6 @@ const WebsiteGenerator = () => {
                                                 const newEnabled = e.target.checked;
                                                 setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
                                                 
-                                                // Trigger auto-save
                                                 setSaving(true);
                                                 try {
                                                     const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
@@ -358,19 +358,8 @@ const WebsiteGenerator = () => {
                                                     setSaving(false);
                                                 }
                                             }}
-                                            sx={{ 
-                                                '& .MuiSwitch-switchBase.Mui-checked': { color: '#22c55e' },
-                                                '& .MuiSwitch-switchBase.Mui-checked + .MuiSwitch-track': { backgroundColor: '#22c55e' }
-                                            }}
                                         />
                                     </Box>
-                                    {settings.website_enabled && settings.slug && (
-                                        <Tooltip title="View Live Site">
-                                            <IconButton size="small" onClick={() => window.open(`/?biz=${encodeBusinessId(selectedBusinessId)}`, '_blank')} sx={{ bgcolor: 'action.hover' }}>
-                                                <OpenIcon fontSize="small" />
-                                            </IconButton>
-                                        </Tooltip>
-                                    )}
                                 </Box>
 
                                 <ToggleButtonGroup
@@ -378,12 +367,12 @@ const WebsiteGenerator = () => {
                                     exclusive
                                     onChange={(e, v) => v && setViewMode(v)}
                                     size="small"
-                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.5, border: '1px solid divider' }}
+                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
                                 >
-                                    <ToggleButton value="desktop" sx={{ px: 3, border: 'none', borderRadius: '8px !important' }}>
+                                    <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
                                         <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
                                     </ToggleButton>
-                                    <ToggleButton value="mobile" sx={{ px: 3, border: 'none', borderRadius: '8px !important' }}>
+                                    <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
                                         <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
                                     </ToggleButton>
                                 </ToggleButtonGroup>

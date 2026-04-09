@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination,
+    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -183,7 +183,7 @@ const Businesses = () => {
                 buttonText="Add Business"
             />
 
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
@@ -201,17 +201,18 @@ const Businesses = () => {
                         {loading ? (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 6 }}>
-                                    <Typography color="text.secondary">Loading businesses...</Typography>
+                                    <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredBusinesses.length === 0 ? (
                             <TableRow>
                                 <TableCell colSpan={7} align="center" sx={{ py: 6, color: 'text.secondary' }}>
                                     {searchQuery ? 'No businesses match your search.' : (
-                                        <>
-                                            <BusinessIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />
-                                            No businesses added yet. Click "Add Business" to get started.
-                                        </>
+                                        <Box sx={{ opacity: 0.5 }}>
+                                            <BusinessIcon sx={{ fontSize: 40, mb: 1, display: 'block', mx: 'auto' }} />
+                                            <Typography variant="h6">No businesses yet</Typography>
+                                            <Typography variant="body2">Click "Add Business" to get started.</Typography>
+                                        </Box>
                                     )}
                                 </TableCell>
                             </TableRow>
@@ -243,6 +244,63 @@ const Businesses = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : filteredBusinesses.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No businesses found</Typography>
+                    </Paper>
+                ) : filteredBusinesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz) => {
+                    const industry = INDUSTRY_OPTIONS.find(opt => opt.value === biz.business_type);
+                    return (
+                        <Card key={biz.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                                    <Box sx={{ 
+                                        width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.50', 
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' 
+                                    }}>
+                                        {industry?.icon || '🏢'}
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{biz.business_type}</Typography>
+                                    </Box>
+                                </Box>
+                                <Box sx={{ display: 'flex' }}>
+                                    {biz.website_enabled && biz.slug && (
+                                        <IconButton onClick={() => window.open(`/${biz.slug}`, '_blank')} color="secondary" size="small">
+                                            <OpenIcon fontSize="small" />
+                                        </IconButton>
+                                    )}
+                                    <IconButton onClick={() => handleOpen(biz)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                </Box>
+                            </Box>
+
+                            <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+
+                            <Grid container spacing={2}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Phone</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{biz.phone || '—'}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">UPI ID</Typography>
+                                    <Typography variant="body2" fontWeight={600} sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{biz.upi_id || '—'}</Typography>
+                                </Grid>
+                                <Grid item xs={12}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Email</Typography>
+                                    <Typography variant="body2" fontWeight={600} sx={{ wordBreak: 'break-all' }}>{biz.email || '—'}</Typography>
+                                </Grid>
+                            </Grid>
+                        </Card>
+                    );
+                })}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

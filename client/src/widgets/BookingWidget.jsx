@@ -109,6 +109,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     const [resolvedBusinessId, setResolvedBusinessId] = useState(null);
 
     const [open, setOpen] = useState(false);
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
 
     // Sync externalOpen with internal open state
     useEffect(() => {
@@ -136,6 +137,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         const now = new Date();
         return { year: now.getFullYear(), month: now.getMonth() };
     });
+
+    const isExtraSmall = typeof window !== 'undefined' && window.innerWidth < 400;
 
     const fetchData = async () => {
         // If it's a public key, set the header for all subsequent Widget requests
@@ -1061,11 +1064,19 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 </Fab>
             )}
 
-            <Dialog open={open} onClose={resetBooking} maxWidth="xs" fullWidth
+            <Dialog 
+                open={open} 
+                onClose={resetBooking} 
+                maxWidth="xs" 
+                fullWidth
+                fullScreen={isMobile}
                 PaperProps={{
                     sx: {
-                        borderRadius: 4, overflow: 'hidden',
+                        borderRadius: isMobile ? 0 : 4, 
+                        overflow: 'hidden',
                         boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
+                        height: isMobile ? '100%' : 'auto',
+                        maxHeight: isMobile ? '100%' : 'calc(100% - 64px)'
                     }
                 }}>
 
@@ -1073,14 +1084,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 {activeStep < 6 && (
                     <Box sx={{
                         background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        px: 3, pt: 2.5, pb: 2,
+                        px: { xs: 2.5, sm: 3 }, 
+                        pt: { xs: 2, sm: 2.5 }, 
+                        pb: 2,
                     }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                             <Box>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase' }}>
+                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.65rem' }}>
                                     Step {activeStep + 1} of {steps.length}
                                 </Typography>
-                                <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2}>
+                                <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
                                     {steps[activeStep]}
                                 </Typography>
                             </Box>
@@ -1103,7 +1116,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     </Box>
                 )}
 
-                <DialogContent sx={{ px: 3, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
+                <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
                     <AnimatePresence mode="wait">
                         <motion.div key={activeStep}
                             initial={{ opacity: 0, y: 12 }}

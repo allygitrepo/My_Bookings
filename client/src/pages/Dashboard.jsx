@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Grid, Card, Typography, Box, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TablePagination,
+    TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TablePagination, CircularProgress, Divider
 } from '@mui/material';
 import {
     Business as BusinessIcon, People as StaffIcon,
@@ -124,35 +124,34 @@ const Dashboard = () => {
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Businesses" value={loading ? '...' : businesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" subtitle={loading ? 'Loading...' : `${businesses.filter(b => b.status === "Active").length} active`} />
+                    <StatCard title="Total Businesses" value={loading ? '...' : businesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Staff" value={loading ? '...' : staff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" subtitle={loading ? 'Loading...' : `${staff.filter(s => s.status === 'Active').length} active`} />
+                    <StatCard title="Total Staff" value={loading ? '...' : staff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Bookings" value={loading ? '...' : bookings.length} icon={<BookingsIcon sx={{ fontSize: 26 }} />} color="#10b981" subtitle={loading ? 'Loading...' : `${customers.length} customers`} />
+                    <StatCard title="Total Bookings" value={loading ? '...' : bookings.length} icon={<BookingsIcon sx={{ fontSize: 26 }} />} color="#10b981" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Payments" value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`} icon={<RevenueIcon sx={{ fontSize: 26 }} />} color="#f59e0b" subtitle={loading ? 'Loading...' : `${payments.length} transactions`} />
+                    <StatCard title="Total Payments" value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`} icon={<RevenueIcon sx={{ fontSize: 26 }} />} color="#f59e0b" />
                 </Grid>
-            </Grid>
-
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+            </Grid>            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                 <TrendIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6" fontWeight={700}>Recent Bookings</Typography>
+                <Typography variant="h6" fontWeight={800}>Recent Bookings</Typography>
             </Box>
 
-            <TableContainer component={Paper}>
+            {/* Desktop Table View */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
-                            <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Staff</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Service</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Payment</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Staff</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Payment</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -164,7 +163,7 @@ const Dashboard = () => {
                             </TableRow>
                         ) : recentBookings.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 5, color: 'text.secondary' }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 5, color: 'text.secondary' }}>
                                     {searchQuery ? 'No bookings match your search.' : 'No bookings yet. Go to the Bookings page to create one!'}
                                 </TableCell>
                             </TableRow>
@@ -172,40 +171,40 @@ const Dashboard = () => {
                             const customer = customers.find(c => c.id === b.customer_id);
                             const staffMember = staff.find(s => s.id === b.staff_id);
                             const service = services.find(s => s.id === b.service_id);
+                            const isConfirmedInDb = (b.status === true || b.status === 1);
+                            const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
+                            const isPast = bookingDateTime < new Date();
+                            const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                            const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+
                             return (
                                 <TableRow key={b.id} hover>
-                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                     <TableCell>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Avatar sx={{ width: 28, height: 28, fontSize: '0.7rem', bgcolor: 'primary.light', color: 'primary.dark' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                            <Avatar sx={{ width: 32, height: 32, fontSize: '0.8rem', bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 700 }}>
                                                 {customer?.name?.charAt(0)}
                                             </Avatar>
-                                            <Typography variant="body2" fontWeight={500}>{customer?.name || '—'}</Typography>
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={700}>{customer?.name || '—'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
+                                            </Box>
                                         </Box>
                                     </TableCell>
-                                    <TableCell>{staffMember?.staff_name || '—'}</TableCell>
-                                    <TableCell>{service?.service_name || '—'}</TableCell>
-                                    <TableCell>{formatDate(b.booking_date)}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{staffMember?.staff_name || '—'}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{service?.service_name || '—'}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
                                     <TableCell>
                                         <Chip
                                             label={(b.payment_status === true || b.payment_status === 1) ? 'Paid' : 'Pending'}
                                             size="small"
                                             color={(b.payment_status === true || b.payment_status === 1) ? 'success' : 'warning'}
                                             variant="outlined"
+                                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        {(() => {
-                                            const isConfirmedInDb = (b.status === true || b.status === 1);
-                                            // Handle potential missing dayjs or use format directly if needed
-                                            // But Bookings.jsx uses dayjs, let's ensure it's imported or use standard Date
-                                            const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
-                                            const isPast = bookingDateTime < new Date();
-                                            
-                                            if (isConfirmedInDb && isPast) return <Chip label="Completed" size="small" color="info" />;
-                                            if (isConfirmedInDb) return <Chip label="Confirmed" size="small" color="success" />;
-                                            return <Chip label="Cancelled" size="small" color="error" />;
-                                        })()}
+                                        <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                                     </TableCell>
                                 </TableRow>
                             );
@@ -213,6 +212,67 @@ const Dashboard = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
+                ) : recentBookings.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No bookings found</Typography>
+                    </Paper>
+                ) : recentBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => {
+                    const customer = customers.find(c => c.id === b.customer_id);
+                    const staffMember = staff.find(s => s.id === b.staff_id);
+                    const service = services.find(s => s.id === b.service_id);
+                    const isConfirmedInDb = (b.status === true || b.status === 1);
+                    const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
+                    const isPast = bookingDateTime < new Date();
+                    const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                    const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+
+                    return (
+                        <Card key={b.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', fontWeight: 700 }}>
+                                        {customer?.name?.charAt(0)}
+                                    </Avatar>
+                                    <Box>
+                                        <Typography variant="subtitle2" fontWeight={800}>{customer?.name || 'Guest'}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{formatDate(b.booking_date)} • {b.start_time?.slice(0, 5)}</Typography>
+                                    </Box>
+                                </Box>
+                                <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.65rem' }} />
+                            </Box>
+
+                            <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+
+                            <Grid container spacing={1}>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Service</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{service?.service_name || '—'}</Typography>
+                                </Grid>
+                                <Grid item xs={6}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Staff</Typography>
+                                    <Typography variant="body2" fontWeight={700}>{staffMember?.staff_name || '—'}</Typography>
+                                </Grid>
+                                <Grid item xs={6} sx={{ mt: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Payment</Typography>
+                                    <Chip
+                                        label={(b.payment_status === true || b.payment_status === 1) ? 'Paid' : 'Pending'}
+                                        size="small"
+                                        variant="filled"
+                                        color={(b.payment_status === true || b.payment_status === 1) ? 'success' : 'warning'}
+                                        sx={{ height: 20, fontSize: '0.65rem', fontWeight: 800 }}
+                                    />
+                                </Grid>
+                            </Grid>
+                        </Card>
+                    );
+                })}
+            </Box>
+
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"

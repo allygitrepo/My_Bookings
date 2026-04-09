@@ -237,12 +237,7 @@ const Login = () => {
                                     <Typography variant="body2" fontWeight={700} sx={{ color: '#374151' }}>
                                         Password
                                     </Typography>
-                                    <MuiLink component={Link} to="#" sx={{
-                                        fontSize: '0.82rem', fontWeight: 600, color: '#6366f1',
-                                        textDecoration: 'none', '&:hover': { textDecoration: 'underline' }
-                                    }}>
-                                        Forgot password?
-                                    </MuiLink>
+
                                 </Box>
                                 <TextField
                                     fullWidth
