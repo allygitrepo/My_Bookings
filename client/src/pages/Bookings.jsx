@@ -226,7 +226,12 @@ const Bookings = () => {
         return () => clearInterval(interval);
     }, []);
 
-    const filteredBookings = [...bookings].reverse().filter(b => {
+    const filteredBookings = [...bookings].sort((a, b) => {
+        const dateA = a.booking_date || "";
+        const dateB = b.booking_date || "";
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (a.start_time || "").localeCompare(b.start_time || "");
+    }).filter(b => {
         // Business Filter
         const matchesBusiness = selectedBusinessId === 'all' || b.business_id === selectedBusinessId;
         if (!matchesBusiness) return false;
@@ -437,9 +442,11 @@ const Bookings = () => {
                                     const staffMember = staff.find(s => s.id === b.staff_id);
                                     const payment = payments.find(p => p.booking_id === b.id);
 
-                                    const totalAmount = Number(service?.price || 0);
+                                    // Use the actual amount quoted at booking (from payment record) if available, 
+                                    // otherwise fallback to current service price
+                                    const totalAmount = Number(payment?.amount || service?.price || 0);
                                     const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                                    const remainingAmount = Math.max(0, totalAmount - paidAmount);
+                                    const remainingAmount = totalAmount - paidAmount;
 
                                     return (
                                         <TableRow key={b.id} hover>

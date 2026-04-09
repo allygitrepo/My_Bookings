@@ -35,7 +35,7 @@ const Payments = () => {
             p.paid_amount?.toString().includes(searchQuery) ||
             p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase());
-    });
+    }).sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
 
     const fetchData = async () => {
         setLoading(true);

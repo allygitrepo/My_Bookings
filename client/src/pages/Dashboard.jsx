@@ -106,7 +106,12 @@ const Dashboard = () => {
         .filter(p => p.payment_status === true || p.payment_status === 1)
         .reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
 
-    const recentBookings = [...filteredDashboardBookings].reverse();
+    const recentBookings = [...filteredDashboardBookings].sort((a, b) => {
+        const dateA = a.booking_date || "";
+        const dateB = b.booking_date || "";
+        if (dateA !== dateB) return dateA.localeCompare(dateB);
+        return (a.start_time || "").localeCompare(b.start_time || "");
+    });
 
     return (
         <PageTransition>
@@ -119,7 +124,7 @@ const Dashboard = () => {
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Businesses" value={loading ? '...' : businesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" subtitle={loading ? 'Loading...' : `${businesses.filter(b => b.status === 'Active').length} active`} />
+                    <StatCard title="Total Businesses" value={loading ? '...' : businesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" subtitle={loading ? 'Loading...' : `${businesses.filter(b => b.status === "Active").length} active`} />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard title="Total Staff" value={loading ? '...' : staff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" subtitle={loading ? 'Loading...' : `${staff.filter(s => s.status === 'Active').length} active`} />

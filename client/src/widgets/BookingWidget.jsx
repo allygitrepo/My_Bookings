@@ -377,10 +377,13 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             // 3. Create payment
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
+            const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
+            const actualPaidAmount = bookingData.paidAmount || minAmountToPay;
+
             const paymentPayload = {
                 booking_id: bookingId,
-                amount: totalAmount,
-                paid_amount: bookingData.paidAmount || totalAmount,
+                amount: totalAmount, // Store the full service price
+                paid_amount: actualPaidAmount, // Store the amount actually paid
                 payment_method: 'UPI/Card',
                 transaction_id: 'txn_' + crypto.randomUUID().split('-')[0],
                 payment_status: true // Use boolean
