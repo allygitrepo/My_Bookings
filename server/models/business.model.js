@@ -58,6 +58,30 @@ const Business = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false
         },
+        has_multiple_locations: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        address: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
+        city: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        state: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        location_type: {
+            type: DataTypes.ENUM('Physical', 'Online'),
+            defaultValue: 'Physical'
+        },
+        meeting_link: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

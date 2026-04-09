@@ -515,7 +515,9 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         }}
                                     >
                                         <Typography fontWeight={700} fontSize="0.95rem">{loc.location_name}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{loc.address}, {loc.city}</Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {loc.location_type === 'Online' ? 'Online / Virtual' : `${loc.address}, ${loc.city}`}
+                                        </Typography>
                                     </Box>
                                 ))}
                             </Box>

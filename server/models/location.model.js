@@ -29,6 +29,14 @@ const Location = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true
         },
+        location_type: {
+            type: DataTypes.ENUM('Physical', 'Online'),
+            defaultValue: 'Physical'
+        },
+        meeting_link: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

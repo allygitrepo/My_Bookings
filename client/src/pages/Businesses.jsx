@@ -9,12 +9,16 @@ import {
     Delete as DeleteIcon,
     Business as BusinessIcon,
     OpenInNew as OpenIcon,
+    LocationOn as LocationIcon,
+    LaptopMac as OnlineIcon,
+    Map as MapIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
-import { getBusinesses, createBusiness, updateBusiness, deleteBusiness } from '../api/business.api';
+import { useBusiness } from '../context/BusinessContext';
+import { createBusiness, updateBusiness, deleteBusiness } from '../api/business.api';
 import { refreshToken } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
@@ -44,9 +48,8 @@ const FieldSection = ({ label, children }) => (
 
 const Businesses = () => {
     const { searchQuery } = useSearch();
-    const [businesses, setBusinesses] = useState([]);
+    const { businesses, refreshBusinesses, loading } = useBusiness();
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
-    const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
     const [page, setPage] = useState(0);
@@ -68,33 +71,21 @@ const Businesses = () => {
 
     const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
         defaultValues: {
-            business_name: '',
-            business_type: '',
-            email: '',
-            phone: '',
             upi_id: '',
             sync_email: '',
+            has_multiple_locations: false,
+            location_type: 'Physical',
+            address: '',
+            city: '',
+            state: '',
+            meeting_link: '',
         },
     });
 
-    const fetchBusinesses = async () => {
-        setLoading(true);
-        try {
-            const response = await getBusinesses();
-            if (response.success) {
-                setBusinesses(response.data);
-            }
-        } catch (error) {
-            toast.error('Failed to fetch businesses');
-            console.error(error);
-        } finally {
-            setLoading(false);
-        }
-    };
+    const hasMultipleLocations = watch('has_multiple_locations');
+    const locationType = watch('location_type');
 
-    React.useEffect(() => {
-        fetchBusinesses();
-    }, []);
+    // Removed local fetchBusinesses as it's now in BusinessContext
 
     const handleOpen = (biz = null) => {
         setEditId(biz?.id || null);
@@ -105,6 +96,12 @@ const Businesses = () => {
             phone: biz.phone || '',
             upi_id: biz.upi_id || '',
             sync_email: biz.sync_email || '',
+            has_multiple_locations: !!biz.has_multiple_locations,
+            location_type: biz.location_type || 'Physical',
+            address: biz.address || '',
+            city: biz.city || '',
+            state: biz.state || '',
+            meeting_link: biz.meeting_link || '',
         } : {
             business_name: '',
             business_type: '',
@@ -112,6 +109,12 @@ const Businesses = () => {
             phone: '',
             upi_id: '',
             sync_email: '',
+            has_multiple_locations: false,
+            location_type: 'Physical',
+            address: '',
+            city: '',
+            state: '',
+            meeting_link: '',
         });
         setOpen(true);
     };
@@ -127,14 +130,13 @@ const Businesses = () => {
                 const response = await updateBusiness(editId, data);
                 if (response.success) {
                     toast.success('Business updated successfully');
-                    fetchBusinesses();
+                    refreshBusinesses();
                 }
             } else {
                 const response = await createBusiness(data);
                 if (response.success) {
                     toast.success('Business created successfully');
-                    fetchBusinesses();
-
+                    refreshBusinesses();
                     // Refresh the JWT token to embed the new business_id.
                     try {
                         const refreshed = await refreshToken();
@@ -166,7 +168,7 @@ const Businesses = () => {
                 const response = await deleteBusiness(id);
                 if (response.success) {
                     toast.success('Business deleted successfully');
-                    fetchBusinesses();
+                    refreshBusinesses();
                 }
             } catch (error) {
                 toast.error('Failed to delete business');
@@ -392,6 +394,108 @@ const Businesses = () => {
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
 
+                <FieldSection label="Location Structure">
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
+                        <Controller
+                            name="has_multiple_locations"
+                            control={control}
+                            render={({ field: { value, onChange } }) => (
+                                <FormControlLabel
+                                    control={<Switch checked={value} onChange={onChange} color="primary" />}
+                                    label={
+                                        <Box>
+                                            <Typography variant="body2" fontWeight={700}>Operating from multiple locations?</Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                {value 
+                                                    ? "Use the 'Locations' page to manage your branches." 
+                                                    : "Provide address details here to bypass manual location setup."}
+                                            </Typography>
+                                        </Box>
+                                    }
+                                />
+                            )}
+                        />
+                    </Box>
+                </FieldSection>
+
+                {!hasMultipleLocations && (
+                    <>
+                        <Divider sx={{ my: 2.5 }} />
+                        <FieldSection label="Business Location Details">
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                                <Controller
+                                    name="location_type"
+                                    control={control}
+                                    render={({ field: { value, onChange } }) => (
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={6}>
+                                                <Paper 
+                                                    onClick={() => onChange('Physical')}
+                                                    sx={{ 
+                                                        p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
+                                                        border: '2px solid', borderColor: value === 'Physical' ? 'primary.main' : 'divider',
+                                                        bgcolor: value === 'Physical' ? 'primary.50' : 'background.paper',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <LocationIcon color={value === 'Physical' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
+                                                    <Typography variant="body2" fontWeight={700} color={value === 'Physical' ? 'primary' : 'text.secondary'}>Physical</Typography>
+                                                </Paper>
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Paper 
+                                                    onClick={() => onChange('Online')}
+                                                    sx={{ 
+                                                        p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
+                                                        border: '2px solid', borderColor: value === 'Online' ? 'primary.main' : 'divider',
+                                                        bgcolor: value === 'Online' ? 'primary.50' : 'background.paper',
+                                                        transition: 'all 0.2s'
+                                                    }}
+                                                >
+                                                    <OnlineIcon color={value === 'Online' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
+                                                    <Typography variant="body2" fontWeight={700} color={value === 'Online' ? 'primary' : 'text.secondary'}>Online</Typography>
+                                                </Paper>
+                                            </Grid>
+                                        </Grid>
+                                    )}
+                                />
+
+                                {locationType === 'Physical' ? (
+                                    <>
+                                        <Controller name="address" control={control}
+                                            rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'Address is required' : false }}
+                                            render={({ field }) => (
+                                                <TextField {...field} fullWidth label="Full Address *" multiline rows={2} placeholder="Shop No. 5, Business Center..." 
+                                                    error={!!errors.address} helperText={errors.address?.message} />
+                                            )} />
+                                        <Grid container spacing={2}>
+                                            <Grid item xs={6}>
+                                                <Controller name="city" control={control}
+                                                    rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'City is required' : false }}
+                                                    render={({ field }) => (
+                                                        <TextField {...field} fullWidth label="City *" error={!!errors.city} helperText={errors.city?.message} />
+                                                    )} />
+                                            </Grid>
+                                            <Grid item xs={6}>
+                                                <Controller name="state" control={control}
+                                                    rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'State is required' : false }}
+                                                    render={({ field }) => (
+                                                        <TextField {...field} fullWidth label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                                    )} />
+                                            </Grid>
+                                        </Grid>
+                                    </>
+                                ) : (
+                                    <Controller name="meeting_link" control={control}
+                                        render={({ field }) => (
+                                            <TextField {...field} fullWidth label="Meeting Link / Instructions" placeholder="Zoom Link, Google Meet URL, etc." 
+                                                multiline rows={2} helperText="Explain how customers will meet you online." />
+                                        )} />
+                                )}
+                            </Box>
+                        </FieldSection>
+                    </>
+                )}
             </FormDrawer>
         </PageTransition>
     );

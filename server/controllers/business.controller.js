@@ -1,5 +1,6 @@
 const { Op } = require("sequelize");
 const Business = require("../models/business.model");
+const Location = require("../models/location.model"); // Added Location model
 const slugify = require("../uttils/slugify");
 
 // Helper to ensure slug uniqueness
@@ -30,6 +31,20 @@ const businessController = {
                 slug,
                 user_id: req.user.user_id  // Always enforce from JWT
             });
+
+            // If it's a single location business, auto-create the location record
+            if (!row.has_multiple_locations && row.address) {
+                await Location.create({
+                    business_id: row.id,
+                    location_name: row.business_name, // Use Business Name as requested
+                    address: row.address,
+                    city: row.city,
+                    state: row.state,
+                    location_type: row.location_type || 'Physical',
+                    meeting_link: row.meeting_link
+                });
+            }
+
             res.status(201).json({ success: true, message: "Business created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -55,6 +70,16 @@ const businessController = {
                 limit,
                 offset
             });
+
+            // Migration/Sync: For businesses without the flag, check if they have multiple locations
+            for (let biz of rows) {
+                if (biz.has_multiple_locations === null || biz.has_multiple_locations === false) {
+                    const locCount = await Location.count({ where: { business_id: biz.id, status: true } });
+                    if (locCount > 1) {
+                        await biz.update({ has_multiple_locations: true });
+                    }
+                }
+            }
 
             res.json({
                 success: true,
@@ -161,6 +186,33 @@ const businessController = {
             }
 
             await row.update(safeBody);
+
+            // If it's single location, sync the location record
+            if (!row.has_multiple_locations && (safeBody.address || safeBody.city || safeBody.state || safeBody.business_name)) {
+                const mainLoc = await Location.findOne({ where: { business_id: row.id, status: true } });
+                if (mainLoc) {
+                    await mainLoc.update({
+                        location_name: row.business_name,
+                        address: row.address,
+                        city: row.city,
+                        state: row.state,
+                        location_type: row.location_type || 'Physical',
+                        meeting_link: row.meeting_link
+                    });
+                } else {
+                    // Fallback create if somehow missing
+                    await Location.create({
+                        business_id: row.id,
+                        location_name: row.business_name,
+                        address: row.address,
+                        city: row.city,
+                        state: row.state,
+                        location_type: row.location_type || 'Physical',
+                        meeting_link: row.meeting_link
+                    });
+                }
+            }
+
             res.json({ success: true, message: "Business updated successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

@@ -49,20 +49,7 @@ const menuItems = [
 
 const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const location = useLocation();
-    const { selectedBusinessId, setSelectedBusinessId } = useBusiness();
-    const [businesses, setBusinesses] = React.useState([]);
-
-    React.useEffect(() => {
-        const fetchBusinesses = async () => {
-            try {
-                const response = await getBusinesses();
-                if (response.success) setBusinesses(response.data);
-            } catch (error) {
-                console.error('Failed to fetch businesses');
-            }
-        };
-        fetchBusinesses();
-    }, []);
+    const { selectedBusinessId, setSelectedBusinessId, businesses } = useBusiness();
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
@@ -96,7 +83,18 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
 
             <Divider sx={{ mb: 1 }} />
             <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
-                {menuItems.map((item) => {
+                {menuItems.filter(item => {
+                    if (item.text === 'Locations') {
+                        // Show if 'all' is selected and ANY business is multi-location
+                        if (selectedBusinessId === 'all') {
+                            return businesses.some(b => b.has_multiple_locations == true || b.has_multiple_locations == 1);
+                        }
+                        // Show if the specific selected business is multi-location
+                        const current = businesses.find(b => String(b.id) === String(selectedBusinessId));
+                        return current?.has_multiple_locations == true || current?.has_multiple_locations == 1;
+                    }
+                    return true;
+                }).map((item) => {
                     const isActive = location.pathname === item.path;
                     return (
                         <ListItem key={item.text} disablePadding sx={{ mb: 1 }}>

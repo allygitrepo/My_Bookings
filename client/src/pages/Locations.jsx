@@ -4,7 +4,7 @@ import {
     IconButton, TextField, Grid, MenuItem, Box, Typography, Divider,
     Autocomplete, Chip, TablePagination, CircularProgress, Card
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Public as OnlineIcon, Business as PhysicalIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
@@ -106,9 +106,11 @@ const Locations = () => {
 
     React.useEffect(() => { fetchData(); }, []);
 
-    const { control, handleSubmit, reset, setValue, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', location_name: '', address: '', city: '', state: '' },
+    const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
+        defaultValues: { business_id: '', location_name: '', address: '', city: '', state: '', location_type: 'Physical', meeting_link: '' },
     });
+
+    const locationType = watch('location_type');
 
     const handleOpen = async (loc = null) => {
         setEditId(loc?.id || null);
@@ -126,8 +128,24 @@ const Locations = () => {
         }
 
         reset(loc
-            ? { business_id: loc.business_id || '', location_name: loc.location_name || '', address: loc.address || '', city: loc.city || '', state: loc.state || '' }
-            : { business_id: (selectedBusinessId !== 'all' ? selectedBusinessId : businesses[0]?.id) || '', location_name: '', address: '', city: '', state: '' }
+            ? { 
+                business_id: loc.business_id || '', 
+                location_name: loc.location_name || '', 
+                address: loc.address || '', 
+                city: loc.city || '', 
+                state: loc.state || '',
+                location_type: loc.location_type || 'Physical',
+                meeting_link: loc.meeting_link || ''
+            }
+            : { 
+                business_id: (selectedBusinessId !== 'all' ? selectedBusinessId : businesses[0]?.id) || '', 
+                location_name: '', 
+                address: '', 
+                city: '', 
+                state: '',
+                location_type: 'Physical',
+                meeting_link: ''
+            }
         );
         setOpen(true);
     };
@@ -203,7 +221,7 @@ const Locations = () => {
                             <TableCell sx={{ fontWeight: 700 }}>Business</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Address</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>City</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>State</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                             <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -231,8 +249,17 @@ const Locations = () => {
                                     <TableCell sx={{ fontWeight: 700 }}>{loc.location_name}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{biz?.business_name || '—'}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{loc.address}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{loc.city}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{loc.state}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>{loc.city || '—'}</TableCell>
+                                    <TableCell>
+                                        <Chip 
+                                            icon={loc.location_type === 'Online' ? <OnlineIcon sx={{ fontSize: '1rem !important' }} /> : <PhysicalIcon sx={{ fontSize: '1rem !important' }} />}
+                                            label={loc.location_type || 'Physical'} 
+                                            size="small" 
+                                            color={loc.location_type === 'Online' ? 'secondary' : 'default'}
+                                            variant="outlined"
+                                            sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                                        />
+                                    </TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(loc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
                                         <IconButton onClick={() => handleDelete(loc.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
@@ -272,9 +299,20 @@ const Locations = () => {
                             <Typography variant="body2" fontWeight={600}>{loc.address}</Typography>
                         </Box>
 
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <Chip label={loc.city} size="small" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
-                            <Chip label={loc.state} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                        <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                            <Chip 
+                                icon={loc.location_type === 'Online' ? <OnlineIcon sx={{ fontSize: '1rem !important' }} /> : <PhysicalIcon sx={{ fontSize: '1rem !important' }} />}
+                                label={loc.location_type || 'Physical'} 
+                                size="small" 
+                                color={loc.location_type === 'Online' ? 'secondary' : 'default'}
+                                sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                            />
+                            {loc.location_type !== 'Online' && (
+                                <>
+                                    <Chip label={loc.city} size="small" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                                    <Chip label={loc.state} size="small" variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                                </>
+                            )}
                         </Box>
                     </Card>
                 ))}
@@ -333,67 +371,85 @@ const Locations = () => {
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Location Name *" placeholder="e.g. Main Branch, City Center" error={!!errors.location_name} helperText={errors.location_name?.message} />
                             )} />
-                        
-                        <Controller name="address" control={control}
-                            rules={{ validate: blockEmoji }}
-                            render={({ field }) => (
-                                <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" error={!!errors.address} helperText={errors.address?.message} />
-                            )} />
 
-                        {/* State — searchable dropdown */}
-                        <Controller name="state" control={control} rules={{ required: 'State is required' }}
+                        <Controller name="location_type" control={control}
                             render={({ field }) => (
-                                <Autocomplete
-                                    fullWidth
-                                    options={states}
-                                    getOptionLabel={(option) => option.name || ''}
-                                    value={states.find(s => s.name === field.value) || null}
-                                    onChange={(_, v) => {
-                                        field.onChange(v?.name || '');
-                                        setSelectedState(v || null);
-                                        setValue('city', ''); // reset city on state change
-                                    }}
-                                    isOptionEqualToValue={(option, value) => option.name === value?.name}
-                                    renderInput={(params) => (
-                                        <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
-                                    )}
-                                    slotProps={{
-                                        paper: {
-                                            sx: {
-                                                width: 'auto',
-                                                minWidth: '100%',
-                                                '& .MuiAutocomplete-listbox': { maxHeight: 250 }
-                                            }
-                                        }
-                                    }}
-                                />
+                                <TextField {...field} select fullWidth label="Location Type *">
+                                    <MenuItem value="Physical">Physical (Office / Branch)</MenuItem>
+                                    <MenuItem value="Online">Online (Zoom / Google Meet)</MenuItem>
+                                </TextField>
                             )} />
                         
-                        <Controller name="city" control={control} rules={{ required: 'City is required' }}
-                            render={({ field }) => (
-                                <Autocomplete
-                                    fullWidth
-                                    options={cities}
-                                    getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
-                                    value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
-                                    onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
-                                    isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
-                                    disabled={!selectedState}
-                                    noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
-                                    renderInput={(params) => (
-                                        <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
-                                    )}
-                                    slotProps={{
-                                        paper: {
-                                            sx: {
-                                                width: 'auto',
-                                                minWidth: '100%',
-                                                '& .MuiAutocomplete-listbox': { maxHeight: 250 }
-                                            }
-                                        }
-                                    }}
-                                />
-                            )} />
+                        {locationType === 'Online' ? (
+                            <Controller name="meeting_link" control={control}
+                                rules={{ validate: blockEmoji }}
+                                render={({ field }) => (
+                                    <TextField {...field} fullWidth label="Meeting Link / Instructions" multiline rows={2} placeholder="Enter Zoom link or joining instructions" error={!!errors.meeting_link} helperText={errors.meeting_link?.message} />
+                                )} />
+                        ) : (
+                            <>
+                                <Controller name="address" control={control}
+                                    rules={{ validate: blockEmoji }}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" error={!!errors.address} helperText={errors.address?.message} />
+                                    )} />
+
+                                {/* State — searchable dropdown */}
+                                <Controller name="state" control={control} rules={{ required: locationType === 'Physical' ? 'State is required' : false }}
+                                    render={({ field }) => (
+                                        <Autocomplete
+                                            fullWidth
+                                            options={states}
+                                            getOptionLabel={(option) => option.name || ''}
+                                            value={states.find(s => s.name === field.value) || null}
+                                            onChange={(_, v) => {
+                                                field.onChange(v?.name || '');
+                                                setSelectedState(v || null);
+                                                setValue('city', ''); // reset city on state change
+                                            }}
+                                            isOptionEqualToValue={(option, value) => option.name === value?.name}
+                                            renderInput={(params) => (
+                                                <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                            )}
+                                            slotProps={{
+                                                paper: {
+                                                    sx: {
+                                                        width: 'auto',
+                                                        minWidth: '100%',
+                                                        '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    )} />
+                                
+                                <Controller name="city" control={control} rules={{ required: locationType === 'Physical' ? 'City is required' : false }}
+                                    render={({ field }) => (
+                                        <Autocomplete
+                                            fullWidth
+                                            options={cities}
+                                            getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
+                                            value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
+                                            onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
+                                            isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
+                                            disabled={!selectedState}
+                                            noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
+                                            renderInput={(params) => (
+                                                <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
+                                            )}
+                                            slotProps={{
+                                                paper: {
+                                                    sx: {
+                                                        width: 'auto',
+                                                        minWidth: '100%',
+                                                        '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                                    }
+                                                }
+                                            }}
+                                        />
+                                    )} />
+                            </>
+                        )}
                     </Box>
                 </FieldSection>
             </FormDrawer>
