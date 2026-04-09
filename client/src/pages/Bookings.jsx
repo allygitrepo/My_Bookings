@@ -86,12 +86,12 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                 {days.map((day, idx) => {
                     const dayBookings = getBookingsByDay(day);
                     const isToday = day && currentDate.date(day).isSame(dayjs(), 'day');
-                    
+
                     return (
-                        <Card key={idx} sx={{ 
-                            minHeight: 120, 
-                            p: 1.5, 
-                            border: '1px solid', 
+                        <Card key={idx} sx={{
+                            minHeight: 120,
+                            p: 1.5,
+                            border: '1px solid',
                             borderColor: isToday ? 'primary.main' : 'divider',
                             bgcolor: day ? 'background.paper' : 'transparent',
                             boxShadow: 'none',
@@ -107,10 +107,10 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         {dayBookings.slice(0, 3).map(b => (
                                             <Tooltip key={b.id} title={`${services.find(s => s.id === b.service_id)?.service_name || 'Service'} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
-                                                <Box sx={{ 
-                                                    fontSize: '0.68rem', 
-                                                    p: 0.7, 
-                                                    borderRadius: 1.5, 
+                                                <Box sx={{
+                                                    fontSize: '0.68rem',
+                                                    p: 0.7,
+                                                    borderRadius: 1.5,
                                                     bgcolor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
                                                     color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
                                                     fontWeight: 700,
@@ -162,7 +162,7 @@ const Bookings = () => {
     const [startDate, setStartDate] = useState(null);
     const [endDate, setEndDate] = useState(null);
     const [autoSync, setAutoSync] = useState(() => localStorage.getItem('autoSyncEnabled') === 'true');
-    const [showFilters, setShowFilters] = useState(false);
+    const [showFilters, setShowFilters] = useState(true);
 
     const [syncedIds, setSyncedIds] = useState([]); // No longer needed for logic, but keeping state for compatibility if used elsewhere
     const [isSyncingInProgress, setIsSyncingInProgress] = useState(false);
@@ -250,11 +250,20 @@ const Bookings = () => {
             b.booking_date?.toLowerCase().includes(q)
         );
 
+        // Status Logic
+        const isConfirmedInDb = (b.status === true || b.status === 1);
+        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+        const isPast = bookingDateTime.isBefore(dayjs());
+
+        const isCompleted = isConfirmedInDb && isPast;
+        const isConfirmed = isConfirmedInDb && !isPast;
+        const isCancelled = !isConfirmedInDb;
+
         // Status Filter
-        const isConfirmed = (b.status === true || b.status === 1);
         const matchesStatus = filterStatus === 'All' ||
             (filterStatus === 'Confirmed' && isConfirmed) ||
-            (filterStatus === 'Cancelled' && !isConfirmed);
+            (filterStatus === 'Completed' && isCompleted) ||
+            (filterStatus === 'Cancelled' && isCancelled);
 
         // Date Filter
         const bDate = dayjs(b.booking_date);
@@ -327,6 +336,26 @@ const Bookings = () => {
                                 Link Google Calendar
                             </Button>
                         ) */}
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<FilterIcon />}
+                            onClick={() => setShowFilters(!showFilters)}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                borderColor: showFilters ? 'primary.main' : 'divider',
+                                color: showFilters ? 'primary.main' : 'text.secondary',
+                                bgcolor: showFilters ? 'primary.50' : 'transparent',
+                                '&:hover': {
+                                    bgcolor: showFilters ? 'primary.100' : 'action.hover'
+                                }
+                            }}
+                        >
+                            {showFilters ? 'Hide Filters' : 'Filters'}
+                        </Button>
+
                         <ToggleButtonGroup
                             value={view}
                             exclusive
@@ -368,6 +397,7 @@ const Bookings = () => {
                         >
                             <MenuItem value="All">All Status</MenuItem>
                             <MenuItem value="Confirmed">Confirmed</MenuItem>
+                            <MenuItem value="Completed">Completed</MenuItem>
                             <MenuItem value="Cancelled">Cancelled</MenuItem>
                         </TextField>
 
@@ -479,11 +509,15 @@ const Bookings = () => {
                                                 </Typography>
                                             </TableCell>
                                             <TableCell>
-                                                <Chip
-                                                    label={(b.status === true || b.status === 1) ? 'Confirmed' : 'Cancelled'}
-                                                    size="small"
-                                                    color={(b.status === true || b.status === 1) ? 'success' : 'error'}
-                                                />
+                                                {(() => {
+                                                    const isConfirmedInDb = (b.status === true || b.status === 1);
+                                                    const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+                                                    const isPast = bookingDateTime.isBefore(dayjs());
+
+                                                    if (isConfirmedInDb && isPast) return <Chip label="Completed" size="small" color="info" />;
+                                                    if (isConfirmedInDb) return <Chip label="Confirmed" size="small" color="success" />;
+                                                    return <Chip label="Cancelled" size="small" color="error" />;
+                                                })()}
                                             </TableCell>
                                             {/* 
                                             // Calendar Sync Disabled

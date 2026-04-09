@@ -195,11 +195,17 @@ const Dashboard = () => {
                                         />
                                     </TableCell>
                                     <TableCell>
-                                        <Chip
-                                            label={(b.status === true || b.status === 1) ? 'Confirmed' : 'Cancelled'}
-                                            size="small"
-                                            color={(b.status === true || b.status === 1) ? 'success' : 'error'}
-                                        />
+                                        {(() => {
+                                            const isConfirmedInDb = (b.status === true || b.status === 1);
+                                            // Handle potential missing dayjs or use format directly if needed
+                                            // But Bookings.jsx uses dayjs, let's ensure it's imported or use standard Date
+                                            const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
+                                            const isPast = bookingDateTime < new Date();
+                                            
+                                            if (isConfirmedInDb && isPast) return <Chip label="Completed" size="small" color="info" />;
+                                            if (isConfirmedInDb) return <Chip label="Confirmed" size="small" color="success" />;
+                                            return <Chip label="Cancelled" size="small" color="error" />;
+                                        })()}
                                     </TableCell>
                                 </TableRow>
                             );
