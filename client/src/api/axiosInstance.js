@@ -1,7 +1,13 @@
 import axios from 'axios';
 
+const envBaseURL = import.meta.env.VITE_API_BASE_URL;
+// Dynamically replace localhost with the current hostname to support local network access (e.g. 192.168.1.9)
+const baseURL = envBaseURL.includes('localhost') 
+    ? envBaseURL.replace('localhost', window.location.hostname)
+    : envBaseURL;
+
 const axiosInstance = axios.create({
-    baseURL: import.meta.env.VITE_API_BASE_URL,
+    baseURL,
     headers: {
         'Content-Type': 'application/json',
     },
