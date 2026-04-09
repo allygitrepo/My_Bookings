@@ -8,6 +8,7 @@ import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getPayments } from '../api/payment.api';
 import { getBookings } from '../api/booking.api';
+import { getCustomers } from '../api/customer.api';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
@@ -19,6 +20,7 @@ const Payments = () => {
     const { selectedBusinessId } = useBusiness();
     const [payments, setPayments] = useState([]);
     const [bookings, setBookings] = useState([]);
+    const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
@@ -40,9 +42,10 @@ const Payments = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [payRes, bookRes] = await Promise.all([getPayments(), getBookings()]);
+            const [payRes, bookRes, custRes] = await Promise.all([getPayments(), getBookings(), getCustomers()]);
             if (payRes.success) setPayments(payRes.data);
             if (bookRes.success) setBookings(bookRes.data);
+            if (custRes.success) setCustomers(custRes.data);
         } catch (error) {
             toast.error('Failed to fetch payments data');
         } finally {
@@ -65,6 +68,7 @@ const Payments = () => {
                     <TableHead sx={{ bgcolor: 'background.default' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Paid Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
@@ -89,10 +93,17 @@ const Payments = () => {
                                 </Typography>
                                 <Typography variant="caption" color="text.disabled">Payments are recorded automatically when customers complete a booking via the widget.</Typography>
                             </TableCell></TableRow>
-                        ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p, index) => (
-                            <TableRow key={p.id} hover>
-                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
-                                <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>₹{p.amount}</TableCell>
+                        ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p, index) => {
+                            const booking = bookings.find(b => b.id === p.booking_id);
+                            const customer = customers.find(c => c.id === booking?.customer_id);
+                            return (
+                                <TableRow key={p.id} hover>
+                                    <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{index + 1}</TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={600}>{customer?.name || '—'}</Typography>
+                                        <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
+                                    </TableCell>
+                                    <TableCell sx={{ fontWeight: 700, color: 'text.secondary' }}>₹{p.amount}</TableCell>
                                 <TableCell sx={{ fontWeight: 800, color: 'success.main' }}>₹{p.paid_amount || p.amount}</TableCell>
                                 <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
                                     ₹{(Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(2)}
@@ -109,7 +120,7 @@ const Payments = () => {
                                 </TableCell>
                                 <TableCell>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</TableCell>
                             </TableRow>
-                        ))}
+                        );})}
                     </TableBody>
                 </Table>
             </TableContainer>

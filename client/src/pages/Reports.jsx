@@ -207,14 +207,19 @@ const Reports = () => {
                 `rs.${services.find(s => s.id === b.service_id)?.price || 0}`
             ]);
         } else if (reportType === 'payments') {
-            headers = [['Date', 'Txn ID', 'Method', 'Paid Amount', 'Status']];
-            body = filteredPayments.map(p => [
-                dayjs(p.created_at).format('DD/MM/YYYY'),
-                p.transaction_id || '—',
-                p.payment_method || '—',
-                `rs.${p.paid_amount}`,
-                p.payment_status ? 'Paid' : 'Pend.'
-            ]);
+            headers = [['Date', 'Customer', 'Txn ID', 'Method', 'Paid Amount', 'Status']];
+            body = filteredPayments.map(p => {
+                const booking = bookings.find(b => b.id === p.booking_id);
+                const customer = customers.find(c => c.id === booking?.customer_id);
+                return [
+                    dayjs(p.created_at).format('DD/MM/YYYY'),
+                    customer?.name || '—',
+                    p.transaction_id || '—',
+                    p.payment_method || '—',
+                    `rs.${p.paid_amount}`,
+                    p.payment_status ? 'Paid' : 'Pend.'
+                ];
+            });
         } else {
             headers = [['Customer', 'Appts', 'Total Due', 'Paid', 'Balance']];
             body = ledgerData.map(c => [
@@ -412,6 +417,7 @@ const Reports = () => {
                             <TableHead sx={{ bgcolor: 'background.default' }}>
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700 }}>Txn Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Transaction ID</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Method</TableCell>
                                     <TableCell align="right" sx={{ fontWeight: 700 }}>Paid Amount</TableCell>
@@ -423,17 +429,25 @@ const Reports = () => {
                                     <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3 }}>Loading...</TableCell></TableRow>
                                 ) : filteredPayments.length === 0 ? (
                                     <TableRow><TableCell colSpan={5} align="center" sx={{ py: 3 }}>No payments found in this period.</TableCell></TableRow>
-                                ) : filteredPayments.map((p) => (
-                                    <TableRow key={p.id} hover>
-                                        <TableCell>{dayjs(p.created_at).format('DD/MM/YYYY')}</TableCell>
-                                        <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
-                                        <TableCell>{p.payment_method}</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700, color: 'success.main' }}>₹{p.paid_amount}</TableCell>
-                                        <TableCell>
-                                            <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} variant="outlined" />
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
+                                ) : filteredPayments.map((p) => {
+                                    const booking = bookings.find(b => b.id === p.booking_id);
+                                    const customer = customers.find(c => c.id === booking?.customer_id);
+                                    return (
+                                        <TableRow key={p.id} hover>
+                                            <TableCell>{dayjs(p.created_at).format('DD/MM/YYYY')}</TableCell>
+                                            <TableCell>
+                                                <Typography variant="body2" fontWeight={600}>{customer?.name || '—'}</Typography>
+                                                <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
+                                            </TableCell>
+                                            <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
+                                            <TableCell>{p.payment_method}</TableCell>
+                                            <TableCell align="right" sx={{ fontWeight: 700, color: 'success.main' }}>₹{p.paid_amount}</TableCell>
+                                            <TableCell>
+                                                <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} variant="outlined" />
+                                            </TableCell>
+                                        </TableRow>
+                                    );
+                                })}
                             </TableBody>
                         </Table>
                     </TableContainer>
