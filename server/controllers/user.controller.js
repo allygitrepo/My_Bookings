@@ -10,7 +10,7 @@ const issueToken = async (user) => {
     const business = await Business.findOne({ where: { user_id: user.id, status: true } });
     const businessId = business ? business.id : null;
     const token = jwt.sign(
-        { user_id: user.id, business_id: businessId, email: user.email },
+        { user_id: user.id, business_id: businessId, email: user.email, role: user.role },
         process.env.JWT_SECRET,
         { expiresIn: process.env.JWT_EXPIRES_IN }
     );
@@ -70,6 +70,14 @@ const userController = {
                 return res.status(400).json({ success: false, message: "Invalid password" });
             }
 
+            // Check if user is suspended
+            if (!user.status) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: `Your account has been suspended. Reason: ${user.suspended_reason || 'No reason provided.'}`
+                });
+            }
+
             // issueToken finds the business and issues a fresh JWT
             const { token, businessId } = await issueToken(user);
 
@@ -78,7 +86,7 @@ const userController = {
                 message: "Login successful",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN' }
                 }
             });
         } catch (err) {
@@ -103,8 +111,13 @@ const userController = {
             const limit = parseInt(req.query.limit) || 20;
             const offset = (page - 1) * limit;
 
+            const whereClause = { status: true };
+            if (req.user?.role === 'PORTAL_ADMIN') {
+                delete whereClause.status;
+            }
+
             const { count, rows } = await Users.findAndCountAll({
-                where: { status: true },
+                where: whereClause,
                 limit,
                 offset
             });
@@ -168,7 +181,7 @@ const userController = {
                 message: "Token refreshed",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN' }
                 }
             });
         } catch (error) {

@@ -2,7 +2,7 @@ import React from 'react';
 import { Box, Typography, Button } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
 
-const PageHeader = ({ title, subtitle, onAddClick, buttonText = 'Add New', extraActions }) => {
+const PageHeader = ({ title, subtitle, onAddClick, buttonText = 'Add New', extraActions, disabled = false }) => {
     return (
         <Box sx={{
             mb: 4,
@@ -36,6 +36,7 @@ const PageHeader = ({ title, subtitle, onAddClick, buttonText = 'Add New', extra
                         variant="contained"
                         startIcon={<AddIcon />}
                         onClick={onAddClick}
+                        disabled={disabled}
                         fullWidth={{ xs: true, sm: false }}
                         sx={{ borderRadius: 2, fontWeight: 700 }}
                     >

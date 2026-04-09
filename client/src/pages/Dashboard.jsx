@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import {
     Grid, Card, Typography, Box, Table, TableBody, TableCell,
-    TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TablePagination, CircularProgress, Divider
+    TableContainer, TableHead, TableRow, Paper, Chip, Avatar, TablePagination, CircularProgress, Divider, Alert
 } from '@mui/material';
 import {
     Business as BusinessIcon, People as StaffIcon,
     EventAvailable as BookingsIcon, Payments as RevenueIcon,
     TrendingUp as TrendIcon,
+    Warning as WarningIcon
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import { getBusinesses } from '../api/business.api';
@@ -18,6 +19,7 @@ import { getPayments } from '../api/payment.api';
 import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/PageTransition';
+import { useBusiness } from '../context/BusinessContext';
 import { formatDate } from '../utils/date';
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
@@ -52,6 +54,7 @@ const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default'
 
 const Dashboard = () => {
     const { searchQuery } = useSearch();
+    const { isSuspended, suspendedReason } = useBusiness();
     const [businesses, setBusinesses] = useState([]);
     const [staff, setStaff] = useState([]);
     const [bookings, setBookings] = useState([]);
@@ -115,6 +118,31 @@ const Dashboard = () => {
 
     return (
         <PageTransition>
+            {isSuspended && (
+                <Alert 
+                    severity="error" 
+                    variant="filled"
+                    icon={<WarningIcon />}
+                    sx={{ 
+                        mb: 4, 
+                        borderRadius: 3, 
+                        fontWeight: 700,
+                        boxShadow: '0 8px 24px -12px rgba(239, 68, 68, 0.5)',
+                        '& .MuiAlert-message': { width: '100%' }
+                    }}
+                >
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', width: '100%' }}>
+                        <Box>
+                            <Typography variant="subtitle1" fontWeight={800} sx={{ lineHeight: 1.2 }}>
+                                THIS BUSINESS IS CURRENTLY SUSPENDED
+                            </Typography>
+                            <Typography variant="body2" sx={{ opacity: 0.9 }}>
+                                Reason: {suspendedReason || "Violation of platform policies. Public pages and booking systems are disabled."}
+                            </Typography>
+                        </Box>
+                    </Box>
+                </Alert>
+            )}
             <Box sx={{ mb: 4 }}>
                 <Typography variant="h4" fontWeight={800}>Dashboard</Typography>
                 <Typography variant="body2" color="text.secondary" mt={0.5}>

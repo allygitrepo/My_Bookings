@@ -25,6 +25,8 @@ const paymentController = {
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin: whereClause remains empty
             } else if (req.user?.user_id) {
                 // Fetch all businesses owned by this user
                 const Business = require("../models/business.model");
@@ -42,20 +44,27 @@ const paymentController = {
             });
             const bookingIds = businessBookings.map(b => b.id);
 
-            // If no bookings, return empty (avoids showing all payments when bookingIds is [])
-            if (bookingIds.length === 0) {
-                return res.json({
-                    success: true,
-                    message: "Payments fetched successfully",
-                    totalRecords: 0,
-                    totalPages: 0,
-                    currentPage: page,
-                    data: []
-                });
+            // Fetch payments
+            const paymentWhere = {};
+            if (Object.keys(whereClause).length > 0) {
+                // If there were filters, we must restrict by booking IDs
+                if (bookingIds.length === 0) {
+                    return res.json({
+                        success: true,
+                        message: "Payments fetched successfully",
+                        totalRecords: 0,
+                        totalPages: 0,
+                        currentPage: page,
+                        data: []
+                    });
+                }
+                paymentWhere.booking_id = { [Op.in]: bookingIds };
             }
+            // else: Portal Admin (empty whereClause) sees all payments without restriction
+
 
             const { count, rows } = await Payment.findAndCountAll({
-                where: { booking_id: { [Op.in]: bookingIds } },
+                where: paymentWhere,
                 limit,
                 offset
             });

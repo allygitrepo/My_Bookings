@@ -34,9 +34,13 @@ axiosInstance.interceptors.response.use(
     },
     async (error) => {
         if (error.response && error.response.status === 401) {
-            // Token expired or invalid — clear session and redirect to login
-            localStorage.removeItem('currentUser');
-            window.location.href = '/login';
+            const isAuthPage = ['/login', '/register'].includes(window.location.pathname);
+            
+            // Only clear and redirect if we aren't already on an auth page
+            if (!isAuthPage) {
+                localStorage.removeItem('currentUser');
+                window.location.href = '/login';
+            }
         }
         return Promise.reject(error);
     }

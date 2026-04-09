@@ -30,7 +30,7 @@ const FieldSection = ({ label, children }) => (
 
 const Services = () => {
     const { searchQuery } = useSearch();
-    const { selectedBusinessId } = useBusiness();
+    const { selectedBusinessId, isSuspended } = useBusiness();
     const [servicesList, setServicesList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -212,7 +212,7 @@ const Services = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Services" subtitle="Define the services you offer and assign staff." onAddClick={() => handleOpen()} buttonText="Add Service" />
+            <PageHeader title="Services" subtitle="Define the services you offer and assign staff." onAddClick={() => handleOpen()} buttonText="Add Service" disabled={isSuspended} />
             {/* Desktop Table */}
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
@@ -269,8 +269,8 @@ const Services = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(svc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(svc.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleOpen(svc)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(svc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -301,8 +301,8 @@ const Services = () => {
                                     <Typography variant="caption" color="text.secondary">{svc.duration_minutes} Minutes Duration</Typography>
                                 </Box>
                                 <Box>
-                                    <IconButton onClick={() => handleOpen(svc)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(svc.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleOpen(svc)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(svc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
                             

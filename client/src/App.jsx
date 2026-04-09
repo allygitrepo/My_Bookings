@@ -34,34 +34,51 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import PublicBusinessWebsite from './pages/PublicBusinessWebsite';
 import WebsiteGenerator from './pages/WebsiteGenerator';
 
+import PortalLayout from './layout/PortalLayout';
+import PortalDashboard from './pages/portal/PortalDashboard';
+import PortalBusinesses from './pages/portal/PortalBusinesses';
+import PortalBookings from './pages/portal/PortalBookings';
+import PortalUsers from './pages/portal/PortalUsers';
+import CreateAdmin from './pages/portal/CreateAdmin';
+
 const GOOGLE_CLIENT_ID = "518219129243-ffkdl9t99oqrofkfm5l4o3nvnvmolvd4.apps.googleusercontent.com";
 
 function App() {
   // Auto-refresh JWT when user is logged in but business_id is missing.
   // This handles users who logged in before tenant isolation was implemented.
-  useEffect(() => {
-    const stored = localStorage.getItem('currentUser');
-    if (!stored) return;
-    try {
-      const user = JSON.parse(stored);
-      if (user?.token && !user?.business_id) {
-        axiosInstance.post('/users/refresh-token')
-          .then(res => {
-            if (res.data?.success) {
-              const { token, user: refreshedUser } = res.data.data;
-              localStorage.setItem('currentUser', JSON.stringify({
-                ...user,
-                ...refreshedUser,
-                token,
-              }));
-              // Reload the page so all components pick up the new business_id
-              window.location.reload();
+    useEffect(() => {
+        // Skip migration check on auth pages and landing page to prevent loops
+        const isPublicPage = ['/', '/login', '/register'].includes(window.location.pathname);
+        if (isPublicPage) return;
+
+        const stored = localStorage.getItem('currentUser');
+        if (!stored) return;
+        try {
+            const user = JSON.parse(stored);
+            // Only refresh if token is present, business_id is missing, and it's NOT a portal admin
+            const needsRefresh = user?.token && !user?.business_id && user?.role !== 'PORTAL_ADMIN';
+
+            if (needsRefresh) {
+                axiosInstance.post('/users/refresh-token')
+                    .then(res => {
+                        if (res.data?.success) {
+                            const { token, user: refreshedUser } = res.data.data;
+                            const updatedUser = { ...user, ...refreshedUser, token };
+                            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+                            localStorage.setItem('role', refreshedUser.role);
+                            localStorage.setItem('isPortalAdmin', refreshedUser.role === 'PORTAL_ADMIN');
+
+                            // ONLY reload if we actually found a business_id now.
+                            // If it's still null, we stop here to prevent an infinite reload loop.
+                            if (refreshedUser.business_id) {
+                                window.location.reload();
+                            }
+                        }
+                    })
+                    .catch(() => {/* silent fail */ });
             }
-          })
-          .catch(() => {/* silent fail */ });
-      }
-    } catch (_) { /* ignore parse errors */ }
-  }, []);
+        } catch (_) { /* ignore parse errors */ }
+    }, []);
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -79,23 +96,32 @@ function App() {
                   <Route path="/register" element={<Register />} />
 
                   {/* Protected Dashboard Routes */}
-                  <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
-                    <Route path="/dashboard" element={<Dashboard />} />
-                    <Route path="/businesses" element={<Businesses />} />
-                    <Route path="/locations" element={<Locations />} />
-                    <Route path="/staff" element={<Staff />} />
-                    <Route path="/services" element={<Services />} />
-                    <Route path="/staff-services" element={<StaffServices />} />
-                    <Route path="/availability" element={<Availability />} />
-                    <Route path="/customers" element={<Customers />} />
-                    <Route path="/bookings" element={<Bookings />} />
-                    <Route path="/payments" element={<Payments />} />
-                    <Route path="/reports" element={<Reports />} />
-                    <Route path="/api-keys" element={<ApiKeys />} />
-                    <Route path="/widget-script" element={<WidgetScript />} />
-                    <Route path="/website-builder" element={<WebsiteGenerator />} />
-                    <Route path="/profile" element={<Profile />} />
-                  </Route>
+                    <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
+                        <Route path="/dashboard" element={<Dashboard />} />
+                        <Route path="/businesses" element={<Businesses />} />
+                        <Route path="/locations" element={<Locations />} />
+                        <Route path="/staff" element={<Staff />} />
+                        <Route path="/services" element={<Services />} />
+                        <Route path="/staff-services" element={<StaffServices />} />
+                        <Route path="/availability" element={<Availability />} />
+                        <Route path="/customers" element={<Customers />} />
+                        <Route path="/bookings" element={<Bookings />} />
+                        <Route path="/payments" element={<Payments />} />
+                        <Route path="/reports" element={<Reports />} />
+                        <Route path="/api-keys" element={<ApiKeys />} />
+                        <Route path="/widget-script" element={<WidgetScript />} />
+                        <Route path="/website-builder" element={<WebsiteGenerator />} />
+                        <Route path="/profile" element={<Profile />} />
+                    </Route>
+
+                    {/* Portal Admin Routes */}
+                    <Route element={<AuthGuard><PortalLayout /></AuthGuard>}>
+                        <Route path="/portal/dashboard" element={<PortalDashboard />} />
+                        <Route path="/portal/businesses" element={<PortalBusinesses />} />
+                        <Route path="/portal/bookings" element={<PortalBookings />} />
+                        <Route path="/portal/users" element={<PortalUsers />} />
+                        <Route path="/portal/create-admin" element={<CreateAdmin />} />
+                    </Route>
 
                   <Route path="/:slug" element={<PublicBusinessWebsite />} />
                   <Route path="*" element={<Navigate to="/login" replace />} />

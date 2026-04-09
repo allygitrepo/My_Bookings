@@ -4,13 +4,14 @@ import {
     Box, Typography, Avatar, Chip, IconButton, Button, Divider,
     TextField, FormControlLabel, Checkbox, TablePagination,
 } from '@mui/material';
-import { Schedule as ScheduleIcon, Edit as EditIcon, Add as AddIcon, Remove as RemoveIcon, Warning as WarningIcon } from '@mui/icons-material';
+import { Schedule as ScheduleIcon, Edit as EditIcon, Add as AddIcon, Remove as RemoveIcon, Warning as WarningIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabilityByStaff } from '../api/staffAvailability.api';
 import { getStaff } from '../api/staff.api';
 import { useSearch } from '../context/SearchContext';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
@@ -22,6 +23,7 @@ const dayColors = {
 
 const Availability = () => {
     const { searchQuery } = useSearch();
+    const { isSuspended } = useBusiness();
     const [availability, setAvailability] = useState([]);
     const [staffList, setStaffList] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -119,7 +121,6 @@ const Availability = () => {
             return { ...prev, [day]: updatedDaySlots };
         });
 
-        // Removed "End time must be after start time" validation to allow overnight shifts
         setSlotErrors(prev => {
             const key = `${day}-${idx}`;
             const next = { ...prev };
@@ -152,7 +153,6 @@ const Availability = () => {
 
     const handleSave = async () => {
         if (saving) return;
-        // Validate all time slots for overlaps before saving
         const clashingDays = [];
         
         Object.entries(schedule).forEach(([day, slots]) => {
@@ -166,11 +166,10 @@ const Availability = () => {
         }
 
         setSaving(true);
-        setOpen(false); // Close immediately
+        setOpen(false);
         showGlobalLoader('Updating availability...');
 
         try {
-            // Remove all existing for this staff and re-create in bulk
             await deleteStaffAvailabilityByStaff(selectedStaff.id);
 
             const records = [];
@@ -197,7 +196,6 @@ const Availability = () => {
         }
     };
 
-    // Sort by staff name, then day order
     const sorted = [...filteredAvailability].sort((a, b) => {
         const sa = staffList.find(s => s.id === a.staff_id)?.staff_name || '';
         const sb = staffList.find(s => s.id === b.staff_id)?.staff_name || '';
@@ -212,7 +210,6 @@ const Availability = () => {
                 subtitle="View working hours for each team member. Edit availability from the Staff page."
             />
 
-            {/* Staff filter chips */}
             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3, alignItems: 'center' }}>
                 <Typography variant="body2" color="text.secondary" fontWeight={500}>Filter:</Typography>
                 <Chip
@@ -293,7 +290,7 @@ const Availability = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton size="small" color="primary" onClick={() => handleEdit(staffMember)}>
+                                        <IconButton size="small" color="primary" onClick={() => handleEdit(staffMember)} disabled={isSuspended}>
                                             <EditIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>

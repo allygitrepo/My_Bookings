@@ -11,6 +11,7 @@ import PageTransition from '../components/PageTransition';
 import { getStaffServices, createStaffService, updateStaffService, deleteStaffService } from '../api/staffService.api';
 import { getStaff } from '../api/staff.api';
 import { getServices } from '../api/service.api';
+import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
@@ -22,6 +23,7 @@ const FieldSection = ({ label, children }) => (
 );
 
 const StaffServices = () => {
+    const { isSuspended } = useBusiness();
     const [staffServices, setStaffServices] = useState([]);
     const [staff, setStaff] = useState([]);
     const [services, setServices] = useState([]);
@@ -115,7 +117,7 @@ const StaffServices = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Staff Services" subtitle="Manage which staff members can perform which services." onAddClick={() => handleOpen()} buttonText="Assign Service" />
+            <PageHeader title="Staff Services" subtitle="Manage which staff members can perform which services." onAddClick={() => handleOpen()} buttonText="Assign Service" disabled={isSuspended} />
             <TableContainer component={Paper}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'background.default' }}>
@@ -146,8 +148,8 @@ const StaffServices = () => {
                                     <TableCell>{service?.service_name || '—'}</TableCell>
                                     <TableCell>{ss.created_at ? new Date(ss.created_at).toLocaleDateString() : '—'}</TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(ss)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(ss.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleOpen(ss)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(ss.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );

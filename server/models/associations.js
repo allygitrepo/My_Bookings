@@ -5,6 +5,10 @@ const StaffAvailability = require("./staffAvailability.model");
 const Business = require("./business.model");
 const Service = require("./service.model");
 const ServiceLocation = require("./serviceLocation.model");
+const User = require("./user.model");
+const Booking = require("./booking.model");
+const Payment = require("./payment.model");
+const Customer = require("./customer.model");
 
 // Staff <-> Business (Many-to-One)
 Staff.belongsTo(Business, { foreignKey: 'business_id' });
@@ -33,4 +37,35 @@ StaffAvailability.belongsTo(Staff, { foreignKey: 'staff_id' });
 // Availability <-> Location (Many-to-One)
 StaffAvailability.belongsTo(Location, { foreignKey: 'location_id', as: 'location' });
 
-module.exports = { Staff, Location, StaffLocation, StaffAvailability, Business, Service, ServiceLocation };
+// Business <-> User (Many-to-One) - Owner Relationship
+Business.belongsTo(User, { foreignKey: 'user_id', as: 'owner' });
+User.hasMany(Business, { foreignKey: 'user_id' });
+
+// Booking <-> Business (Many-to-One)
+Booking.belongsTo(Business, { foreignKey: 'business_id' });
+Business.hasMany(Booking, { foreignKey: 'business_id' });
+
+// Booking <-> Payment (One-to-Many)
+Booking.hasMany(Payment, { foreignKey: 'booking_id' });
+Payment.belongsTo(Booking, { foreignKey: 'booking_id' });
+
+// Customer <-> Business (Many-to-One)
+Customer.belongsTo(Business, { foreignKey: 'business_id' });
+Business.hasMany(Customer, { foreignKey: 'business_id' });
+
+// Booking <-> Customer (Many-to-One)
+Booking.belongsTo(Customer, { foreignKey: 'customer_id' });
+Customer.hasMany(Booking, { foreignKey: 'customer_id' });
+
+// Booking <-> Service (Many-to-One)
+Booking.belongsTo(Service, { foreignKey: 'service_id' });
+Service.hasMany(Booking, { foreignKey: 'service_id' });
+
+// Booking <-> Staff (Many-to-One)
+Booking.belongsTo(Staff, { foreignKey: 'staff_id' });
+Staff.hasMany(Booking, { foreignKey: 'staff_id' });
+
+module.exports = { 
+    Staff, Location, StaffLocation, StaffAvailability, 
+    Business, Service, ServiceLocation, User, Booking, Payment, Customer 
+};

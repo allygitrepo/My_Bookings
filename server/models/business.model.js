@@ -86,6 +86,10 @@ const Business = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: true
         },
+        suspended_reason: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

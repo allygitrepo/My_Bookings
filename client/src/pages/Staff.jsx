@@ -84,7 +84,7 @@ const FieldSection = ({ label, children }) => (
 
 const Staff = () => {
     const { searchQuery } = useSearch();
-    const { selectedBusinessId } = useBusiness();
+    const { selectedBusinessId, isSuspended } = useBusiness();
     const [staffList, setStaffList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -377,8 +377,7 @@ const Staff = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Staff Members" subtitle="Manage your team and their weekly availability." onAddClick={() => handleOpen()} buttonText="Add Staff" 
-                extraActions={
+            <PageHeader title="Staff Members" subtitle="Manage your team and their weekly availability." onAddClick={() => handleOpen()} buttonText="Add Staff" disabled={isSuspended}                extraActions={
                     <Autocomplete
                         multiple
                         size="small"
@@ -485,8 +484,8 @@ const Staff = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(s)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(s.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleOpen(s)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(s.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -514,8 +513,8 @@ const Staff = () => {
                                     <Typography variant="caption" color="primary.main" fontWeight={700}>{s.role || 'Staff member'}</Typography>
                                 </Box>
                                 <Box>
-                                    <IconButton onClick={() => handleOpen(s)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(s.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleOpen(s)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(s.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
                             

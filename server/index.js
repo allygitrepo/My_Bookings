@@ -3,12 +3,15 @@ const { connectDB } = require("./config/db");
 const cors = require("cors");
 require("dotenv").config();
 const routes = require("./routes/routes.index");
+const createDefaultAdmin = require("./config/createDefaultAdmin");
 
 const app = express();
 const PORT = process.env.PORT || 3000;
 
 // Connect Database and Sync Models
-connectDB();
+connectDB().then(() => {
+    createDefaultAdmin();
+});
 
 // Middlewares
 app.use(cors({

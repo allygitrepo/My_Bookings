@@ -56,12 +56,15 @@ const businessController = {
             const limit = parseInt(req.query.limit) || 50;
             const offset = (page - 1) * limit;
 
-            const whereClause = { status: true };
-            // Widget: filter by specific business id; Admin: filter by user_id from JWT
-            // Use -1 sentinel when IDs are null to prevent data leaks
+            const whereClause = {};
+            // Widget: filter by specific business id and MUST be active
             if (req.isWidget) {
+                whereClause.status = true;
                 whereClause.id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Portal Admin sees all
             } else {
+                // Owners see all their businesses (active or suspended)
                 whereClause.user_id = req.user?.user_id ?? -1;
             }
 
@@ -95,8 +98,14 @@ const businessController = {
     },
     getById: async (req, res) => {
         try {
-            const whereClause = { id: req.params.id, status: true };
-            if (!req.isWidget && req.user) whereClause.user_id = req.user.user_id;
+            const whereClause = { id: req.params.id };
+            if (req.isWidget) {
+                whereClause.status = true;
+            } else if (req.user) {
+                if (req.user.role !== 'PORTAL_ADMIN') {
+                    whereClause.user_id = req.user.user_id;
+                }
+            }
 
             const row = await Business.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Business not found" });
@@ -173,7 +182,11 @@ const businessController = {
     update: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            if (!req.isWidget && req.user) whereClause.user_id = req.user.user_id;
+            if (!req.isWidget && req.user) {
+                if (req.user.role !== 'PORTAL_ADMIN') {
+                    whereClause.user_id = req.user.user_id;
+                }
+            }
 
             const row = await Business.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Business not found" });
@@ -221,7 +234,11 @@ const businessController = {
     delete: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            if (!req.isWidget && req.user) whereClause.user_id = req.user.user_id;
+            if (!req.isWidget && req.user) {
+                if (req.user.role !== 'PORTAL_ADMIN') {
+                    whereClause.user_id = req.user.user_id;
+                }
+            }
 
             const row = await Business.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Business not found" });

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card
+    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card, Tooltip
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -12,6 +12,7 @@ import {
     LocationOn as LocationIcon,
     LaptopMac as OnlineIcon,
     Map as MapIcon,
+    Info as InfoIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
@@ -183,6 +184,7 @@ const Businesses = () => {
                 subtitle="Manage your business profiles and settings."
                 onAddClick={() => handleOpen()}
                 buttonText="Add Business"
+                disabled={false} // Always allowed to create new ones? Or keep it? Let's keep it enabled.
             />
 
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
@@ -196,6 +198,7 @@ const Businesses = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Email</TableCell>
                             {/* <TableCell sx={{ fontWeight: 600 }}>Sync Email</TableCell> */}
                             <TableCell sx={{ fontWeight: 600 }}>UPI ID</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
@@ -227,6 +230,28 @@ const Businesses = () => {
                                 <TableCell>{biz.email}</TableCell>
                                 {/* <TableCell>{biz.sync_email || '—'}</TableCell> */}
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{biz.upi_id || '—'}</TableCell>
+                                <TableCell>
+                                    {biz.status === false ? (
+                                        <Tooltip title={biz.suspended_reason || "Violation of platform policies"} arrow>
+                                            <Chip 
+                                                label="Suspended" 
+                                                color="error" 
+                                                size="small" 
+                                                variant="filled" 
+                                                icon={<InfoIcon style={{ fontSize: '0.9rem' }} />}
+                                                sx={{ fontWeight: 700, borderRadius: 1.5, cursor: 'help' }}
+                                            />
+                                        </Tooltip>
+                                    ) : (
+                                        <Chip 
+                                            label="Active" 
+                                            color="success" 
+                                            size="small" 
+                                            variant="outlined" 
+                                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                                        />
+                                    )}
+                                </TableCell>
                                 <TableCell align="right">
                                     {biz.website_enabled && biz.slug && (
                                         <IconButton
@@ -238,8 +263,8 @@ const Businesses = () => {
                                             <OpenIcon fontSize="small" />
                                         </IconButton>
                                     )}
-                                    <IconButton onClick={() => handleOpen(biz)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleOpen(biz)} color="primary" size="small" disabled={biz.status === false}><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -269,7 +294,12 @@ const Businesses = () => {
                                     </Box>
                                     <Box>
                                         <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
-                                        <Typography variant="caption" color="text.secondary">{biz.business_type}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="caption" color="text.secondary">{biz.business_type}</Typography>
+                                            {biz.status === false && (
+                                                <Chip label="Suspended" color="error" size="small" sx={{ height: 18, fontSize: '0.6rem', fontWeight: 700 }} />
+                                            )}
+                                        </Box>
                                     </Box>
                                 </Box>
                                 <Box sx={{ display: 'flex' }}>
@@ -278,8 +308,8 @@ const Businesses = () => {
                                             <OpenIcon fontSize="small" />
                                         </IconButton>
                                     )}
-                                    <IconButton onClick={() => handleOpen(biz)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleOpen(biz)} color="primary" size="small" disabled={biz.status === false}><EditIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
 

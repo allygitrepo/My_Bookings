@@ -12,7 +12,17 @@ export const BusinessProvider = ({ children }) => {
         return localStorage.getItem('selectedBusinessId') || 'all';
     });
 
+    const selectedBusiness = businesses.find(b => b.id === Number(selectedBusinessId));
+    const isSuspended = selectedBusiness?.status === false;
+    const suspendedReason = selectedBusiness?.suspended_reason;
+
     const refreshBusinesses = async () => {
+        const stored = localStorage.getItem('currentUser');
+        if (!stored) {
+            setLoading(false);
+            return;
+        }
+
         setLoading(true);
         try {
             const response = await getBusinesses();
@@ -36,12 +46,14 @@ export const BusinessProvider = ({ children }) => {
 
     return (
         <BusinessContext.Provider value={{ 
+            businesses, 
             selectedBusinessId, 
             setSelectedBusinessId, 
-            businesses, 
-            setBusinesses,
-            refreshBusinesses,
-            loading 
+            refreshBusinesses, 
+            loading,
+            selectedBusiness,
+            isSuspended,
+            suspendedReason
         }}>
             {children}
         </BusinessContext.Provider>

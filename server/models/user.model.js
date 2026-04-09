@@ -22,9 +22,17 @@ const Users = sequelize.define(
             type: DataTypes.TEXT,
             allowNull: false
         },
+        role: {
+            type: DataTypes.ENUM('PORTAL_ADMIN', 'OWNER', 'STAFF'),
+            defaultValue: 'OWNER'
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true
+        },
+        suspended_reason: {
+            type: DataTypes.TEXT,
+            allowNull: true
         },
         created_at: {
             type: DataTypes.DATE,

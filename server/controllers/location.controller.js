@@ -27,6 +27,8 @@ const locationController = {
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 // Fetch all businesses owned by this user
                 const Business = require("../models/business.model");
@@ -61,6 +63,8 @@ const locationController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const Business = require("../models/business.model");
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
@@ -80,6 +84,8 @@ const locationController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const Business = require("../models/business.model");
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
@@ -107,6 +113,8 @@ const locationController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const Business = require("../models/business.model");
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });

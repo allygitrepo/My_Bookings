@@ -17,7 +17,7 @@ const FEATURES = [
     { icon: <BusinessIcon sx={{ fontSize: 20 }} />, text: 'Multi-business management' },
     { icon: <PeopleIcon sx={{ fontSize: 20 }} />, text: 'Smart staff scheduling' },
     { icon: <CalendarIcon sx={{ fontSize: 20 }} />, text: 'Real-time availability' },
-    { icon: <EventIcon sx={{ fontSize: 20 }} />, text: 'Seamless customer bookings' },
+    // { icon: <EventIcon sx={{ fontSize: 20 }} />, text: 'Seamless customer bookings' },
 ];
 
 const Login = () => {
@@ -39,7 +39,14 @@ const Login = () => {
             if (response.success) {
                 const { token, user } = response.data;
                 localStorage.setItem('currentUser', JSON.stringify({ ...user, token }));
-                navigate('/dashboard');
+                localStorage.setItem('role', user.role);
+                localStorage.setItem('isPortalAdmin', user.isPortalAdmin);
+
+                if (response.data.user.isPortalAdmin) {
+                    navigate('/portal/dashboard');
+                } else {
+                    navigate('/dashboard');
+                }
             } else {
                 setError(response.message || 'Login failed');
             }

@@ -112,8 +112,10 @@ const WebsiteGenerator = () => {
         }
     };
 
+    const isSuspended = businesses.find(b => String(b.id) === String(selectedBusinessId))?.status === false;
+
     const handleSave = async () => {
-        if (saving) return;
+        if (saving || isSuspended) return;
         if (blockEmoji(settings.slug) !== true) {
             toast.error('Slug contains emojis or invalid characters');
             return;
@@ -250,10 +252,10 @@ const WebsiteGenerator = () => {
                                         return (
                                             <Box
                                                 key={tmpl.id}
-                                                onClick={() => setSettings({ ...settings, selected_template: tmpl.id })}
+                                                onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
                                                 sx={{
-                                                    cursor: 'pointer',
-                                                    borderRadius: 3,
+                                                    cursor: isSuspended ? 'not-allowed' : 'pointer',
+                                                    opacity: isSuspended ? 0.6 : 1,                                                    borderRadius: 3,
                                                     position: 'relative',
                                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                     border: '2.5px solid',
@@ -339,7 +341,9 @@ const WebsiteGenerator = () => {
                                         <Switch
                                             size="small"
                                             checked={settings.website_enabled}
+                                            disabled={isSuspended}
                                             onChange={async (e) => {
+                                                if (isSuspended) return;
                                                 const newEnabled = e.target.checked;
                                                 setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
                                                 

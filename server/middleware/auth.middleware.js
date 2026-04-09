@@ -1,5 +1,6 @@
 const jwt = require("jsonwebtoken");
 const ApiKey = require("../models/apiKey.model");
+const Users = require("../models/user.model");
 
 const authMiddleware = async (req, res, next) => {
     const authHeader = req.headers.authorization;
@@ -10,6 +11,16 @@ const authMiddleware = async (req, res, next) => {
         const token = authHeader.split(" ")[1];
         try {
             const decoded = jwt.verify(token, process.env.JWT_SECRET);
+            
+            // Fast check: Verify user status in DB to handle real-time bans
+            const user = await Users.findByPk(decoded.user_id);
+            if (!user || !user.status) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "Your account is suspended or inactive." 
+                });
+            }
+
             req.user = decoded;
             return next();
         } catch (error) {

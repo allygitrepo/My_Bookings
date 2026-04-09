@@ -43,6 +43,7 @@ const WidgetScript = () => {
     const matchedKey = apiKeys.find(k => k.business_id === selectedBusinessId);
     const apiKeyValue = matchedKey?.api_key || null;
     const selectedBusiness = businesses.find(b => b.id === selectedBusinessId);
+    const isSuspended = selectedBusiness?.status === false;
 
     const scriptTag = apiKeyValue
         ? `<script\n  src="https://mybookings.allysoftsolutions.com/widget.js"\n  data-business-id="${apiKeyValue}"\n  data-theme="light"\n  async>\n</script>`
@@ -101,9 +102,16 @@ const WidgetScript = () => {
                             </Alert>
                         )}
 
-                        {selectedBusinessId && apiKeyValue && (
+                        {selectedBusinessId && apiKeyValue && !isSuspended && (
                             <Alert severity="success" sx={{ mb: 3, borderRadius: 2 }}>
                                 Using API key: <code style={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{apiKeyValue.slice(0, 20)}…</code>
+                            </Alert>
+                        )}
+
+                        {selectedBusinessId && isSuspended && (
+                            <Alert severity="error" icon={<WarnIcon />} sx={{ mb: 3, borderRadius: 2 }}>
+                                <strong>{selectedBusiness?.business_name}</strong> is currently suspended.
+                                All widget and website actions are disabled.
                             </Alert>
                         )}
 
@@ -137,11 +145,12 @@ const WidgetScript = () => {
                             )}
 
                             {apiKeyValue && (
-                                <CopyToClipboard text={scriptTag} onCopy={handleCopy}>
+                                <CopyToClipboard text={scriptTag} onCopy={() => !isSuspended && handleCopy()}>
                                     <Button
                                         variant="contained" size="small"
                                         sx={{ position: 'absolute', top: 12, right: 12 }}
                                         startIcon={<CopyIcon />}
+                                        disabled={isSuspended}
                                     >
                                         Copy
                                     </Button>

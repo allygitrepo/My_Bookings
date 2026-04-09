@@ -27,7 +27,7 @@ const FieldSection = ({ label, children }) => (
 
 const Locations = () => {
     const { searchQuery } = useSearch();
-    const { selectedBusinessId } = useBusiness();
+    const { selectedBusinessId, isSuspended } = useBusiness();
     const [locations, setLocations] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -191,7 +191,7 @@ const Locations = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" 
+            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" disabled={isSuspended} 
                 extraActions={
                     <TextField
                         select
@@ -261,8 +261,8 @@ const Locations = () => {
                                         />
                                     </TableCell>
                                     <TableCell align="right">
-                                        <IconButton onClick={() => handleOpen(loc)} color="primary" size="small"><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(loc.id)} color="error" size="small"><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleOpen(loc)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDelete(loc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -287,8 +287,8 @@ const Locations = () => {
                                 <Typography variant="caption" color="text.secondary">{businesses.find(b => b.id === loc.business_id)?.business_name}</Typography>
                             </Box>
                             <Box>
-                                <IconButton onClick={() => handleOpen(loc)} size="small" color="primary"><EditIcon fontSize="small" /></IconButton>
-                                <IconButton onClick={() => handleDelete(loc.id)} size="small" color="error"><DeleteIcon fontSize="small" /></IconButton>
+                                <IconButton onClick={() => handleOpen(loc)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
+                                <IconButton onClick={() => handleDelete(loc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                             </Box>
                         </Box>
                         

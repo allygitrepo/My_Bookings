@@ -44,6 +44,8 @@ const staffController = {
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 // Fetch all businesses owned by this user
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
@@ -90,6 +92,8 @@ const staffController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 whereClause.business_id = businesses.map(b => b.id);
@@ -108,6 +112,8 @@ const staffController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 whereClause.business_id = businesses.map(b => b.id);
@@ -147,6 +153,8 @@ const staffController = {
             
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
+            } else if (req.user?.role === 'PORTAL_ADMIN') {
+                // Bypass filter for Portal Admin
             } else if (req.user?.user_id) {
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 whereClause.business_id = businesses.map(b => b.id);
