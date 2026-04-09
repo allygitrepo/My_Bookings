@@ -20,8 +20,12 @@ import { getBusinesses, updateBusiness, getBusinessById } from '../api/business.
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
+import TemplatePortfolioStudio from '../templates/TemplatePortfolioStudio';
+import TemplatePortfolioGrid from '../templates/TemplatePortfolioGrid';
+import TemplatePortfolioCreative from '../templates/TemplatePortfolioCreative';
 import { encodeBusinessId } from '../utils/obfuscation';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import { blockEmoji } from '../utils/validators';
 import toast from 'react-hot-toast';
 
 const WebsiteGenerator = () => {
@@ -36,6 +40,8 @@ const WebsiteGenerator = () => {
         slug: '',
         selected_template: 'template1',
         website_enabled: false,
+        website_type: 'website',
+        description: ''
     });
 
     // Preview Data State (Full business data including services/locations)
@@ -60,6 +66,8 @@ const WebsiteGenerator = () => {
                         slug: currentBiz.slug || '',
                         selected_template: currentBiz.selected_template || 'template1',
                         website_enabled: currentBiz.website_enabled || false,
+                        website_type: currentBiz.website_type || 'website',
+                        description: currentBiz.description || ''
                     });
                 }
             }
@@ -108,6 +116,8 @@ const WebsiteGenerator = () => {
                 slug: biz.slug || '',
                 selected_template: biz.selected_template || 'template1',
                 website_enabled: biz.website_enabled || false,
+                website_type: biz.website_type || 'website',
+                description: biz.description || ''
             });
         }
     };
@@ -145,13 +155,17 @@ const WebsiteGenerator = () => {
         // Overlay current settings onto preview data
         const displayData = {
             ...previewData,
-            business: { ...previewData.business, ...settings }
+            business: { ...previewData.business, ...settings },
+            hideScript: true
         };
 
         switch (settings.selected_template) {
             case 'template1': return <TemplateMinimal data={displayData} />;
             case 'template2': return <TemplatePremium data={displayData} />;
             case 'template3': return <TemplateModern data={displayData} />;
+            case 'portfolio1': return <TemplatePortfolioStudio data={displayData} />;
+            case 'portfolio2': return <TemplatePortfolioGrid data={displayData} />;
+            case 'portfolio3': return <TemplatePortfolioCreative data={displayData} />;
             default: return <TemplateMinimal data={displayData} />;
         }
     };
@@ -233,21 +247,89 @@ const WebsiteGenerator = () => {
                                             toast.error('Emojis are not allowed');
                                         }
                                     }}
-                                    helperText={selectedBusinessId ? `Link: ${window.location.origin}/?biz=...` : 'Select a business to get a live link'}
+                                    helperText={selectedBusinessId ? (
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Link: {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                            </Typography>
+                                            <Tooltip title="Visit Website">
+                                                <IconButton 
+                                                    size="small" 
+                                                    sx={{ p: 0.2 }}
+                                                    onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                >
+                                                    <OpenIcon sx={{ fontSize: '0.8rem' }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
+                                    ) : 'Select a business to get a live link'}
+                                    sx={{ mt: 1 }}
+                                />
+                            </Box>
+
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    3. Choose Site Mode
+                                </Typography>
+                                <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
+                                    <Grid item xs={6}>
+                                        <Button 
+                                            fullWidth
+                                            variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
+                                            onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
+                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800 }}
+                                        >
+                                            Website
+                                        </Button>
+                                    </Grid>
+                                    <Grid item xs={6}>
+                                        <Tooltip title={!businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations ? "" : "Portfolios are for solo providers only."}>
+                                            <span style={{ display: 'block', width: '100%' }}>
+                                                <Button 
+                                                    fullWidth
+                                                    disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
+                                                    variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
+                                                    onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: 'portfolio1' })}
+                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, height: '100%' }}
+                                                >
+                                                    Portfolio
+                                                </Button>
+                                            </span>
+                                        </Tooltip>
+                                    </Grid>
+                                </Grid>
+                            </Box>
+
+                            <Box>
+                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                    4. Professional Bio
+                                </Typography>
+                                <TextField
+                                    fullWidth
+                                    multiline
+                                    rows={3}
+                                    size="small"
+                                    placeholder={settings.website_type === 'portfolio' ? "Describe your expertise and what you offer..." : "Summary of your business for the homepage..."}
+                                    value={settings.description}
+                                    onChange={(e) => setSettings({ ...settings, description: e.target.value })}
                                     sx={{ mt: 1 }}
                                 />
                             </Box>
 
                             <Box>
                                 <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'text.secondary', mb: 1.5 }}>
-                                    3. Choose Style
+                                    5. Choose Template
                                 </Typography>
                                 <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                                    {[
+                                    {(settings.website_type === 'portfolio' ? [
+                                        { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
+                                        { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
+                                        { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
+                                    ] : [
                                         { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
                                         { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
                                         { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
-                                    ].map((tmpl) => {
+                                    ]).map((tmpl) => {
                                         const isSelected = settings.selected_template === tmpl.id;
                                         return (
                                             <Box

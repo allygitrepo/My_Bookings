@@ -82,6 +82,14 @@ const Business = sequelize.define(
             type: DataTypes.TEXT,
             allowNull: true
         },
+        website_type: {
+            type: DataTypes.ENUM('website', 'portfolio'),
+            defaultValue: 'website'
+        },
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

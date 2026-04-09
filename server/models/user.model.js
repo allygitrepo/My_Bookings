@@ -37,6 +37,10 @@ const Users = sequelize.define(
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
+        },
+        profile_picture: {
+            type: DataTypes.TEXT('long'),
+            allowNull: true
         }
     },
     {

@@ -23,6 +23,7 @@ import { createBusiness, updateBusiness, deleteBusiness } from '../api/business.
 import { refreshToken } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
+import { encodeBusinessId } from '../utils/obfuscation';
 import toast from 'react-hot-toast';
 import { validateName, validateEmail, validatePhone, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -255,7 +256,7 @@ const Businesses = () => {
                                 <TableCell align="right">
                                     {biz.website_enabled && biz.slug && (
                                         <IconButton
-                                            onClick={() => window.open(`/${biz.slug}`, '_blank')}
+                                            onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')}
                                             color="secondary"
                                             size="small"
                                             title="Visit Website"
@@ -303,8 +304,8 @@ const Businesses = () => {
                                     </Box>
                                 </Box>
                                 <Box sx={{ display: 'flex' }}>
-                                    {biz.website_enabled && biz.slug && (
-                                        <IconButton onClick={() => window.open(`/${biz.slug}`, '_blank')} color="secondary" size="small">
+                                    {biz.website_enabled && (
+                                        <IconButton onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')} color="secondary" size="small">
                                             <OpenIcon fontSize="small" />
                                         </IconButton>
                                     )}

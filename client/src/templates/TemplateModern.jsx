@@ -85,7 +85,7 @@ const Counter = ({ to, suffix = '' }) => {
 };
 
 // ─── Main Component ───────────────────────────────────────────────────────────
-const TemplatePremium = ({ data }) => {
+const TemplateModern = ({ data }) => {
     const { business = {}, services = [], locations = [] } = data || {};
     const svcs = services.length ? services : DEFAULT_SERVICES;
     const locs = locations.length ? locations : DEFAULT_LOCATIONS;
@@ -104,8 +104,9 @@ const TemplatePremium = ({ data }) => {
         return () => window.removeEventListener('scroll', fn);
     }, []);
 
-    // Load External Booking Widget Script
+    // Load External Booking Widget Script (Disabled during internal previews to avoid OAuth context conflicts)
     useEffect(() => {
+        if (data.hideScript) return;
         const scriptId = 'mybookings-widget-script';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
@@ -116,7 +117,7 @@ const TemplatePremium = ({ data }) => {
             script.async = true;
             document.body.appendChild(script);
         }
-    }, [business.api_key]);
+    }, [business.api_key, data.hideScript]);
 
     return (
         <Box sx={{ bgcolor: '#080b12', minHeight: '100vh', color: '#fff', fontFamily: "'Jost', sans-serif", overflowX: 'hidden' }}>
@@ -207,7 +208,7 @@ const TemplatePremium = ({ data }) => {
                             </div>
                             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.5 }}>
                                 <Typography sx={{ fontSize: '1.05rem', color: 'rgba(255,255,255,.55)', mb: 7, fontWeight: 300, lineHeight: 1.8, maxWidth: 520, letterSpacing: '.2px' }}>
-                                    An uncompromising dedication to excellence — where craft meets luxury and every detail is curated for your distinction.
+                                    {business.description || "An uncompromising dedication to excellence — where craft meets luxury and every detail is curated for your distinction."}
                                 </Typography>
                             </motion.div>
 
@@ -562,4 +563,4 @@ const TemplatePremium = ({ data }) => {
     );
 };
 
-export default TemplatePremium;
+export default TemplateModern;

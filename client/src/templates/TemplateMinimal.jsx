@@ -79,8 +79,9 @@ const TemplateMinimal = ({ data }) => {
         return () => clearInterval(id);
     }, []);
 
-    // Load External Booking Widget Script
+    // Load External Booking Widget Script (Disabled during internal previews to avoid OAuth context conflicts)
     useEffect(() => {
+        if (data.hideScript) return;
         const scriptId = 'mybookings-widget-script';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
@@ -92,7 +93,7 @@ const TemplateMinimal = ({ data }) => {
             script.async = true;
             document.body.appendChild(script);
         }
-    }, [business.api_key]);
+    }, [business.api_key, data.hideScript]);
 
     return (
         <Box
@@ -153,8 +154,8 @@ const TemplateMinimal = ({ data }) => {
                     </Reveal>
 
                     <Reveal delay={0.15}>
-                        <Typography sx={{ fontSize: '1rem', color: '#999', mb: 5, fontWeight: 400, letterSpacing: '.3px' }}>
-                            {business.business_type || 'Premium Hair & Beauty Services'}
+                        <Typography sx={{ fontSize: '1.05rem', color: '#888', mb: 5, fontWeight: 500, letterSpacing: '.3px', maxWidth: 600, mx: 'auto', lineHeight: 1.6 }}>
+                            {business.description || business.business_type || 'Premium Professional Services'}
                         </Typography>
                     </Reveal>
 

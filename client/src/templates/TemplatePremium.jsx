@@ -17,8 +17,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 const TemplatePremium = ({ data }) => {
     const { business = {}, services = [], locations = [] } = data || {};
 
-    // Load External Booking Widget Script
+    // Load External Booking Widget Script (Disabled during internal previews to avoid OAuth context conflicts)
     React.useEffect(() => {
+        if (data.hideScript) return;
         const scriptId = 'mybookings-widget-script';
         if (!document.getElementById(scriptId)) {
             const script = document.createElement('script');
@@ -29,7 +30,7 @@ const TemplatePremium = ({ data }) => {
             script.async = true;
             document.body.appendChild(script);
         }
-    }, [business.api_key]);
+    }, [business.api_key, data.hideScript]);
 
     return (
         <Box sx={{ bgcolor: '#020617', minHeight: '100vh', color: '#fff', fontFamily: "'Outfit', sans-serif" }}>
@@ -69,8 +70,8 @@ const TemplatePremium = ({ data }) => {
                             <Typography variant="h1" fontWeight={900} sx={{ fontSize: { xs: '3.5rem', md: '5.5rem' }, mb: 3, lineHeight: 1, color: '#fff', letterSpacing: -2 }}>
                                 {business.business_name}
                             </Typography>
-                            <Typography variant="h6" sx={{ color: '#94a3b8', mb: 6, fontWeight: 400, fontSize: '1.2rem', lineHeight: 1.6, maxWidth: 600 }}>
-                                Experience unparalleled {business.business_type?.toLowerCase() || 'service'} excellence. Bespoke solutions tailored for your professional needs.
+                            <Typography variant="h6" sx={{ color: '#94a3b8', mb: 6, fontWeight: 400, fontSize: '1.1rem', lineHeight: 1.7, maxWidth: 600 }}>
+                                {business.description || `Experience unparalleled ${business.business_type?.toLowerCase() || 'service'} excellence. Bespoke solutions tailored for your professional needs.`}
                             </Typography>
                             <Button
                                 variant="contained"

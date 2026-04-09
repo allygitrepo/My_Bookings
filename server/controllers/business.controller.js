@@ -1,6 +1,7 @@
 const { Op } = require("sequelize");
 const Business = require("../models/business.model");
-const Location = require("../models/location.model"); // Added Location model
+const User = require("../models/user.model");
+const Location = require("../models/location.model");
 const slugify = require("../uttils/slugify");
 
 // Helper to ensure slug uniqueness
@@ -70,6 +71,7 @@ const businessController = {
 
             const { count, rows } = await Business.findAndCountAll({
                 where: whereClause,
+                include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }],
                 limit,
                 offset
             });
@@ -107,7 +109,10 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ where: whereClause });
+            const row = await Business.findOne({ 
+                where: whereClause,
+                include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
+            });
             if (!row) return res.status(404).json({ success: false, message: "Business not found" });
             res.json({ success: true, message: "Business fetched successfully", data: row });
         } catch (error) {
@@ -118,7 +123,8 @@ const businessController = {
         try {
             const { slug } = req.params;
             const business = await Business.findOne({
-                where: { slug, status: true, website_enabled: true }
+                where: { slug, status: true, website_enabled: true },
+                include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
 
             if (!business) {
@@ -151,7 +157,8 @@ const businessController = {
         try {
             const { id } = req.params;
             const business = await Business.findOne({
-                where: { id, status: true, website_enabled: true }
+                where: { id, status: true, website_enabled: true },
+                include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
 
             if (!business) {
@@ -188,7 +195,10 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ where: whereClause });
+            const row = await Business.findOne({ 
+                where: whereClause,
+                include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
+            });
             if (!row) return res.status(404).json({ success: false, message: "Business not found" });
 
             const { user_id, ...safeBody } = req.body; // prevent overwriting user_id

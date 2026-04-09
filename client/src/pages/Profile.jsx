@@ -3,7 +3,7 @@ import {
     Box, Card, Typography, TextField, Button, Alert, Avatar,
     Divider, InputAdornment, IconButton,
 } from '@mui/material';
-import { Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined } from '@mui/icons-material';
+import { Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined, PhotoCamera } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import { updateUser, getUsers } from '../api/user.api';
 import toast from 'react-hot-toast';
@@ -13,6 +13,7 @@ const Profile = () => {
     const [profileForm, setProfileForm] = useState({
         name: currentUser?.name || '',
         email: currentUser?.email || '',
+        profile_picture: currentUser?.profile_picture || '',
     });
 
     const [passwordForm, setPasswordForm] = useState({
@@ -36,16 +37,60 @@ const Profile = () => {
         try {
             const response = await updateUser(currentUser.id, {
                 name: profileForm.name,
-                email: profileForm.email
+                email: profileForm.email,
+                profile_picture: profileForm.profile_picture
             });
             if (response.success) {
-                const updatedUser = { ...currentUser, name: profileForm.name, email: profileForm.email };
+                const updatedUser = { ...currentUser, name: profileForm.name, email: profileForm.email, profile_picture: profileForm.profile_picture };
                 localStorage.setItem('currentUser', JSON.stringify(updatedUser));
                 toast.success('Profile updated successfully!');
             }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to update profile');
         }
+    };
+
+    const handleImageUpload = (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please upload an image file.');
+            return;
+        }
+
+        const reader = new FileReader();
+        reader.onload = (event) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement('canvas');
+                const MAX_SIZE = 500;
+                let width = img.width;
+                let height = img.height;
+
+                if (width > height) {
+                    if (width > MAX_SIZE) {
+                        height *= MAX_SIZE / width;
+                        width = MAX_SIZE;
+                    }
+                } else {
+                    if (height > MAX_SIZE) {
+                        width *= MAX_SIZE / height;
+                        height = MAX_SIZE;
+                    }
+                }
+
+                canvas.width = width;
+                canvas.height = height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0, width, height);
+
+                const dataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                setProfileForm(prev => ({ ...prev, profile_picture: dataUrl }));
+            };
+            img.src = event.target.result;
+        };
+        reader.readAsDataURL(file);
     };
 
     const handlePasswordChange = async (e) => {
@@ -81,11 +126,22 @@ const Profile = () => {
                 {/* Profile Info Card */}
                 <Card sx={{ p: 4, mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-                        <Avatar
-                            sx={{ width: 76, height: 76, bgcolor: 'primary.main', fontSize: '1.8rem', fontWeight: 700 }}
-                        >
-                            {userInitials}
-                        </Avatar>
+                        <Box sx={{ position: 'relative' }}>
+                            <Avatar
+                                src={profileForm.profile_picture || undefined}
+                                sx={{ width: 86, height: 86, bgcolor: 'primary.main', fontSize: '1.8rem', fontWeight: 700, border: '4px solid white', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' }}
+                            >
+                                {!profileForm.profile_picture && userInitials}
+                            </Avatar>
+                            <IconButton 
+                                component="label" 
+                                size="small" 
+                                sx={{ position: 'absolute', bottom: -5, right: -5, bgcolor: 'white', border: '1px solid #ddd', '&:hover': { bgcolor: '#f0f0f0' } }}
+                            >
+                                <PhotoCamera fontSize="small" sx={{ color: 'text.secondary' }} />
+                                <input hidden accept="image/*" type="file" onChange={handleImageUpload} />
+                            </IconButton>
+                        </Box>
                         <Box>
                             <Typography variant="h5" fontWeight={700}>{currentUser?.name}</Typography>
                             <Typography variant="body2" color="text.secondary">{currentUser?.email}</Typography>

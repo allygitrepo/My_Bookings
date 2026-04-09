@@ -123,7 +123,7 @@ function App() {
                         <Route path="/portal/create-admin" element={<CreateAdmin />} />
                     </Route>
 
-                  <Route path="/:slug" element={<PublicBusinessWebsite />} />
+                  <Route path="/:id" element={<PublicBusinessWebsite />} />
                   <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
               </Router>
