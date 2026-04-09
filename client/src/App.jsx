@@ -21,6 +21,7 @@ import Availability from './pages/Availability';
 import Customers from './pages/Customers';
 import Bookings from './pages/Bookings';
 import Payments from './pages/Payments';
+import Reports from './pages/Reports';
 import ApiKeys from './pages/ApiKeys';
 import WidgetScript from './pages/WidgetScript';
 import LandingPage from './pages/LandingPage';
@@ -89,6 +90,7 @@ function App() {
                     <Route path="/customers" element={<Customers />} />
                     <Route path="/bookings" element={<Bookings />} />
                     <Route path="/payments" element={<Payments />} />
+                    <Route path="/reports" element={<Reports />} />
                     <Route path="/api-keys" element={<ApiKeys />} />
                     <Route path="/widget-script" element={<WidgetScript />} />
                     <Route path="/website-builder" element={<WebsiteGenerator />} />

@@ -25,6 +25,7 @@ import {
     VpnKey as ApiKeysIcon,
     Code as WidgetIcon,
     Language as WebsiteIcon,
+    Assessment as AssessmentIcon,
 } from '@mui/icons-material';
 
 const menuItems = [
@@ -37,6 +38,7 @@ const menuItems = [
     { text: 'Customers', icon: <CustomersIcon />, path: '/customers' },
     { text: 'Bookings', icon: <BookingsIcon />, path: '/bookings' },
     { text: 'Payments', icon: <PaymentsIcon />, path: '/payments' },
+    { text: 'Reports', icon: <AssessmentIcon />, path: '/reports' },
     { text: 'API Keys', icon: <ApiKeysIcon />, path: '/api-keys' },
     { text: 'Widget Script', icon: <WidgetIcon />, path: '/widget-script' },
     { text: 'Website Builder', icon: <WebsiteIcon />, path: '/website-builder' },

@@ -405,6 +405,7 @@ const Bookings = () => {
                             label="Start Date"
                             value={startDate}
                             onChange={(val) => setStartDate(val)}
+                            format="DD/MM/YYYY"
                             slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
                         />
 
@@ -412,6 +413,7 @@ const Bookings = () => {
                             label="End Date"
                             value={endDate}
                             onChange={(val) => setEndDate(val)}
+                            format="DD/MM/YYYY"
                             slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
                         />
 
