@@ -129,7 +129,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         date: '',
         slot: '',
         paidAmount: 0,
-        customer: { name: '', phone: '', email: '' },
+        customer: { name: '', phone: '' },
     });
     const [detailErrors, setDetailErrors] = useState({});
     const [calendarMonth, setCalendarMonth] = useState(() => {
@@ -237,7 +237,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             date: '',
             slot: '',
             paidAmount: 0,
-            customer: { name: '', phone: '', email: '' }
+            customer: { name: '', phone: '' }
         });
     };
 
@@ -332,7 +332,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         try {
             // 1. Find or create customer
             let customerId;
-            const existing = customers.find(c => c.email === bookingData.customer.email);
+            const existing = customers.find(c => c.phone === bookingData.customer.phone);
 
             if (existing) {
                 customerId = existing.id;
@@ -341,7 +341,6 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 const custRes = await createCustomer({
                     business_id: resolvedBusinessId,
                     name: bookingData.customer.name,
-                    email: bookingData.customer.email,
                     phone: bookingData.customer.phone
                 });
                 if (!custRes.success) {
@@ -833,16 +832,13 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             case 4: { // Your Details
                 const validateAndNext = () => {
                     const errs = {};
-                    const { name, phone, email } = bookingData.customer;
+                    const { name, phone } = bookingData.customer;
                     
                     const nameRes = validateName(name);
                     if (nameRes !== true) errs.name = nameRes;
                     
                     const mobileRes = validateMobile(phone);
                     if (mobileRes !== true) errs.phone = mobileRes;
-
-                    const emailRes = validateEmail(email);
-                    if (emailRes !== true) errs.email = emailRes;
 
                     const nameEmoji = blockEmoji(name);
                     if (nameEmoji !== true) errs.name = nameEmoji;
@@ -877,17 +873,6 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         const val = e.target.value.replace(/\D/g, '').slice(0, 10);
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
                                         if (detailErrors.phone) setDetailErrors(p => ({ ...p, phone: undefined }));
-                                    }} />
-                            </Grid>
-                            <Grid item xs={12}>
-                                <TextField fullWidth label="Email Address *" value={bookingData.customer.email}
-                                    error={!!detailErrors.email}
-                                    helperText={detailErrors.email}
-                                    placeholder="e.g. john@example.com"
-                                    onChange={e => {
-                                        const val = e.target.value.trim();
-                                        setBookingData({ ...bookingData, customer: { ...bookingData.customer, email: val } });
-                                        if (detailErrors.email) setDetailErrors(p => ({ ...p, email: undefined }));
                                     }} />
                             </Grid>
                         </Grid>
