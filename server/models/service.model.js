@@ -19,15 +19,18 @@ const Service = sequelize.define(
         },
         duration_minutes: {
             type: DataTypes.DECIMAL,
-            allowNull: true
+            allowNull: true,
+            validate: { min: 0 }
         },
         price: {
             type: DataTypes.DOUBLE,
-            allowNull: true
+            allowNull: true,
+            validate: { min: 0 }
         },
         minimum_booking_charge: {
             type: DataTypes.DOUBLE,
-            allowNull: true
+            allowNull: true,
+            validate: { min: 0 }
         },
         status: {
             type: DataTypes.BOOLEAN,

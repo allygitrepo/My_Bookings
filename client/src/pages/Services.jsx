@@ -426,14 +426,18 @@ const Services = () => {
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}>
                                 <Controller name="duration_minutes" control={control}
+                                    rules={{ 
+                                        required: 'Duration is required',
+                                        min: { value: 1, message: 'Duration must be at least 1 minute' }
+                                    }}
                                     render={({ field }) => (
-                                        <TextField {...field} fullWidth label="Duration (minutes)" type="number" placeholder="30" InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }} />
+                                        <TextField {...field} fullWidth label="Duration (minutes)" type="number" placeholder="30" error={!!errors.duration_minutes} helperText={errors.duration_minutes?.message} inputProps={{ min: 1 }} InputProps={{ endAdornment: <InputAdornment position="end">min</InputAdornment> }} />
                                     )} />
                             </Grid>
                             <Grid item xs={12} md={6}>
-                                <Controller name="price" control={control} rules={{ required: 'Price is required', min: { value: 1, message: 'Price must be > 0' } }}
+                                <Controller name="price" control={control} rules={{ required: 'Price is required', min: { value: 0, message: 'Price cannot be negative' } }}
                                     render={({ field }) => (
-                                        <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                        <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} inputProps={{ min: 0 }} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                     )} />
                             </Grid>
                             <Grid item xs={12}>
@@ -443,12 +447,13 @@ const Services = () => {
                                             const price = parseFloat(watch('price'));
                                             const charge = parseFloat(v);
                                             if (!v || isNaN(charge)) return true;
+                                            if (charge < 0) return 'Booking charge cannot be negative';
                                             if (charge >= price) return 'Booking charge must be less than price';
                                             return true;
                                         }
                                     }}
                                     render={({ field }) => (
-                                        <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
+                                        <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} inputProps={{ min: 0 }} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                     )} />
                             </Grid>
                         </Grid>
