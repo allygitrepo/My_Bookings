@@ -137,11 +137,28 @@ const TemplatePortfolioStudio = ({ data }) => {
                 }} />
 
                 <Container maxWidth="xl" sx={{ zIndex: 2, position: 'relative' }}>
-                    <Grid container spacing={8} alignItems="center" sx={{ minHeight: '80vh' }}>
-
+                    <Grid
+                        container
+                        spacing={{ xs: 6, md: 10 }}
+                        alignItems="center"
+                        justifyContent="space-between"
+                        sx={{
+                            minHeight: '80vh',
+                            maxWidth: '1200px',
+                            mx: 'auto'
+                        }}
+                    >
                         {/* LEFT ── text */}
-                        <Grid item xs={12} md={6}>
-                            <motion.div style={{ y: y1, opacity: opacity1 }}>
+                        <Grid
+                            item
+                            xs={12}
+                            md={6}
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                flexDirection: 'column'
+                            }}
+                        >                            <motion.div style={{ y: y1, opacity: opacity1 }}>
 
                                 <Chip
                                     label={business.business_type || 'Creative Studio'}
@@ -182,8 +199,7 @@ const TemplatePortfolioStudio = ({ data }) => {
                                     color: MUTED,
                                     fontSize: { xs: '1rem', md: '1.2rem' },
                                     lineHeight: 1.6,
-                                    maxWidth: 500,
-                                    mb: 6,
+                                    maxWidth: 460, mb: 6,
                                     fontWeight: 400,
                                     opacity: 0.9
                                 }}>
@@ -223,13 +239,21 @@ const TemplatePortfolioStudio = ({ data }) => {
                         </Grid>
 
                         {/* RIGHT ── image with neon frame */}
-                        <Grid item xs={12} md={6} sx={{ display: 'flex', justifyContent: 'center' }}>
-                            <motion.div
-                                initial={{ opacity: 0, x: 40 }}
-                                animate={{ opacity: 1, x: 0 }}
-                                transition={{ duration: 1, delay: 0.3 }}
-                                style={{ position: 'relative' }}
-                            >
+                        <Grid
+                            item
+                            xs={12}
+                            md={6}
+                            sx={{
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                            }}
+                        >                            <motion.div
+                            initial={{ opacity: 0, x: 40 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ duration: 1, delay: 0.3 }}
+                            style={{ position: 'relative' }}
+                        >
                                 {/* Outer neon frame */}
                                 <Box sx={{
                                     position: 'absolute', inset: -14,
@@ -257,8 +281,8 @@ const TemplatePortfolioStudio = ({ data }) => {
                                         component="img"
                                         src={business.owner.profile_picture}
                                         sx={{
-                                            width: { xs: 270, md: 360, lg: 420 },
-                                            height: { xs: 330, md: 450, lg: 510 },
+                                            width: { xs: 270, md: 400, lg: 480 },
+                                            height: { xs: 330, md: 500, lg: 600 },
                                             objectFit: 'cover',
                                             display: 'block',
                                             position: 'relative', zIndex: 1,
@@ -267,8 +291,8 @@ const TemplatePortfolioStudio = ({ data }) => {
                                     />
                                 ) : (
                                     <Box sx={{
-                                        width: { xs: 270, md: 360, lg: 420 },
-                                        height: { xs: 330, md: 450, lg: 510 },
+                                        width: { xs: 270, md: 400, lg: 480 },
+                                        height: { xs: 330, md: 500, lg: 600 },
                                         bgcolor: BG3,
                                         display: 'flex', alignItems: 'center', justifyContent: 'center',
                                         position: 'relative', zIndex: 1,

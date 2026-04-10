@@ -62,16 +62,16 @@ const TemplatePortfolioGrid = ({ data }) => {
             boxShadow: '0 4px 14px 0 rgba(0,0,0,0.1)',
         },
         hero: {
-            padding: '100px 32px 60px',
+            padding: '60px 32px 30px',
             textAlign: 'center',
-            maxWidth: 800,
+            maxWidth: 1000,
             margin: '0 auto',
         },
         avatarWrapper: {
             position: 'relative',
-            width: 120,
-            height: 120,
-            margin: '0 auto 30px',
+            width: 200,
+            height: 200,
+            margin: '0 auto 20px',
         },
         avatarStatus: {
             position: 'absolute',
@@ -87,17 +87,20 @@ const TemplatePortfolioGrid = ({ data }) => {
             width: '100%',
             height: '100%',
             borderRadius: '50%',
-            background: business.owner?.profile_picture ? `url(${business.owner.profile_picture}) center/cover no-repeat` : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+            background: business.owner?.profile_picture
+                ? `url(${business.owner.profile_picture}) center/cover no-repeat`
+                : 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
             color: '#fff',
-            fontSize: 48,
+            fontSize: 64,
             fontWeight: 700,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            boxShadow: '0 20px 40px -10px rgba(118, 75, 162, 0.4)',
+            boxShadow: '0 30px 60px -15px rgba(0,0,0,0.25)',
+            border: '6px solid white'
         },
         name: {
-            fontSize: 48,
+            fontSize: 52,
             fontWeight: 800,
             letterSpacing: '-1.5px',
             marginBottom: 16,
@@ -109,7 +112,7 @@ const TemplatePortfolioGrid = ({ data }) => {
             fontSize: 18,
             color: '#555',
             lineHeight: 1.6,
-            marginBottom: 32,
+            marginBottom: 20,
             fontWeight: 400
         },
         chipsRow: {
@@ -259,9 +262,7 @@ const TemplatePortfolioGrid = ({ data }) => {
         <div style={styles.root}>
             <motion.nav style={styles.nav} initial={{ y: -100 }} animate={{ y: 0 }} transition={{ duration: 0.5, ease: "easeOut" }}>
                 <div style={styles.navLogo}>{firstName}<span style={{ color: '#667eea' }}>.</span></div>
-                <button style={styles.navBtn} onClick={() => document.getElementById('services-section')?.scrollIntoView({ behavior: 'smooth' })}>
-                    Book Session
-                </button>
+
             </motion.nav>
 
             <div style={styles.hero}>
@@ -286,7 +287,7 @@ const TemplatePortfolioGrid = ({ data }) => {
             <div style={styles.bentoContainer} id="services-section">
                 <div style={styles.grid}>
                     {services.map((service, index) => (
-                        <motion.div 
+                        <motion.div
                             key={service.id}
                             initial={{ opacity: 0, y: 30 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -319,7 +320,7 @@ const TemplatePortfolioGrid = ({ data }) => {
             </div>
 
             <div style={{ padding: '0 32px' }}>
-                <motion.div 
+                <motion.div
                     style={styles.cta}
                     initial={{ opacity: 0, scale: 0.95 }}
                     whileInView={{ opacity: 1, scale: 1 }}
