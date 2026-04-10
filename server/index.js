@@ -1,5 +1,6 @@
 const express = require("express");
 const { connectDB } = require("./config/db");
+const cors = require("cors");
 require("dotenv").config();
 const routes = require("./routes/routes.index");
 const createDefaultAdmin = require("./config/createDefaultAdmin");
@@ -13,6 +14,12 @@ connectDB().then(() => {
 });
 
 // Middlewares
+app.use(cors({
+    origin: true, // Allow all origins by reflecting the requesting origin
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
+}));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
 app.use(express.json({ limit: '2mb' }));
 
