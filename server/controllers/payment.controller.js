@@ -1,6 +1,7 @@
 const Payment = require("../models/payment.model");
 const Booking = require("../models/booking.model");
 const { Op } = require("sequelize");
+const crypto = require("crypto");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
@@ -10,7 +11,11 @@ const getBusinessId = (req) => {
 const paymentController = {
     create: async (req, res) => {
         try {
-            const row = await Payment.create(req.body);
+            const data = { ...req.body };
+            if (!data.transaction_id) {
+                data.transaction_id = 'txn_' + crypto.randomBytes(4).toString('hex');
+            }
+            const row = await Payment.create(data);
             res.status(201).json({ success: true, message: "Payment created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

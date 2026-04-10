@@ -1,7 +1,6 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useBusiness } from '../context/BusinessContext';
-import { getBusinesses } from '../api/business.api';
 import {
     Drawer,
     List,

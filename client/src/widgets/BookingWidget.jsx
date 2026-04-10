@@ -388,7 +388,6 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 amount: totalAmount, // Store the full service price
                 paid_amount: actualPaidAmount, // Store the amount actually paid
                 payment_method: 'UPI/Card',
-                transaction_id: 'txn_' + crypto.randomUUID().split('-')[0],
                 payment_status: true // Use boolean
             };
 

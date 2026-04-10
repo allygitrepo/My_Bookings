@@ -27,26 +27,10 @@ import toast from 'react-hot-toast';
 
 const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
     const { searchQuery, setSearchQuery } = useSearch();
-    const { selectedBusinessId, setSelectedBusinessId } = useBusiness();
-    const [businesses, setBusinesses] = useState([]);
+    const { selectedBusinessId, setSelectedBusinessId, businesses } = useBusiness();
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     const [anchorEl, setAnchorEl] = useState(null);
     const navigate = useNavigate();
-
-    const fetchBusinesses = async () => {
-        try {
-            const response = await getBusinesses();
-            if (response.success) {
-                setBusinesses(response.data);
-            }
-        } catch (error) {
-            console.error('Failed to fetch businesses');
-        }
-    };
-
-    useEffect(() => {
-        fetchBusinesses();
-    }, []);
 
     const handleMenu = (event) => setAnchorEl(event.currentTarget);
     const handleClose = () => setAnchorEl(null);
@@ -141,8 +125,11 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
 
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, cursor: 'pointer' }} onClick={handleMenu}>
-                        <Avatar sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: '0.85rem', fontWeight: 700 }}>
-                            {userInitials}
+                        <Avatar 
+                            src={currentUser?.profile_picture || undefined}
+                            sx={{ width: 34, height: 34, bgcolor: 'primary.main', fontSize: '0.85rem', fontWeight: 700 }}
+                        >
+                            {!currentUser?.profile_picture && userInitials}
                         </Avatar>
                         {currentUser?.name && (
                             <Typography variant="body2" fontWeight={600} sx={{ display: { xs: 'none', sm: 'block' } }}>

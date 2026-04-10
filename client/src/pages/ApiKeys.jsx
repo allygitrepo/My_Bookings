@@ -82,11 +82,7 @@ const ApiKeys = () => {
                     fetchData();
                 }
             } else {
-                const newKeyData = {
-                    business_id: data.business_id,
-                    api_key: 'pk_live_' + crypto.randomUUID().replace(/-/g, ''),
-                };
-                const response = await createApiKey(newKeyData);
+                const response = await createApiKey({ business_id: data.business_id });
                 if (response.success) {
                     toast.success('New API Key generated!');
                     fetchData();

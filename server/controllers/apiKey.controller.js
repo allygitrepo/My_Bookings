@@ -1,4 +1,5 @@
 const ApiKey = require("../models/apiKey.model");
+const crypto = require("crypto");
 
 const getBusinessId = (req) => {
     if (req.body?.business_id) return req.body.business_id;
@@ -11,7 +12,11 @@ const apiKeyController = {
         try {
             const business_id = getBusinessId(req);
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
-            const row = await ApiKey.create({ ...req.body, business_id });
+            
+            // Generate API key on server if not provided (frontend might fail to generate in non-secure contexts)
+            const api_key = req.body.api_key || ('pk_live_' + crypto.randomUUID().replace(/-/g, ''));
+            
+            const row = await ApiKey.create({ ...req.body, api_key, business_id });
             res.status(201).json({ success: true, message: "ApiKey created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

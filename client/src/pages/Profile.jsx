@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box, Card, Typography, TextField, Button, Alert, Avatar,
     Divider, InputAdornment, IconButton,
 } from '@mui/material';
 import { Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined, PhotoCamera } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
-import { updateUser, getUsers } from '../api/user.api';
+import { updateUser, getUserById } from '../api/user.api';
 import toast from 'react-hot-toast';
+import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
 const Profile = () => {
     const currentUser = JSON.parse(localStorage.getItem('currentUser')) || {};
@@ -28,6 +29,29 @@ const Profile = () => {
     const userInitials = currentUser?.name
         ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
         : 'AD';
+
+    useEffect(() => {
+        const fetchUserData = async () => {
+            if (!currentUser.id) return;
+            try {
+                const response = await getUserById(currentUser.id);
+                if (response.success) {
+                    const freshUser = response.data;
+                    setProfileForm({
+                        name: freshUser.name || '',
+                        email: freshUser.email || '',
+                        profile_picture: freshUser.profile_picture || '',
+                    });
+                    // Sync localStorage
+                    const updatedStorageUser = { ...currentUser, ...freshUser };
+                    localStorage.setItem('currentUser', JSON.stringify(updatedStorageUser));
+                }
+            } catch (error) {
+                console.error('Failed to fetch fresh user data:', error);
+            }
+        };
+        fetchUserData();
+    }, []);
 
     const handleProfileSave = async (e) => {
         e.preventDefault();

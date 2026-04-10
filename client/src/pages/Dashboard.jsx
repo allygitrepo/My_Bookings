@@ -54,8 +54,7 @@ const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default'
 
 const Dashboard = () => {
     const { searchQuery } = useSearch();
-    const { isSuspended, suspendedReason } = useBusiness();
-    const [businesses, setBusinesses] = useState([]);
+    const { isSuspended, suspendedReason, businesses: contextBusinesses } = useBusiness();
     const [staff, setStaff] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [services, setServices] = useState([]);
@@ -85,10 +84,9 @@ const Dashboard = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [bizRes, staffRes, bookRes, svcRes, custRes, payRes] = await Promise.all([
-                getBusinesses(), getStaff(), getBookings(), getServices(), getCustomers(), getPayments()
+            const [staffRes, bookRes, svcRes, custRes, payRes] = await Promise.all([
+                getStaff(), getBookings(), getServices(), getCustomers(), getPayments()
             ]);
-            if (bizRes.success) setBusinesses(bizRes.data);
             if (staffRes.success) setStaff(staffRes.data);
             if (bookRes.success) setBookings(bookRes.data);
             if (svcRes.success) setServices(svcRes.data);
@@ -152,7 +150,7 @@ const Dashboard = () => {
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Businesses" value={loading ? '...' : businesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" />
+                    <StatCard title="Total Businesses" value={loading ? '...' : contextBusinesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard title="Total Staff" value={loading ? '...' : staff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" />

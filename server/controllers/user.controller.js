@@ -86,7 +86,7 @@ const userController = {
                 message: "Login successful",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN' }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
                 }
             });
         } catch (err) {
@@ -181,7 +181,7 @@ const userController = {
                 message: "Token refreshed",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN' }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
                 }
             });
         } catch (error) {

@@ -10,6 +10,7 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../api/user.api';
+import { useBusiness } from '../context/BusinessContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../assets/logo.png';
 
@@ -30,6 +31,8 @@ const Login = () => {
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
+    const { refreshBusinesses } = useBusiness();
+
     const handleLogin = async (e) => {
         e.preventDefault();
         setError('');
@@ -41,6 +44,11 @@ const Login = () => {
                 localStorage.setItem('currentUser', JSON.stringify({ ...user, token }));
                 localStorage.setItem('role', user.role);
                 localStorage.setItem('isPortalAdmin', user.isPortalAdmin);
+
+                // Refresh businesses immediately so the context is populated before navigation
+                if (!user.isPortalAdmin) {
+                    await refreshBusinesses();
+                }
 
                 if (response.data.user.isPortalAdmin) {
                     navigate('/portal/dashboard');
