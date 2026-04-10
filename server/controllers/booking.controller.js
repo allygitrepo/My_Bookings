@@ -4,6 +4,7 @@ const Customer = require("../models/customer.model");
 const Service = require("../models/service.model");
 const Staff = require("../models/staff.model");
 const Location = require("../models/location.model");
+const BookingService = require("../models/bookingService.model");
 const { syncBookingToGoogle } = require("../services/googleCalendar.service");
 
 const getBusinessId = (req) => {
@@ -18,7 +19,26 @@ const bookingController = {
             const business_id = getBusinessId(req);
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
             
-            const row = await Booking.create({ ...req.body, business_id });
+            // Extract service_ids from body if present
+            const { service_ids, ...bookingData } = req.body;
+            
+            const row = await Booking.create({ ...bookingData, business_id });
+
+            // Store multiple services if provided
+            if (service_ids && Array.isArray(service_ids) && service_ids.length > 0) {
+                const bookingServices = service_ids.map(service_id => ({
+                    booking_id: row.id,
+                    service_id: service_id
+                }));
+                await BookingService.bulkCreate(bookingServices);
+                console.log(`[BookingController] Stored ${service_ids.length} services for booking ${row.id}`);
+            } else if (req.body.service_id) {
+                // Fallback for single service if service_ids array is not provided
+                await BookingService.create({
+                    booking_id: row.id,
+                    service_id: req.body.service_id
+                });
+            }
             
             /* 
             // Calendar Sync Disabled
@@ -79,8 +99,12 @@ const bookingController = {
 
             const { count, rows } = await Booking.findAndCountAll({
                 where: whereClause,
+                include: [
+                    { model: Service, as: 'services', through: { attributes: [] } }
+                ],
                 limit,
-                offset
+                offset,
+                distinct: true // Required when using limit/offset with include to get correct count
             });
 
             res.json({
@@ -108,7 +132,12 @@ const bookingController = {
                 whereClause.business_id = businesses.map(b => b.id);
             }
 
-            const row = await Booking.findOne({ where: whereClause });
+            const row = await Booking.findOne({ 
+                where: whereClause,
+                include: [
+                    { model: Service, as: 'services', through: { attributes: [] } }
+                ]
+            });
             if (!row) return res.status(404).json({ success: false, message: "Booking not found" });
             res.json({ success: true, message: "Booking fetched successfully", data: row });
         } catch (error) {

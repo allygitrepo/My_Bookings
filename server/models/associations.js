@@ -9,6 +9,7 @@ const User = require("./user.model");
 const Booking = require("./booking.model");
 const Payment = require("./payment.model");
 const Customer = require("./customer.model");
+const BookingService = require("./bookingService.model");
 
 // Staff <-> Business (Many-to-One)
 Staff.belongsTo(Business, { foreignKey: 'business_id' });
@@ -57,7 +58,11 @@ Business.hasMany(Customer, { foreignKey: 'business_id' });
 Booking.belongsTo(Customer, { foreignKey: 'customer_id' });
 Customer.hasMany(Booking, { foreignKey: 'customer_id' });
 
-// Booking <-> Service (Many-to-One)
+// Booking <-> Service (Many-to-Many through BookingService)
+Booking.belongsToMany(Service, { through: BookingService, foreignKey: 'booking_id', as: 'services' });
+Service.belongsToMany(Booking, { through: BookingService, foreignKey: 'service_id' });
+
+// Keep the old relationship for backward compatibility if needed, but the primary one is now the junction
 Booking.belongsTo(Service, { foreignKey: 'service_id' });
 Service.hasMany(Booking, { foreignKey: 'service_id' });
 
@@ -67,5 +72,5 @@ Staff.hasMany(Booking, { foreignKey: 'staff_id' });
 
 module.exports = { 
     Staff, Location, StaffLocation, StaffAvailability, 
-    Business, Service, ServiceLocation, User, Booking, Payment, Customer 
+    Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService
 };

@@ -218,7 +218,22 @@ const Dashboard = () => {
                                         </Box>
                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{staffMember?.staff_name || '—'}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>{service?.service_name || '—'}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>
+                                        {b.services && b.services.length > 0 ? (
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={600}>
+                                                    {b.services.map(s => s.service_name).join(', ')}
+                                                </Typography>
+                                                {b.services.length > 1 && (
+                                                    <Typography variant="caption" color="primary.main" fontWeight={700}>
+                                                        ({b.services.length} services)
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        ) : (
+                                            service?.service_name || '—'
+                                        )}
+                                    </TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
                                     <TableCell>
                                         <Chip
@@ -277,7 +292,12 @@ const Dashboard = () => {
                             <Grid container spacing={1}>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Service</Typography>
-                                    <Typography variant="body2" fontWeight={700}>{service?.service_name || '—'}</Typography>
+                                    <Typography variant="body2" fontWeight={700}>
+                                        {b.services && b.services.length > 0 
+                                            ? b.services.map(s => s.service_name).join(', ')
+                                            : (service?.service_name || '—')
+                                        }
+                                    </Typography>
                                 </Grid>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Staff</Typography>

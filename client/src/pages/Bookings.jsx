@@ -106,7 +106,7 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
                                         {dayBookings.slice(0, 3).map(b => (
-                                            <Tooltip key={b.id} title={`${services.find(s => s.id === b.service_id)?.service_name || 'Service'} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
+                                            <Tooltip key={b.id} title={`${b.services && b.services.length > 0 ? b.services.map(s => s.service_name).join(', ') : (services.find(s => s.id === b.service_id)?.service_name || 'Service')} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
                                                 <Box sx={{
                                                     fontSize: '0.68rem',
                                                     p: 0.7,
@@ -121,7 +121,7 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                                                     borderColor: (b.status === true || b.status === 1) ? 'success.main' : 'error.main',
                                                     opacity: 0.9
                                                 }}>
-                                                    {b.start_time?.slice(0, 5)} {services.find(s => s.id === b.service_id)?.service_name}
+                                                    {b.start_time?.slice(0, 5)} {b.services && b.services.length > 0 ? (b.services.length > 1 ? `${b.services[0].service_name} (+${b.services.length - 1})` : b.services[0].service_name) : services.find(s => s.id === b.service_id)?.service_name}
                                                 </Box>
                                             </Tooltip>
                                         ))}
@@ -508,7 +508,22 @@ const Bookings = () => {
                                                     </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ fontWeight: 500 }}>{service?.service_name || '—'}</TableCell>
+                                            <TableCell sx={{ fontWeight: 500 }}>
+                                                {b.services && b.services.length > 0 ? (
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={700}>
+                                                            {b.services.map(s => s.service_name).join(', ')}
+                                                        </Typography>
+                                                        {b.services.length > 1 && (
+                                                            <Typography variant="caption" color="primary.main" fontWeight={800}>
+                                                                {b.services.length} services selected
+                                                            </Typography>
+                                                        )}
+                                                    </Box>
+                                                ) : (
+                                                    service?.service_name || '—'
+                                                )}
+                                            </TableCell>
                                             <TableCell sx={{ fontWeight: 500 }}>{staffMember?.staff_name || '—'}</TableCell>
                                             <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
                                             <TableCell sx={{ whiteSpace: 'nowrap', fontWeight: 500 }}>{String(b.start_time || '').slice(0, 5)}{b.end_time ? ` – ${String(b.end_time).slice(0, 5)}` : ''}</TableCell>
@@ -562,7 +577,12 @@ const Bookings = () => {
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
                                         <Grid item xs={6}>
                                             <Typography variant="caption" color="text.secondary" display="block">Service</Typography>
-                                            <Typography variant="body2" fontWeight={700}>{service?.service_name || '—'}</Typography>
+                                            <Typography variant="body2" fontWeight={700}>
+                                                {b.services && b.services.length > 0 
+                                                    ? b.services.map(s => s.service_name).join(', ')
+                                                    : (service?.service_name || '—')
+                                                }
+                                            </Typography>
                                         </Grid>
                                         <Grid item xs={6}>
                                             <Typography variant="caption" color="text.secondary" display="block">Staff</Typography>

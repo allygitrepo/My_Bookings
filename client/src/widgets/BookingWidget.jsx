@@ -361,6 +361,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 location_id: bookingData.location.id,
                 staff_id: bookingData.staff.id,
                 service_id: bookingData.services[0].id, // Store first service as primary
+                service_ids: bookingData.services.map(s => s.id), // Store all selected services
                 customer_id: customerId,
                 booking_date: bookingData.date,
                 start_time: bookingData.slot,
