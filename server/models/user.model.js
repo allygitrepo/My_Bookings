@@ -41,6 +41,19 @@ const Users = sequelize.define(
         profile_picture: {
             type: DataTypes.TEXT('long'),
             allowNull: true
+        },
+        google_id: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true
+        },
+        avatar: {
+            type: DataTypes.TEXT,
+            allowNull: true
+        },
+        auth_provider: {
+            type: DataTypes.ENUM('local', 'google'),
+            defaultValue: 'local'
         }
     },
     {

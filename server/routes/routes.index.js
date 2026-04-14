@@ -12,6 +12,7 @@ const apiKeyRoutes = require("./apiKey.routes");
 const serviceLocationRoutes = require("./serviceLocation.routes");
 const googleAuthRoutes = require("./googleAuth.routes");
 const portalRoutes = require("./portal.routes");
+const authRoutes = require("./auth.routes");
 
 const preventDuplicate = require("../middleware/preventDuplicate.middleware");
 
@@ -35,6 +36,9 @@ const routes = (app) => {
     app.use(`${prefix}/service-locations`, serviceLocationRoutes);
     app.use(`${prefix}/google`, googleAuthRoutes);
     app.use(`${prefix}/portal`, portalRoutes);
+    
+    // Auth routes
+    app.use(`${prefix}/auth`, authRoutes);
 };
 
 module.exports = routes;

@@ -41,7 +41,7 @@ import PortalBookings from './pages/portal/PortalBookings';
 import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
 
-const GOOGLE_CLIENT_ID = "518219129243-ffkdl9t99oqrofkfm5l4o3nvnvmolvd4.apps.googleusercontent.com";
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function App() {
   // Auto-refresh JWT when user is logged in but business_id is missing.

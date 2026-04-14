@@ -10,9 +10,11 @@ import {
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../api/user.api';
+import { googleLogin } from '../services/authService';
 import { useBusiness } from '../context/BusinessContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../assets/logo.png';
+import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 const FEATURES = [
     { icon: <BusinessIcon sx={{ fontSize: 20 }} />, text: 'Multi-business management' },
@@ -32,6 +34,34 @@ const Login = () => {
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const { refreshBusinesses } = useBusiness();
+
+    const handleGoogleLogin = async (googleUser) => {
+        setError('');
+        setLoading(true);
+        try {
+            const response = await googleLogin(googleUser);
+            if (response.success) {
+                const { user } = response;
+                
+                // Refresh businesses immediately
+                if (!user.isPortalAdmin) {
+                    await refreshBusinesses();
+                }
+
+                if (user.isPortalAdmin) {
+                    navigate('/portal/dashboard');
+                } else {
+                    navigate('/dashboard');
+                }
+            } else {
+                setError(response.message || 'Google Login failed');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || err.message || 'Google authentication failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const handleLogin = async (e) => {
         e.preventDefault();
@@ -313,6 +343,16 @@ const Login = () => {
                             >
                                 {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Sign In'}
                             </Button>
+
+                            {/* Google Login */}
+                            <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}>
+                                <Typography variant="body2" color="text.secondary" sx={{ position: 'relative', width: '100%', textAlign: 'center', '&::before, &::after': { content: '""', position: 'absolute', top: '50%', width: '30%', height: '1px', bgcolor: '#e5e7eb' }, '&::before': { left: 0 }, '&::after': { right: 0 } }}>
+                                    Or
+                                </Typography>
+                                <Box sx={{ width: '100%', display: 'flex', justifyContent: 'center' }}>
+                                    <GoogleLoginButton onSuccess={handleGoogleLogin} />
+                                </Box>
+                            </Box>
                         </Box>
                     </form>
 

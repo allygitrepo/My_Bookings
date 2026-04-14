@@ -7,6 +7,11 @@ export default defineConfig(({ mode }) => {
 
   return {
     plugins: [react()],
+    resolve: {
+      alias: {
+        '@': '/src',
+      },
+    },
     server: {
       cors: true,
       origin: 'http://localhost:5173',
