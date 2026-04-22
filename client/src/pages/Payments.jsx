@@ -30,7 +30,7 @@ const Payments = () => {
     }, [searchQuery, selectedBusinessId]);
 
     const filteredPayments = payments.filter(p => {
-        const matchesBusiness = selectedBusinessId === 'all' || p.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(p.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         return p.amount?.toString().includes(searchQuery) ||

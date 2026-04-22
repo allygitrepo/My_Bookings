@@ -49,7 +49,7 @@ const Services = () => {
     }, [searchQuery, selectedBusinessId]);
 
     const filteredServices = servicesList.filter(svc => {
-        const matchesBusiness = selectedBusinessId === 'all' || svc.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(svc.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         return svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -87,8 +87,8 @@ const Services = () => {
     const watchedBusinessId = watch('business_id');
 
     // Filter data based on form selection
-    const availableLocations = locations.filter(l => !watchedBusinessId || l.business_id === watchedBusinessId);
-    const availableStaff = staff.filter(s => !watchedBusinessId || s.business_id === watchedBusinessId);
+    const availableLocations = locations.filter(l => !watchedBusinessId || String(l.business_id) === String(watchedBusinessId));
+    const availableStaff = staff.filter(s => !watchedBusinessId || String(s.business_id) === String(watchedBusinessId));
 
     // Reset assignments if business changes in form
     useEffect(() => {

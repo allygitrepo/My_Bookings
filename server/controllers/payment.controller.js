@@ -2,6 +2,7 @@ const Payment = require("../models/payment.model");
 const Booking = require("../models/booking.model");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
+const razorpayService = require("../services/razorpay.service");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
@@ -14,6 +15,10 @@ const paymentController = {
             const data = { ...req.body };
             if (!data.transaction_id) {
                 data.transaction_id = 'txn_' + crypto.randomBytes(4).toString('hex');
+            }
+            const booking = await Booking.findByPk(data.booking_id);
+            if (!data.business_id && booking) {
+                data.business_id = booking.business_id;
             }
             const row = await Payment.create(data);
             res.status(201).json({ success: true, message: "Payment created successfully", data: row });
@@ -37,7 +42,7 @@ const paymentController = {
                 const Business = require("../models/business.model");
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 const businessIds = businesses.map(b => b.id);
-                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+                whereClause.business_id = { [Op.in]: businessIds.length > 0 ? businessIds : [-1] };
             } else {
                 whereClause.business_id = -1;
             }
@@ -111,6 +116,77 @@ const paymentController = {
             if (!row) return res.status(404).json({ success: false, message: "Payment not found" });
             await row.update({ status: false });
             res.json({ success: true, message: "Payment deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    // --- Razorpay Integration ---
+
+    createRazorpayOrder: async (req, res) => {
+        try {
+            const { amount, booking_id, business_id } = req.body;
+            if (!amount || !booking_id) {
+                return res.status(400).json({ success: false, message: "Amount and Booking ID are required" });
+            }
+
+            const order = await razorpayService.createOrder(amount, booking_id, {
+                booking_id: String(booking_id),
+                business_id: String(business_id || '')
+            });
+
+            res.json({ success: true, order });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    verifyRazorpayPayment: async (req, res) => {
+        try {
+            const { 
+                razorpay_order_id, 
+                razorpay_payment_id, 
+                razorpay_signature,
+                booking_id,
+                amount,
+                paid_amount
+            } = req.body;
+
+            const isVerified = razorpayService.verifySignature(
+                razorpay_order_id,
+                razorpay_payment_id,
+                razorpay_signature
+            );
+
+            if (!isVerified) {
+                return res.status(400).json({ success: false, message: "Invalid payment signature" });
+            }
+
+            // Fetch booking to get business_id
+            const booking = await Booking.findByPk(booking_id);
+            if (!booking) {
+                return res.status(404).json({ success: false, message: "Booking not found" });
+            }
+
+            // Create payment record
+            const paymentRecord = await Payment.create({
+                booking_id: booking_id,
+                business_id: booking.business_id,
+                amount: amount,
+                paid_amount: paid_amount || amount,
+                payment_method: 'Razorpay',
+                transaction_id: razorpay_payment_id,
+                payment_status: true
+            });
+
+            // Update booking status
+            await booking.update({ payment_status: true });
+
+            res.json({ 
+                success: true, 
+                message: "Payment verified and recorded successfully", 
+                data: paymentRecord 
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

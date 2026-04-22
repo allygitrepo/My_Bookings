@@ -69,6 +69,9 @@ const Dashboard = () => {
     }, [searchQuery]);
 
     const filteredDashboardBookings = bookings.filter(b => {
+        const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);
+        if (!matchesBusiness) return false;
+
         const customer = customers.find(c => c.id === b.customer_id);
         const staffMember = staff.find(s => s.id === b.staff_id);
         const service = services.find(s => s.id === b.service_id);
@@ -80,6 +83,9 @@ const Dashboard = () => {
             b.booking_date?.toLowerCase().includes(q)
         );
     });
+
+    const filteredStaff = staff.filter(s => selectedBusinessId === 'all' || String(s.business_id) === String(selectedBusinessId));
+    const filteredPayments = payments.filter(p => selectedBusinessId === 'all' || String(p.business_id) === String(selectedBusinessId));
 
     const fetchData = async () => {
         setLoading(true);
@@ -103,7 +109,7 @@ const Dashboard = () => {
         fetchData();
     }, []);
 
-    const totalRevenue = payments
+    const totalRevenue = filteredPayments
         .filter(p => p.payment_status === true || p.payment_status === 1)
         .reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
 
@@ -153,10 +159,10 @@ const Dashboard = () => {
                     <StatCard title="Total Businesses" value={loading ? '...' : contextBusinesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Staff" value={loading ? '...' : staff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" />
+                    <StatCard title="Total Staff" value={loading ? '...' : filteredStaff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Bookings" value={loading ? '...' : bookings.length} icon={<BookingsIcon sx={{ fontSize: 26 }} />} color="#10b981" />
+                    <StatCard title="Total Bookings" value={loading ? '...' : filteredDashboardBookings.length} icon={<BookingsIcon sx={{ fontSize: 26 }} />} color="#10b981" />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
                     <StatCard title="Total Payments" value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`} icon={<RevenueIcon sx={{ fontSize: 26 }} />} color="#f59e0b" />

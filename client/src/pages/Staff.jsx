@@ -102,7 +102,7 @@ const Staff = () => {
     }, [searchQuery, selectedBusinessId]);
 
     const filteredStaff = staffList.filter(s => {
-        const matchesBusiness = selectedBusinessId === 'all' || s.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(s.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         const matchesSearch = s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||

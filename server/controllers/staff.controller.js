@@ -1,5 +1,6 @@
 const { Staff, Location, Business } = require("../models/associations");
 const StaffLocation = require("../models/staffLocation.model");
+const { Op } = require("sequelize");
 
 // Returns business_id for the current requester. Returns -1 if unknown (prevents leak).
 const getBusinessId = (req) => {
@@ -50,7 +51,7 @@ const staffController = {
                 // Fetch all businesses owned by this user
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 const businessIds = businesses.map(b => b.id);
-                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+                whereClause.business_id = { [Op.in]: businessIds.length > 0 ? businessIds : [-1] };
             } else {
                 whereClause.business_id = -1;
             }

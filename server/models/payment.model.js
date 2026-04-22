@@ -13,6 +13,10 @@ const Payment = sequelize.define(
             type: DataTypes.BIGINT,
             allowNull: false
         },
+        business_id: {
+            type: DataTypes.BIGINT,
+            allowNull: false
+        },
         amount: {
             type: DataTypes.DOUBLE,
             allowNull: false

@@ -19,3 +19,13 @@ export const deletePayment = async (id) => {
     const response = await axiosInstance.delete(`/payments/delete/${id}`);
     return response.data;
 };
+
+export const createRazorpayOrder = async (data) => {
+    const response = await axiosInstance.post('/payments/razorpay/order', data);
+    return response.data;
+};
+
+export const verifyRazorpayPayment = async (data) => {
+    const response = await axiosInstance.post('/payments/razorpay/verify', data);
+    return response.data;
+};

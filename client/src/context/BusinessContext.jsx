@@ -44,6 +44,17 @@ export const BusinessProvider = ({ children }) => {
         localStorage.setItem('selectedBusinessId', selectedBusinessId);
     }, [selectedBusinessId]);
 
+    // Reset selectedBusinessId if it's no longer valid for the current user
+    useEffect(() => {
+        if (!loading && businesses.length > 0 && selectedBusinessId !== 'all') {
+            const exists = businesses.some(b => String(b.id) === String(selectedBusinessId));
+            if (!exists) {
+                console.log('BusinessContext: Resetting invalid selectedBusinessId to "all"');
+                setSelectedBusinessId('all');
+            }
+        }
+    }, [businesses, loading, selectedBusinessId]);
+
     return (
         <BusinessContext.Provider value={{ 
             businesses, 

@@ -6,6 +6,7 @@ const Staff = require("../models/staff.model");
 const Location = require("../models/location.model");
 const BookingService = require("../models/bookingService.model");
 const { syncBookingToGoogle } = require("../services/googleCalendar.service");
+const { Op } = require("sequelize");
 
 const getBusinessId = (req) => {
     if (req.body?.business_id) return req.body.business_id;
@@ -92,7 +93,7 @@ const bookingController = {
                 // Fetch all businesses owned by this user
                 const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
                 const businessIds = businesses.map(b => b.id);
-                whereClause.business_id = businessIds.length > 0 ? businessIds : -1;
+                whereClause.business_id = { [Op.in]: businessIds.length > 0 ? businessIds : [-1] };
             } else {
                 whereClause.business_id = -1;
             }

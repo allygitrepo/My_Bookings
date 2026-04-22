@@ -33,6 +33,22 @@ const Business = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true
         },
+        account_holder_name: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        account_number: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        ifsc_code: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        bank_name: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
         sync_email: {
             type: DataTypes.STRING,
             allowNull: true

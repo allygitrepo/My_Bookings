@@ -46,7 +46,7 @@ const Locations = () => {
     }, [searchQuery]);
 
     const filteredLocations = locations.filter(loc => {
-        const matchesBusiness = selectedBusinessId === 'all' || loc.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(loc.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         const bizName = businesses.find(b => b.id === loc.business_id)?.business_name || '';

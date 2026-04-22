@@ -81,6 +81,10 @@ const Businesses = () => {
             city: '',
             state: '',
             meeting_link: '',
+            account_holder_name: '',
+            account_number: '',
+            ifsc_code: '',
+            bank_name: '',
         },
     });
 
@@ -104,6 +108,10 @@ const Businesses = () => {
             city: biz.city || '',
             state: biz.state || '',
             meeting_link: biz.meeting_link || '',
+            account_holder_name: biz.account_holder_name || '',
+            account_number: biz.account_number || '',
+            ifsc_code: biz.ifsc_code || '',
+            bank_name: biz.bank_name || '',
         } : {
             business_name: '',
             business_type: '',
@@ -117,6 +125,10 @@ const Businesses = () => {
             city: '',
             state: '',
             meeting_link: '',
+            account_holder_name: '',
+            account_number: '',
+            ifsc_code: '',
+            bank_name: '',
         });
         setOpen(true);
     };
@@ -423,6 +435,40 @@ const Businesses = () => {
                             )} />
                     </Box>
                 </FieldSection>
+                <Divider sx={{ my: 2.5 }} />
+                
+                <FieldSection label="Payout Details (Optional)">
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                        Provide your bank details to receive payments from bookings. These are handled via our central Razorpay account.
+                    </Typography>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
+                        <Controller name="account_holder_name" control={control}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Account Holder Name" placeholder="Full name as per bank" />
+                            )} />
+                        
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} sm={6}>
+                                <Controller name="account_number" control={control}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Account Number" placeholder="1234567890" />
+                                    )} />
+                            </Grid>
+                            <Grid item xs={12} sm={6}>
+                                <Controller name="ifsc_code" control={control}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="IFSC Code" placeholder="SBIN0001234" />
+                                    )} />
+                            </Grid>
+                        </Grid>
+
+                        <Controller name="bank_name" control={control}
+                            render={({ field }) => (
+                                <TextField {...field} fullWidth label="Bank Name" placeholder="State Bank of India" />
+                            )} />
+                    </Box>
+                </FieldSection>
+
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Location Structure">

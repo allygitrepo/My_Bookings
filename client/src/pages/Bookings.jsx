@@ -233,7 +233,7 @@ const Bookings = () => {
         return (a.start_time || "").localeCompare(b.start_time || "");
     }).filter(b => {
         // Business Filter
-        const matchesBusiness = selectedBusinessId === 'all' || b.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         const customer = customers.find(c => c.id === b.customer_id);

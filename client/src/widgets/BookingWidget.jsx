@@ -22,7 +22,7 @@ import { getStaffAvailability } from '../api/staffAvailability.api';
 import { getCustomers, createCustomer } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
 import { getBookings, createBooking } from '../api/booking.api';
-import { createPayment } from '../api/payment.api';
+import { createPayment, createRazorpayOrder, verifyRazorpayPayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
 import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
@@ -94,6 +94,16 @@ const getDayNameDisplay = (dateStr) => {
 };
 
 console.log('Booking Widget Version: 2.1 (Robust Day Matching)');
+
+const loadRazorpayScript = () => {
+    return new Promise((resolve) => {
+        const script = document.createElement('script');
+        script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+        script.onload = () => resolve(true);
+        script.onerror = () => resolve(false);
+        document.body.appendChild(script);
+    });
+};
 
 const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false }) => {
     const [services, setServices] = useState([]);
@@ -353,57 +363,96 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 customerId = custRes.data.id;
             }
 
-            // 2. Create booking
+            // 2. Create booking (initially payment_status: false)
             const endTime = addMinutes(bookingData.slot, bookingDuration);
-
             const bookingPayload = {
                 business_id: bookingData.services[0].business_id,
                 location_id: bookingData.location.id,
                 staff_id: bookingData.staff.id,
-                service_id: bookingData.services[0].id, // Store first service as primary
-                service_ids: bookingData.services.map(s => s.id), // Store all selected services
+                service_id: bookingData.services[0].id,
+                service_ids: bookingData.services.map(s => s.id),
                 customer_id: customerId,
                 booking_date: bookingData.date,
                 start_time: bookingData.slot,
                 end_time: endTime,
-                payment_status: true,
+                payment_status: false,
                 status: true
             };
 
-            console.log('Widget: Creating booking with payload:', bookingPayload);
             const bookingRes = await createBooking(bookingPayload);
-
-            if (!bookingRes.success) {
-                console.error('Widget: Booking creation failed:', bookingRes.message);
-                throw new Error(bookingRes.message);
-            }
+            if (!bookingRes.success) throw new Error(bookingRes.message);
             const bookingId = bookingRes.data.id;
 
-            // 3. Create payment
+            // 3. Razorpay Order Creation
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
             const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
-            const actualPaidAmount = bookingData.paidAmount || minAmountToPay;
+            const amountToPayNow = bookingData.paidAmount || minAmountToPay;
 
-            const paymentPayload = {
+            const orderRes = await createRazorpayOrder({
+                amount: amountToPayNow,
                 booking_id: bookingId,
-                amount: totalAmount, // Store the full service price
-                paid_amount: actualPaidAmount, // Store the amount actually paid
-                payment_method: 'UPI/Card',
-                payment_status: true // Use boolean
-            };
+                business_id: resolvedBusinessId
+            });
 
-            console.log('Widget: Creating payment with payload:', paymentPayload);
-            const payRes = await createPayment(paymentPayload);
+            if (!orderRes.success) throw new Error(orderRes.message);
 
-            if (!payRes.success) {
-                console.error('Widget: Payment creation failed:', payRes.message);
-                throw new Error(payRes.message);
+            // 4. Load SDK and Open Checkout
+            const isLoaded = await loadRazorpayScript();
+            if (!isLoaded) {
+                toast.error("Razorpay SDK failed to load. Are you online?");
+                setLoading(false);
+                return;
             }
 
-            handleNext();
+            const biz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Use the client key from env
+                amount: orderRes.order.amount,
+                currency: orderRes.order.currency,
+                name: biz?.business_name || "My Bookings",
+                description: `Booking for ${bookingData.services.map(s => s.service_name).join(', ')} ${biz?.upi_id ? `(UPI: ${biz.upi_id})` : ''}`,
+                order_id: orderRes.order.id,
+                handler: async (response) => {
+                    try {
+                        setLoading(true);
+                        // Verify payment on backend
+                        const verifyRes = await verifyRazorpayPayment({
+                            razorpay_order_id: response.razorpay_order_id,
+                            razorpay_payment_id: response.razorpay_payment_id,
+                            razorpay_signature: response.razorpay_signature,
+                            booking_id: bookingId,
+                            amount: totalAmount,
+                            paid_amount: amountToPayNow
+                        });
+
+                        if (verifyRes.success) {
+                            handleNext(); // Move to success step
+                        } else {
+                            throw new Error(verifyRes.message);
+                        }
+                    } catch (err) {
+                        toast.error(err.message || "Payment verification failed");
+                    } finally {
+                        setLoading(false);
+                    }
+                },
+                prefill: {
+                    name: bookingData.customer.name,
+                    contact: bookingData.customer.phone
+                },
+                theme: { color: "#6366f1" },
+                modal: {
+                    ondismiss: () => {
+                        setLoading(false);
+                    }
+                }
+            };
+
+            const rzp = new window.Razorpay(options);
+            rzp.open();
+
         } catch (error) {
             toast.error(error.message || 'Booking failed');
-        } finally {
             setLoading(false);
         }
     };
@@ -932,6 +981,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 <Typography variant="body2" color="primary.main" fontWeight={600}>Min. to Pay Now</Typography>
                                 <Typography variant="body2" fontWeight={700} color="primary.main">₹{minAmountToPay}</Typography>
                             </Box>
+                            {businesses.find(b => String(b.id) === String(resolvedBusinessId))?.upi_id && (
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
+                                    <Typography variant="caption" color="text.secondary">Linked UPI</Typography>
+                                    <Typography variant="caption" fontWeight={700} color="text.secondary">{businesses.find(b => String(b.id) === String(resolvedBusinessId))?.upi_id}</Typography>
+                                </Box>
+                            )}
                         </Card>
 
                         <Box sx={{ mb: 3 }}>
@@ -964,28 +1019,14 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             />
                         </Box>
 
-                        {(() => {
-                            const bizIdToLookup = resolvedBusinessId || bookingData.services[0]?.business_id;
-                            const biz = businesses.find(b => String(b.id) === String(bizIdToLookup));
-                            const amountToPay = bookingData.paidAmount || minAmountToPay;
-                            if (biz?.upi_id) {
-                                const upiUri = `upi://pay?pa=${biz.upi_id}&pn=${encodeURIComponent(biz.business_name)}&am=${amountToPay}&cu=INR`;
-                                const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(upiUri)}`;
-                                return (
-                                    <Box sx={{ textAlign: 'center', mb: 3 }}>
-                                        <Typography variant="subtitle2" fontWeight={600} gutterBottom>Scan to Pay ₹{amountToPay}</Typography>
-                                        <Box sx={{ p: 2, bgcolor: 'white', display: 'inline-block', borderRadius: 3, boxShadow: 1, mb: 1.5 }}>
-                                            <img src={qrUrl} alt="UPI QR Code" style={{ width: 140, height: 140, display: 'block' }} />
-                                        </Box>
-                                    </Box>
-                                );
-                            }
-                            return (
-                                <Box sx={{ py: 2, textAlign: 'center', bgcolor: 'rgba(239,68,68,0.05)', borderRadius: 2, mb: 2 }}>
-                                    <Typography variant="caption" color="error">Business UPI ID not configured.</Typography>
-                                </Box>
-                            );
-                        })()}
+                        <Box sx={{ textAlign: 'center', mb: 3, p: 2, bgcolor: 'rgba(99,102,241,0.05)', borderRadius: 3 }}>
+                            <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
+                                <SuccessIcon sx={{ fontSize: 14 }} /> Secure Payment via Razorpay
+                            </Typography>
+                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
+                                Supports UPI, Cards, and Netbanking
+                            </Typography>
+                        </Box>
 
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
                             onClick={handleConfirmBooking}

@@ -24,7 +24,7 @@ const Customers = () => {
     }, [searchQuery, selectedBusinessId]);
 
     const filteredCustomers = customers.filter(c => {
-        const matchesBusiness = selectedBusinessId === 'all' || c.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(c.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
         return c.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
