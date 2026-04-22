@@ -1058,9 +1058,14 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Date</Typography><Typography variant="body2">{formatDate(bookingData.date)}</Typography></Box>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
                                     <Typography variant="body2" color="text.secondary">Time</Typography>
-                                    <Typography variant="body2"><strong>{formatSlotLabel(bookingData.slot, bookingDuration)}</strong></Typography>
+                                    <Typography variant="body2">
+                                        <strong>{bookingData.slots?.length > 0 ? formatSlotLabel(bookingData.slots.sort()[0], bookingData.slots.length * slotStepMin) : '—'}</strong>
+                                    </Typography>
                                 </Box>
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}><Typography variant="body2" color="text.secondary">Total Duration</Typography><Typography variant="body2">{bookingDuration} min</Typography></Box>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
+                                    <Typography variant="body2" color="text.secondary">Total Duration</Typography>
+                                    <Typography variant="body2">{bookingData.slots?.length * slotStepMin} min</Typography>
+                                </Box>
                             </Box>
                             <Divider sx={{ my: 1.5 }} />
                             <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
