@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Fab, Dialog, DialogContent, Box, Typography, IconButton, Button,
     Card, Grid, TextField, List, ListItem, ListItemButton,
-    Avatar, Divider, LinearProgress,
+    Avatar, Divider, LinearProgress, Chip,
 } from '@mui/material';
 import {
     Event as BookIcon, Close as CloseIcon, ArrowBack as BackIcon,
@@ -103,6 +103,14 @@ const loadRazorpayScript = () => {
         script.onerror = () => resolve(false);
         document.body.appendChild(script);
     });
+};
+
+const formatDuration = (mins) => {
+    if (!mins) return '0 min';
+    if (mins < 60) return `${mins} min`;
+    const h = Math.floor(mins / 60);
+    const m = mins % 60;
+    return m > 0 ? `${h} hr ${m} min` : `${h === 1 ? '1 hr' : `${h} hrs`}`;
 };
 
 const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false }) => {
@@ -248,7 +256,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             services: [],
             staff: null,
             date: '',
-            slot: '',
+            slots: [], // Changed from slot to slots array
             paidAmount: 0,
             customer: { name: '', phone: '' }
         });
@@ -269,11 +277,9 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     const totalDuration = bookingData.services.reduce((acc, s) => acc + (Number(s.duration_minutes) || 0), 0);
     // Time slots use staff's slot_duration_minutes as the "step" for availability
     const slotStepMin = Number(bookingData.staff?.slot_duration_minutes) || 30;
-    
-    // User wants the booking duration to match the staff's slot setting (dynamic)
-    const bookingDuration = bookingData.services.length > 0 
-        ? slotStepMin * bookingData.services.length 
-        : slotStepMin;
+
+    // Final booking duration is the sum of service durations, or staff slot step if no services selected
+    const bookingDuration = totalDuration > 0 ? totalDuration : slotStepMin;
 
     const matchingRecs = (() => {
         if (!bookingData.staff || !bookingData.date) return [];
@@ -303,9 +309,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     const availableSlots = (() => {
         if (matchingRecs.length === 0) return [];
         const all = [];
-        matchingRecs.forEach(r => { // Changed recs.forEach to matchingRecs.forEach
+        matchingRecs.forEach(r => { 
             console.log(` - Record ${r.id}: ${r.start_time} - ${r.end_time}`);
-            generateSlots(r.start_time, r.end_time, slotStepMin, bookingDuration).forEach(s => all.push(s));
+            // Generate all possible base slots (stepMin duration each)
+            generateSlots(r.start_time, r.end_time, slotStepMin, slotStepMin).forEach(s => all.push(s));
         });
 
         const uniqueSlots = [...new Set(all)].sort();
@@ -321,7 +328,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
 
             const slotStart = slot;
-            const slotEnd = addMinutes(slot, bookingDuration);
+            const slotEnd = addMinutes(slot, slotStepMin);
 
             const isAlreadyBooked = bookings.some(b => {
                 if (String(b.staff_id) !== String(bookingData.staff.id)) return false;
@@ -338,6 +345,39 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             });
             return !isAlreadyBooked;
         });
+    })();
+
+    // Helper to handle slot selection
+    const handleSlotClick = (slot) => {
+        const currentSlots = [...(bookingData.slots || [])];
+        const index = currentSlots.indexOf(slot);
+
+        if (index > -1) {
+            // Deselect: Remove from array
+            currentSlots.splice(index, 1);
+        } else {
+            // Select: Only allow if not already fulfilled
+            if (currentSlots.length * slotStepMin >= totalDuration) {
+                toast.error(`Required duration of ${formatDuration(totalDuration)} already fulfilled.`);
+                return;
+            }
+            currentSlots.push(slot);
+        }
+        
+        setBookingData({ ...bookingData, slots: currentSlots.sort() });
+    };
+
+    const selectedDuration = (bookingData.slots?.length || 0) * slotStepMin;
+    const isDurationMet = selectedDuration >= totalDuration;
+
+    // Check if selected slots are consecutive
+    const areSlotsConsecutive = (() => {
+        if (!bookingData.slots || bookingData.slots.length <= 1) return true;
+        const sorted = [...bookingData.slots].sort();
+        for (let i = 0; i < sorted.length - 1; i++) {
+            if (addMinutes(sorted[i], slotStepMin) !== sorted[i + 1]) return false;
+        }
+        return true;
     })();
 
     const handleConfirmBooking = async () => {
@@ -364,17 +404,19 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
 
             // 2. Create booking (initially payment_status: false)
-            const endTime = addMinutes(bookingData.slot, bookingDuration);
+            const startSlot = [...bookingData.slots].sort()[0];
+            const finalDuration = bookingData.slots.length * slotStepMin;
+
             const bookingPayload = {
-                business_id: bookingData.services[0].business_id,
+                business_id: resolvedBusinessId,
                 location_id: bookingData.location.id,
                 staff_id: bookingData.staff.id,
-                service_id: bookingData.services[0].id,
+                service_id: bookingData.services[0].id, // Primary service for DB constraint
                 service_ids: bookingData.services.map(s => s.id),
                 customer_id: customerId,
                 booking_date: bookingData.date,
-                start_time: bookingData.slot,
-                end_time: endTime,
+                start_time: startSlot,
+                end_time: addMinutes(startSlot, finalDuration),
                 payment_status: false,
                 status: true
             };
@@ -484,8 +526,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             // Reconstruct a booking-like object for the formatter
             const bookingProxy = {
                 booking_date: bookingData.date,
-                start_time: bookingData.slot,
-                end_time: addMinutes(bookingData.slot, totalDuration),
+                start_time: bookingData.slots.sort()[0],
+                end_time: addMinutes(bookingData.slots.sort()[0], bookingData.slots.length * slotStepMin),
                 id: 'New Booking'
             };
 
@@ -523,7 +565,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     */
     const isSyncing = false;
     const isSynced = false;
-    const handleGoogleSync = () => {};
+    const handleGoogleSync = () => { };
 
     const renderStep = () => {
         switch (activeStep) {
@@ -547,7 +589,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 {locations.map(loc => (
                                     <Box key={loc.id}
                                         onClick={() => {
-                                            setBookingData({ ...bookingData, location: loc, services: [], staff: null, slot: '' });
+                                            setBookingData({ ...bookingData, location: loc, services: [], staff: null, slots: [] });
                                             handleNext();
                                         }}
                                         sx={{
@@ -596,7 +638,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                             const newServices = isSelected
                                                 ? bookingData.services.filter(s => s.id !== service.id)
                                                 : [...bookingData.services, service];
-                                            setBookingData({ ...bookingData, services: newServices, staff: null, slot: '' });
+                                            setBookingData({ ...bookingData, services: newServices, staff: null, slots: [] });
                                         }}
                                         sx={{
                                             p: 2, borderRadius: 3, cursor: 'pointer',
@@ -635,21 +677,35 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 );
                             })}
                         </Box>
-                        <Button
-                            fullWidth
-                            variant="contained"
-                            disabled={bookingData.services.length === 0}
-                            onClick={handleNext}
-                            sx={{
-                                borderRadius: 2.5, fontWeight: 700, py: 1.3,
-                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                                boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
-                                '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
-                                '&:disabled': { background: '#f1f5f9', color: '#94a3b8', boxShadow: 'none' }
-                            }}
-                        >
-                            Continue ({bookingData.services.length} {bookingData.services.length === 1 ? 'service' : 'services'})
-                        </Button>
+
+                        {bookingData.services.length > 0 && (
+                            <Box sx={{
+                                mb: 3, p: 2, borderRadius: 3, bgcolor: '#6366f1', color: 'white',
+                                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                                boxShadow: '0 4px 15px rgba(99,102,241,0.3)',
+                                animation: 'fadeInUp 0.3s ease-out'
+                            }}>
+                                <Box>
+                                    <Typography variant="caption" sx={{ opacity: 0.8, fontWeight: 700, display: 'block', letterSpacing: 0.5 }}>MINIMUM DURATION</Typography>
+                                    <Typography variant="h6" fontWeight={800}>{formatDuration(totalDuration)}</Typography>
+                                </Box>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleNext}
+                                    sx={{
+                                        bgcolor: 'white',
+                                        color: '#6366f1',
+                                        fontWeight: 800,
+                                        px: 3,
+                                        borderRadius: 2,
+                                        '&:hover': { bgcolor: '#f8f9ff', transform: 'scale(1.05)' },
+                                        transition: 'all 0.2s'
+                                    }}
+                                >
+                                    Continue
+                                </Button>
+                            </Box>
+                        )}
                     </Box>
                 );
 
@@ -673,7 +729,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     const isSelected = bookingData.staff?.id === s.id;
                                     return (
                                         <Grid item xs={6} key={s.id}>
-                                            <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slot: '' }); handleNext(); }}
+                                            <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slots: [] }); handleNext(); }}
                                                 sx={{
                                                     p: 2, textAlign: 'center', cursor: 'pointer',
                                                     borderRadius: 4, bgcolor: 'white',
@@ -729,7 +785,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     selected.setHours(0, 0, 0, 0);
                     if (selected < today) return;
                     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    setBookingData(prev => ({ ...prev, date: iso, slot: '' }));
+                    setBookingData(prev => ({ ...prev, date: iso, slots: [] }));
                 };
 
                 const prevMonth = () => setCalendarMonth(prev => {
@@ -748,6 +804,25 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             <IconButton size="small" onClick={handleBack}><BackIcon fontSize="small" /></IconButton>
                             <Typography variant="h6" fontWeight={700}>Pick a Date &amp; Time</Typography>
                         </Box>
+                        
+                        {!isDurationMet && (
+                            <Box sx={{ mb: 2, p: 1.5, borderRadius: 2, bgcolor: 'rgba(245,158,11,0.08)', border: '1px solid', borderColor: 'rgba(245,158,11,0.2)' }}>
+                                <Typography variant="caption" fontWeight={700} color="#b45309" sx={{ display: 'block' }}>
+                                    MINIMUM DURATION REQUIRED: {formatDuration(totalDuration)}
+                                </Typography>
+                                <Typography variant="caption" color="#d97706">
+                                    Selected: {formatDuration(selectedDuration)}. Need {formatDuration(totalDuration - selectedDuration)} more.
+                                </Typography>
+                            </Box>
+                        )}
+                        
+                        {bookingData.slots?.length > 0 && !areSlotsConsecutive && (
+                            <Box sx={{ mb: 2, p: 1, borderRadius: 2, bgcolor: 'rgba(239,68,68,0.08)', border: '1px solid', borderColor: 'rgba(239,68,68,0.2)' }}>
+                                <Typography variant="caption" fontWeight={700} color="error.main">
+                                    Error: Selected slots must be consecutive.
+                                </Typography>
+                            </Box>
+                        )}
 
                         {/* ── Modern Inline Calendar ── */}
                         <Box sx={{
@@ -826,8 +901,18 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         {/* Time slots */}
                         {bookingData.date && (
                             <>
-                                <Typography variant="subtitle2" fontWeight={700} gutterBottom sx={{ color: '#6366f1' }}>
-                                    Available Slots — {getDayNameDisplay(bookingData.date)}
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                                    <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#6366f1' }}>
+                                        Available Slots — {getDayNameDisplay(bookingData.date)}
+                                    </Typography>
+                                    <Chip 
+                                        label={`Required: ${formatDuration(totalDuration)}`} 
+                                        size="small" 
+                                        sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 700, borderRadius: 1.5 }} 
+                                    />
+                                </Box>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
+                                    Select multiple slots to fulfill the {formatDuration(totalDuration)} requirement.
                                 </Typography>
                                 {availableSlots.length === 0 ? (
                                     <Box sx={{ py: 2, textAlign: 'center', bgcolor: 'rgba(239,68,68,0.05)', borderRadius: 2, px: 2 }}>
@@ -840,48 +925,53 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     </Box>
                                 ) : (
                                     <Grid container spacing={1}>
-                                        {availableSlots.map(slot => (
-                                            <Grid item xs={6} key={slot}>
-                                                <Button
-                                                    key={slot}
-                                                    variant={bookingData.slot === slot ? "contained" : "outlined"}
-                                                    fullWidth
-                                                    onClick={() => setBookingData({ ...bookingData, slot })}
-                                                    sx={{
-                                                        boxShadow: bookingData.slot === slot
-                                                            ? '0 4px 12px rgba(99,102,241,0.3)'
-                                                            : 'none',
-                                                        transition: 'all 0.15s',
-                                                        '&:hover': {
-                                                            borderColor: '#6366f1',
-                                                            bgcolor: bookingData.slot === slot ? undefined : 'rgba(99,102,241,0.06)',
-                                                        },
-                                                    }}
-                                                >
-                                                    <Typography
-                                                        variant="caption"
-                                                        fontWeight={700}
-                                                        sx={{ color: bookingData.slot === slot ? 'white' : '#6366f1', fontSize: '0.72rem' }}
+                                        {availableSlots.map(slot => {
+                                            const isSelected = bookingData.slots?.includes(slot);
+                                            return (
+                                                <Grid item xs={6} key={slot}>
+                                                    <Button
+                                                        variant={isSelected ? "contained" : "outlined"}
+                                                        fullWidth
+                                                        onClick={() => handleSlotClick(slot)}
+                                                        sx={{
+                                                            borderRadius: 2.5,
+                                                            py: 1,
+                                                            fontSize: '0.75rem', // Slightly smaller font to fit range
+                                                            fontWeight: isSelected ? 800 : 600,
+                                                            borderColor: isSelected ? 'transparent' : 'rgba(99,102,241,0.2)',
+                                                            color: isSelected ? 'white' : '#6366f1',
+                                                            bgcolor: isSelected ? '#6366f1' : 'white',
+                                                            '&:hover': {
+                                                                bgcolor: isSelected ? '#4f46e5' : 'rgba(99,102,241,0.05)',
+                                                                borderColor: '#6366f1'
+                                                            }
+                                                        }}
                                                     >
-                                                        {formatSlotLabel(slot, bookingDuration)}
-                                                    </Typography>
-                                                </Button>
-                                            </Grid>
-                                        ))}
+                                                        {formatSlotLabel(slot, slotStepMin)}
+                                                    </Button>
+                                                </Grid>
+                                            );
+                                        })}
                                     </Grid>
                                 )}
+
+                                <Button
+                                    fullWidth
+                                    variant="contained"
+                                    disabled={!isDurationMet || !areSlotsConsecutive}
+                                    onClick={handleNext}
+                                    sx={{
+                                        mt: 3, borderRadius: 3, py: 1.5, fontWeight: 800,
+                                        background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : '#f1f5f9',
+                                        color: (isDurationMet && areSlotsConsecutive) ? 'white' : '#94a3b8',
+                                        boxShadow: (isDurationMet && areSlotsConsecutive) ? '0 10px 20px rgba(99,102,241,0.25)' : 'none',
+                                        '&:hover': { background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#f1f5f9' }
+                                    }}
+                                >
+                                    {isDurationMet ? 'Continue' : `Selected ${formatDuration(selectedDuration)} of ${formatDuration(totalDuration)}`}
+                                </Button>
                             </>
                         )}
-                        <Button fullWidth variant="contained" sx={{
-                            mt: 3, borderRadius: 2.5, fontWeight: 700, py: 1.3,
-                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                            boxShadow: '0 4px 14px rgba(99,102,241,0.35)',
-                            '&:hover': { background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' },
-                            '&:disabled': { background: '#e2e8f0', color: '#94a3b8', boxShadow: 'none' },
-                        }}
-                            disabled={!bookingData.date || !bookingData.slot} onClick={handleNext}>
-                            Continue
-                        </Button>
                     </Box>
                 );
             }
@@ -890,10 +980,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 const validateAndNext = () => {
                     const errs = {};
                     const { name, phone } = bookingData.customer;
-                    
+
                     const nameRes = validateName(name);
                     if (nameRes !== true) errs.name = nameRes;
-                    
+
                     const mobileRes = validateMobile(phone);
                     if (mobileRes !== true) errs.phone = mobileRes;
 
@@ -1048,9 +1138,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             Your appointment with <strong>{bookingData.staff?.staff_name}</strong> is scheduled for
                         </Typography>
                         <Box sx={{ bgcolor: 'success.50', borderRadius: 2, p: 2, mb: 3, border: '1px solid', borderColor: 'success.200' }}>
-                            <Typography fontWeight={700} color="success.dark">{formatDate(bookingData.date)}</Typography>
-                            <Typography variant="body2" color="success.main" fontWeight={600}>{formatSlotLabel(bookingData.slot, bookingDuration)}</Typography>
-                            <Typography variant="caption" color="success.main">{bookingData.services.map(s => s.service_name).join(', ')}</Typography>
+                            <Typography variant="body2" color="success.main" fontWeight={600}>
+                                {formatDate(bookingData.date)} at {[...bookingData.slots].sort()[0].slice(0, 5)}
+                            </Typography>
+                            <Typography variant="caption" color="success.main">
+                                {bookingData.slots.length * slotStepMin} min session • {bookingData.services.map(s => s.service_name).join(', ')}
+                            </Typography>
                         </Box>
                         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'center' }}>
                             {/* 
@@ -1082,6 +1175,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 Close
                             </Button>
                         </Box>
+
                     </Box>
                 );
             default:
@@ -1107,15 +1201,15 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 </Fab>
             )}
 
-            <Dialog 
-                open={open} 
-                onClose={resetBooking} 
-                maxWidth="xs" 
+            <Dialog
+                open={open}
+                onClose={resetBooking}
+                maxWidth="xs"
                 fullWidth
                 fullScreen={isMobile}
                 PaperProps={{
                     sx: {
-                        borderRadius: isMobile ? 0 : 4, 
+                        borderRadius: isMobile ? 0 : 4,
                         overflow: 'hidden',
                         boxShadow: '0 25px 60px rgba(0,0,0,0.18)',
                         height: isMobile ? '100%' : 'auto',
@@ -1127,8 +1221,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 {activeStep < 6 && (
                     <Box sx={{
                         background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        px: { xs: 2.5, sm: 3 }, 
-                        pt: { xs: 2, sm: 2.5 }, 
+                        px: { xs: 2.5, sm: 3 },
+                        pt: { xs: 2, sm: 2.5 },
                         pb: 2,
                     }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>

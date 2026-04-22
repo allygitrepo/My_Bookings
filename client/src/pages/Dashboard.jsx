@@ -54,7 +54,7 @@ const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default'
 
 const Dashboard = () => {
     const { searchQuery } = useSearch();
-    const { isSuspended, suspendedReason, businesses: contextBusinesses } = useBusiness();
+    const { isSuspended, suspendedReason, businesses: contextBusinesses, selectedBusinessId } = useBusiness();
     const [staff, setStaff] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [services, setServices] = useState([]);
