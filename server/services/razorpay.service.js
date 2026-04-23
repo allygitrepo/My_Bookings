@@ -41,8 +41,16 @@ const verifySignature = (razorpay_order_id, razorpay_payment_id, razorpay_signat
     return expectedSignature === razorpay_signature;
 };
 
+/**
+ * Validate Razorpay Webhook Signature
+ */
+const validateWebhookSignature = (body, signature, secret) => {
+    return Razorpay.validateWebhookSignature(body, signature, secret);
+};
+
 module.exports = {
     createOrder,
     verifySignature,
+    validateWebhookSignature,
     razorpay
 };

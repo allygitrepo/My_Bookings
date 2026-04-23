@@ -168,6 +168,12 @@ const paymentController = {
                 return res.status(404).json({ success: false, message: "Booking not found" });
             }
 
+            // Check if payment record already exists (could be from webhook)
+            const existingPayment = await Payment.findOne({ where: { transaction_id: razorpay_payment_id } });
+            if (existingPayment) {
+                return res.json({ success: true, message: "Payment already processed", data: existingPayment });
+            }
+
             // Create payment record
             const paymentRecord = await Payment.create({
                 booking_id: booking_id,
@@ -187,6 +193,72 @@ const paymentController = {
                 message: "Payment verified and recorded successfully", 
                 data: paymentRecord 
             });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    handleWebhook: async (req, res) => {
+        try {
+            const signature = req.headers["x-razorpay-signature"];
+            const secret = process.env.RAZORPAY_WEBHOOK_SECRET;
+
+            if (!signature) {
+                return res.status(400).json({ success: false, message: "Missing signature" });
+            }
+
+            if (!secret) {
+                return res.status(400).json({ success: false, message: "Webhook secret not configured" });
+            }
+
+            const webhookBody = req.rawBody || JSON.stringify(req.body);
+
+            const isValid = razorpayService.validateWebhookSignature(
+                webhookBody,
+                signature,
+                secret
+            );
+
+            if (!isValid) {
+                console.error('Webhook Error: Invalid signature. Verify that RAZORPAY_WEBHOOK_SECRET matches the secret in Razorpay Dashboard.');
+                return res.status(400).json({ success: false, message: "Invalid webhook signature" });
+            }
+
+            const event = req.body.event;
+            const payload = req.body.payload;
+
+
+            if (event === "payment.captured" || event === "order.paid") {
+                const paymentData = payload.payment.entity;
+                const paymentId = paymentData.id;
+                const amount = paymentData.amount / 100; // convert from paise
+
+                // Retrieve booking ID from notes
+                const bookingId = paymentData.notes?.booking_id;
+
+                if (bookingId) {
+                    const booking = await Booking.findByPk(bookingId);
+                    if (booking) {
+                        // Check if payment already exists
+                        const existingPayment = await Payment.findOne({ where: { transaction_id: paymentId } });
+                        if (!existingPayment) {
+                            const paymentRecord = await Payment.create({
+                                booking_id: bookingId,
+                                business_id: booking.business_id,
+                                amount: amount,
+                                paid_amount: amount,
+                                payment_method: 'Razorpay_Webhook',
+                                transaction_id: paymentId,
+                                payment_status: true
+                            });
+                            await booking.update({ payment_status: true });
+                        } else {
+                        }
+                    }
+                }
+            }
+
+            res.json({ success: true, message: "Webhook processed" });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

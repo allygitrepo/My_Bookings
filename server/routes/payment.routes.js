@@ -10,5 +10,6 @@ router.get("/all", authMiddleware, paymentController.getAll);
 router.get("/:id", authMiddleware, paymentController.getById);
 router.put("/update/:id", authMiddleware, paymentController.update);
 router.delete("/delete/:id", authMiddleware, paymentController.delete);
+router.post("/razorpay/webhook", paymentController.handleWebhook);
 
 module.exports = router;

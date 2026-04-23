@@ -20,7 +20,7 @@ const routes = (app) => {
     const prefix = "/mybookings";
 
     // Global duplicate request prevention for POST/PUT/PATCH
-    app.use(preventDuplicate(2000));
+    // app.use(preventDuplicate(2000));
 
     app.use(`${prefix}/users`, userRoutes);
     app.use(`${prefix}/business`, businessRoutes);
@@ -36,7 +36,7 @@ const routes = (app) => {
     app.use(`${prefix}/service-locations`, serviceLocationRoutes);
     app.use(`${prefix}/google`, googleAuthRoutes);
     app.use(`${prefix}/portal`, portalRoutes);
-    
+
     // Auth routes
     app.use(`${prefix}/auth`, authRoutes);
 };

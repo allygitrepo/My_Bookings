@@ -13,6 +13,12 @@ connectDB().then(() => {
     createDefaultAdmin();
 });
 
+
+// app.use((req, res, next) => {
+//     console.log(`>>> Incoming: ${req.method} ${req.url}`);
+//     next();
+// });
+
 // Middlewares
 app.use(cors({
     origin: true, // Allow all origins by reflecting the requesting origin
@@ -20,8 +26,13 @@ app.use(cors({
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization', 'x-api-key']
 }));
+app.use(express.json({
+    limit: '2mb',
+    verify: (req, res, buf) => {
+        req.rawBody = buf.toString();
+    }
+}));
 app.use(express.urlencoded({ extended: true, limit: '2mb' }));
-app.use(express.json({ limit: '2mb' }));
 
 // Routes
 routes(app);
