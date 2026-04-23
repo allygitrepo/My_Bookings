@@ -369,15 +369,15 @@ const PortalPackages = () => {
                                     mt: 2,
                                     flexDirection: { xs: 'column', sm: 'row' }
                                 }}>
-                                    <Button 
-                                        onClick={resetForm} 
-                                        variant="outlined" 
+                                    <Button
+                                        onClick={resetForm}
+                                        variant="outlined"
                                         color="inherit"
                                         size="small"
-                                        sx={{ 
-                                            fontWeight: 700, 
-                                            borderRadius: '100px', 
-                                            order: { xs: 2, sm: 1 }, 
+                                        sx={{
+                                            fontWeight: 700,
+                                            borderRadius: '100px',
+                                            order: { xs: 2, sm: 1 },
                                             textTransform: 'none',
                                             height: 36,
                                             px: 3,
@@ -391,10 +391,10 @@ const PortalPackages = () => {
                                         variant="contained"
                                         size="small"
                                         disabled={processing}
-                                        sx={{ 
-                                            fontWeight: 700, 
-                                            borderRadius: '100px', 
-                                            order: { xs: 1, sm: 2 }, 
+                                        sx={{
+                                            fontWeight: 700,
+                                            borderRadius: '100px',
+                                            order: { xs: 1, sm: 2 },
                                             textTransform: 'none',
                                             height: 36,
                                             px: 4,
