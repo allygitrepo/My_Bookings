@@ -43,22 +43,15 @@ const PortalDashboard = () => {
     const [stats, setStats] = useState({
         totalBusinesses: 0,
         totalUsers: 0,
-        totalBookings: 0,
         totalRevenue: 0
     });
-    const [recentBookings, setRecentBookings] = useState([]);
     const [loading, setLoading] = useState(true);
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [statsRes, bookingsRes] = await Promise.all([
-                axiosInstance.get('/portal/dashboard'),
-                axiosInstance.get('/portal/bookings')
-            ]);
-
+            const statsRes = await axiosInstance.get('/portal/dashboard');
             if (statsRes.data.success) setStats(statsRes.data.data);
-            if (bookingsRes.data.success) setRecentBookings(bookingsRes.data.data.slice(0, 10)); // Top 10
         } catch (error) {
             toast.error('Failed to fetch platform metrics');
         } finally {
@@ -80,7 +73,7 @@ const PortalDashboard = () => {
             </Box>
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={4}>
                     <StatCard
                         title="Total Businesses"
                         value={loading ? '...' : stats.totalBusinesses}
@@ -88,7 +81,7 @@ const PortalDashboard = () => {
                         color="#6366f1"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={4}>
                     <StatCard
                         title="Registered Users"
                         value={loading ? '...' : stats.totalUsers}
@@ -96,15 +89,7 @@ const PortalDashboard = () => {
                         color="#0ea5e9"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={3}>
-                    <StatCard
-                        title="Total Bookings"
-                        value={loading ? '...' : stats.totalBookings}
-                        icon={<BookingsIcon sx={{ fontSize: 26 }} />}
-                        color="#10b981"
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={3}>
+                <Grid item xs={12} sm={6} md={4}>
                     <StatCard
                         title="Platform Revenue"
                         value={loading ? '...' : `₹${stats.totalRevenue.toLocaleString()}`}
@@ -115,59 +100,6 @@ const PortalDashboard = () => {
                 </Grid>
             </Grid>
 
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
-                <TrendIcon sx={{ color: 'primary.main' }} />
-                <Typography variant="h6" fontWeight={800}>Recent Platform Activity</Typography>
-            </Box>
-
-            <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
-                        <TableRow>
-                            <TableCell sx={{ fontWeight: 700 }}>Business</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
-                            <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {loading ? (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 5 }}>
-                                    <CircularProgress size={24} />
-                                </TableCell>
-                            </TableRow>
-                        ) : recentBookings.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 5, color: 'text.secondary' }}>
-                                    No activity recorded yet.
-                                </TableCell>
-                            </TableRow>
-                        ) : recentBookings.map((b) => (
-                            <TableRow key={b.id} hover>
-                                <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>
-                                    {b.business?.business_name || 'System'}
-                                </TableCell>
-                                <TableCell>
-                                    <Typography variant="body2" fontWeight={600}>{b.customer?.name || 'Guest'}</Typography>
-                                    <Typography variant="caption" color="text.secondary">{b.service?.service_name}</Typography>
-                                </TableCell>
-                                <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>₹{parseFloat(b.service?.price || 0).toLocaleString()}</TableCell>
-                                <TableCell>
-                                    <Chip 
-                                        label={b.status ? 'Confirmed' : 'Cancelled'} 
-                                        size="small" 
-                                        color={b.status ? 'success' : 'error'} 
-                                        sx={{ fontWeight: 700, borderRadius: 1.5 }} 
-                                    />
-                                </TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
-            </TableContainer>
 
         </PageTransition>
     );

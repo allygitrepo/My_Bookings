@@ -78,12 +78,13 @@ const authController = {
                 });
             }
 
-            // 3. Ensure user has a business
-            let businesses = await Business.findAll({ where: { user_id: user.id, status: true } });
+            // 3. Ensure user has a business (Check for any business, including suspended ones)
+            let allBusinesses = await Business.findAll({ where: { user_id: user.id } });
+            let businesses = allBusinesses.filter(b => b.status === true);
             let activeBusiness = null;
 
-            if (businesses.length === 0) {
-                // Create default business
+            if (allBusinesses.length === 0) {
+                // Create default business ONLY if user has absolutely no businesses
                 activeBusiness = await Business.create({
                     business_name: "My Business",
                     user_id: user.id,
@@ -92,7 +93,9 @@ const authController = {
                 });
                 businesses = [activeBusiness];
             } else {
-                activeBusiness = businesses[0];
+                // If there are active businesses, use the first one. 
+                // If all are suspended, use the first suspended one as a reference.
+                activeBusiness = businesses.length > 0 ? businesses[0] : allBusinesses[0];
             }
 
             // 4. Generate JWT session
