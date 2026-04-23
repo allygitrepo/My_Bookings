@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import {
     Box,
     Container,
@@ -13,6 +13,9 @@ import {
     AccordionSummary,
     AccordionDetails,
     Link,
+    CircularProgress,
+    Chip,
+    Divider,
 } from '@mui/material';
 import { NavLink, useLocation } from 'react-router-dom';
 import PublicBusinessWebsite from './PublicBusinessWebsite';
@@ -22,6 +25,8 @@ import {
     People as StaffIcon,
     Assessment as ReportIcon,
     ExpandMore as ExpandMoreIcon,
+    CheckCircle as CheckIcon,
+    Cancel as CancelIcon,
 } from '@mui/icons-material';
 import { motion } from 'framer-motion';
 import Logo from '../components/Logo';
@@ -76,6 +81,37 @@ const LandingPage = () => {
     const searchParams = new URLSearchParams(location.search);
     const bizId = searchParams.get('biz');
 
+    const [packages, setPackages] = useState([]);
+    const [loading, setLoading] = useState(true);
+    const [dashboardPath, setDashboardPath] = useState('/dashboard');
+
+    useEffect(() => {
+        // Determine dashboard path based on role
+        const role = localStorage.getItem('role');
+        if (role === 'PORTAL_ADMIN') {
+            setDashboardPath('/portal/dashboard');
+        } else {
+            setDashboardPath('/dashboard');
+        }
+
+        const fetchPackages = async () => {
+            try {
+                const response = await fetch(`${import.meta.env.VITE_API_BASE_URL}/packages/active`);
+                const data = await response.json();
+                if (data.success) {
+                    // Filter active only on frontend as well for absolute safety
+                    const activePackages = data.data.filter(p => p.status === true);
+                    setPackages(activePackages);
+                }
+            } catch (error) {
+                console.error('Failed to fetch pricing plans:', error);
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchPackages();
+    }, []);
+
     if (bizId) {
         return <PublicBusinessWebsite />;
     }
@@ -89,7 +125,7 @@ const LandingPage = () => {
                         <Logo size={42} />
                         <Stack direction="row" spacing={2} alignItems="center">
                             {/* <Button color="inherit" sx={{ display: { xs: 'none', md: 'inline-flex' } }}>Features</Button> */}
-                            <Button variant="contained" component={NavLink} to="/dashboard" sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}>
+                            <Button variant="contained" component={NavLink} to={dashboardPath} sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}>
                                 Get Started
                             </Button>
                         </Stack>
@@ -114,7 +150,7 @@ const LandingPage = () => {
                                     A complete SaaS solution for multi-business booking management, staff scheduling, and customer engagement.
                                 </Typography>
                                 <Stack direction="row" spacing={2}>
-                                    <Button variant="contained" size="large" sx={{ px: 4, py: 1.5 }} component={NavLink} to="/dashboard">
+                                    <Button variant="contained" size="large" sx={{ px: 4, py: 1.5 }} component={NavLink} to={dashboardPath}>
                                         Get Started Free
                                     </Button>
                                 </Stack>
@@ -189,6 +225,150 @@ const LandingPage = () => {
                     ))}
                 </Grid>
             </Container>
+
+            {/* Pricing Section */}
+            <Box sx={{ py: 12, bgcolor: '#f1f5f9' }}>
+                <Container maxWidth="xl">
+                    <Box sx={{ textAlign: 'center', mb: 8 }}>
+                        <Typography variant="h3" fontWeight={800} gutterBottom>
+                            Simple, Transparent <Box component="span" color="primary.main">Pricing</Box>
+                        </Typography>
+                        <Typography color="text.secondary" variant="h6">
+                            Choose the perfect plan for your business growth.
+                        </Typography>
+                    </Box>
+
+                    {loading ? (
+                        <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+                            <CircularProgress />
+                        </Box>
+                    ) : (
+                        <Grid container spacing={2} justifyContent="center">
+                            {packages.map((pkg, i) => (
+                                <Grid item xs={12} sm={6} md={2.4} key={pkg.id}>
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 30 }}
+                                        whileInView={{ opacity: 1, y: 0 }}
+                                        transition={{ duration: 0.5, delay: i * 0.1 }}
+                                        viewport={{ once: true }}
+                                    >
+                                        <Card
+                                            sx={{
+                                                p: 4,
+                                                borderRadius: '32px',
+                                                height: '100%',
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                position: 'relative',
+                                                overflow: 'hidden',
+                                                border: '2px solid transparent',
+                                                transition: 'all 0.3s ease',
+                                                '&:hover': {
+                                                    borderColor: 'primary.main',
+                                                    transform: 'translateY(-8px)',
+                                                    boxShadow: '0 30px 60px -12px rgba(50, 50, 93, 0.25), 0 18px 36px -18px rgba(0, 0, 0, 0.3)'
+                                                }
+                                            }}
+                                        >
+                                            {i === 1 && (
+                                                <Box sx={{
+                                                    position: 'absolute',
+                                                    top: 20,
+                                                    right: -30,
+                                                    bgcolor: 'primary.main',
+                                                    color: 'white',
+                                                    px: 6,
+                                                    py: 0.5,
+                                                    transform: 'rotate(45deg)',
+                                                    fontWeight: 800,
+                                                    fontSize: '0.75rem',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    Most Popular
+                                                </Box>
+                                            )}
+
+                                            <Typography variant="h6" fontWeight={800} gutterBottom>{pkg.name}</Typography>
+                                            <Box sx={{ mb: 4, display: 'flex', alignItems: 'baseline' }}>
+                                                <Typography variant="h3" fontWeight={900}>₹{parseFloat(pkg.amount).toLocaleString()}</Typography>
+                                                <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>/ {pkg.duration_days} days</Typography>
+                                            </Box>
+
+                                            <Divider sx={{ mb: 4 }} />
+
+                                            <Stack spacing={2} sx={{ mb: 4, flexGrow: 1 }}>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">
+                                                        {pkg.max_businesses === -1 ? 'Unlimited' : pkg.max_businesses} Business Account
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">
+                                                        {pkg.max_locations === -1 ? 'Unlimited' : pkg.max_locations} Branch Locations
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">
+                                                        {pkg.max_staff === -1 ? 'Unlimited' : pkg.max_staff} Staff Members
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">
+                                                        {pkg.max_services === -1 ? 'Unlimited' : pkg.max_services} Services
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">
+                                                        {pkg.max_bookings === -1 ? 'Unlimited' : pkg.max_bookings} Monthly Bookings
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
+                                                    <Typography variant="body2">{pkg.portal_payment_charges}% Platform Commission</Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, opacity: pkg.allow_api ? 1 : 0.4 }}>
+                                                    {pkg.allow_api ? 
+                                                        <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} /> : 
+                                                        <CancelIcon sx={{ color: 'error.light', fontSize: '1.2rem' }} />
+                                                    }
+                                                    <Typography variant="body2" sx={{ textDecoration: pkg.allow_api ? 'none' : 'line-through' }}>
+                                                        Custom API Integration
+                                                    </Typography>
+                                                </Box>
+                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, opacity: pkg.allow_website_builder ? 1 : 0.4 }}>
+                                                    {pkg.allow_website_builder ? 
+                                                        <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} /> : 
+                                                        <CancelIcon sx={{ color: 'error.light', fontSize: '1.2rem' }} />
+                                                    }
+                                                    <Typography variant="body2" sx={{ textDecoration: pkg.allow_website_builder ? 'none' : 'line-through' }}>
+                                                        Advanced Website Builder
+                                                    </Typography>
+                                                </Box>
+                                            </Stack>
+
+                                            <Button
+                                                fullWidth
+                                                variant={i === 1 ? 'contained' : 'outlined'}
+                                                size="large"
+                                                component={NavLink}
+                                                to="/register"
+                                                sx={{ borderRadius: '16px', py: 1.5, fontWeight: 700 }}
+                                            >
+                                                Get Started
+                                            </Button>
+                                        </Card>
+                                    </motion.div>
+                                </Grid>
+                            ))}
+                        </Grid>
+                    )}
+                </Container>
+            </Box>
 
 
             {/* FAQ Section */}

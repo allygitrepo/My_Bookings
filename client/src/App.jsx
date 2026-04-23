@@ -40,6 +40,7 @@ import PortalBusinesses from './pages/portal/PortalBusinesses';
 import PortalBookings from './pages/portal/PortalBookings';
 import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
+import PortalPackages from './pages/portal/PortalPackages';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -121,6 +122,7 @@ function App() {
                         <Route path="/portal/bookings" element={<PortalBookings />} />
                         <Route path="/portal/users" element={<PortalUsers />} />
                         <Route path="/portal/create-admin" element={<CreateAdmin />} />
+                        <Route path="/portal/packages" element={<PortalPackages />} />
                     </Route>
 
                   <Route path="/:id" element={<PublicBusinessWebsite />} />

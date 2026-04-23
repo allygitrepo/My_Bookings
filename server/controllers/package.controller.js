@@ -1,0 +1,121 @@
+const { Package, User } = require("../models/associations");
+
+const packageController = {
+    getAll: async (req, res) => {
+        try {
+            const { activeOnly } = req.query;
+            const where = {};
+            
+            // Explicitly filter for active packages if requested
+            if (activeOnly === 'true' || activeOnly === true) {
+                where.status = true;
+            }
+
+            const rows = await Package.findAll({
+                where,
+                order: [['amount', 'ASC']]
+            });
+            res.json({ success: true, data: rows });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getById: async (req, res) => {
+        try {
+            const row = await Package.findByPk(req.params.id);
+            if (!row) return res.status(404).json({ success: false, message: "Package not found" });
+            res.json({ success: true, data: row });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    create: async (req, res) => {
+        try {
+            // API creation is now a mandatory feature for all packages
+            const row = await Package.create({ ...req.body, allow_api: true });
+            res.status(201).json({ success: true, message: "Package created successfully", data: row });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    update: async (req, res) => {
+        try {
+            const row = await Package.findByPk(req.params.id);
+            if (!row) return res.status(404).json({ success: false, message: "Package not found" });
+            
+            // Ensure API creation remains true even if frontend omits it
+            await row.update({ ...req.body, allow_api: true });
+            res.json({ success: true, message: "Package updated successfully", data: row });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    delete: async (req, res) => {
+        try {
+            const row = await Package.findByPk(req.params.id);
+            if (!row) return res.status(404).json({ success: false, message: "Package not found" });
+            
+            // Check if any users are using this package
+            const userCount = await User.count({ where: { package_id: row.id } });
+            if (userCount > 0) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: "Cannot delete package as it is currently assigned to users. Disable it instead." 
+                });
+            }
+
+            await row.destroy();
+            res.json({ success: true, message: "Package deleted successfully" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    assignToUser: async (req, res) => {
+        try {
+            const { userId, packageId } = req.body;
+            
+            const [user, pkg] = await Promise.all([
+                User.findByPk(userId),
+                Package.findByPk(packageId)
+            ]);
+
+            if (!user) return res.status(404).json({ success: false, message: "User not found" });
+            if (!pkg) return res.status(404).json({ success: false, message: "Package not found" });
+
+            // Check for one-time restriction defined in the package
+            if (pkg.is_one_time) {
+                let oneTimePackages = JSON.parse(user.one_time_packages || '[]');
+                if (oneTimePackages.includes(parseInt(packageId))) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: `The package '${pkg.name}' is a one-time offer and has already been used by this user.` 
+                    });
+                }
+                // Add to history
+                oneTimePackages.push(parseInt(packageId));
+                user.one_time_packages = JSON.stringify(oneTimePackages);
+            }
+
+            // Calculate expiry
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + pkg.duration_days);
+
+            await user.update({
+                package_id: pkg.id,
+                package_expiry: expiryDate,
+                one_time_packages: user.one_time_packages
+            });
+
+            res.json({ success: true, message: `Package ${pkg.name} assigned to ${user.name} successfully` });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+};
+
+module.exports = packageController;

@@ -54,6 +54,19 @@ const Users = sequelize.define(
         auth_provider: {
             type: DataTypes.ENUM('local', 'google'),
             defaultValue: 'local'
+        },
+        package_id: {
+            type: DataTypes.BIGINT,
+            allowNull: true
+        },
+        package_expiry: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        one_time_packages: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            defaultValue: '[]'
         }
     },
     {

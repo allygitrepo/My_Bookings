@@ -1,4 +1,4 @@
-const { User, Business, Booking, Payment, Customer, Service } = require("../models/associations");
+const { User, Business, Booking, Payment, Customer, Service, Package } = require("../models/associations");
 const bcrypt = require("bcryptjs");
 
 const portalController = {
@@ -76,6 +76,7 @@ const portalController = {
     users: async (req, res) => {
         try {
             const rows = await User.findAll({
+                include: [{ model: Package, as: 'package', attributes: ['name'] }],
                 order: [['created_at', 'DESC']]
             });
             res.json({ success: true, data: rows });

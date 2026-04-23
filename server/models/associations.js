@@ -10,6 +10,7 @@ const Booking = require("./booking.model");
 const Payment = require("./payment.model");
 const Customer = require("./customer.model");
 const BookingService = require("./bookingService.model");
+const Package = require("./package.model");
 
 // Staff <-> Business (Many-to-One)
 Staff.belongsTo(Business, { foreignKey: 'business_id' });
@@ -66,11 +67,14 @@ Service.belongsToMany(Booking, { through: BookingService, foreignKey: 'service_i
 Booking.belongsTo(Service, { foreignKey: 'service_id' });
 Service.hasMany(Booking, { foreignKey: 'service_id' });
 
-// Booking <-> Staff (Many-to-One)
-Booking.belongsTo(Staff, { foreignKey: 'staff_id' });
 Staff.hasMany(Booking, { foreignKey: 'staff_id' });
+
+// User <-> Package (Many-to-One)
+User.belongsTo(Package, { foreignKey: 'package_id', as: 'package' });
+Package.hasMany(User, { foreignKey: 'package_id' });
 
 module.exports = { 
     Staff, Location, StaffLocation, StaffAvailability, 
-    Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService
+    Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService,
+    Package
 };

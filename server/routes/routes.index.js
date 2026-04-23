@@ -13,6 +13,7 @@ const serviceLocationRoutes = require("./serviceLocation.routes");
 const googleAuthRoutes = require("./googleAuth.routes");
 const portalRoutes = require("./portal.routes");
 const authRoutes = require("./auth.routes");
+const packageRoutes = require("./package.routes");
 
 const preventDuplicate = require("../middleware/preventDuplicate.middleware");
 
@@ -39,6 +40,7 @@ const routes = (app) => {
 
     // Auth routes
     app.use(`${prefix}/auth`, authRoutes);
+    app.use(`${prefix}/packages`, packageRoutes);
 };
 
 module.exports = routes;

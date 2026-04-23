@@ -10,7 +10,8 @@ import {
     People as PeopleIcon,
     AdminPanelSettings as AdminIcon,
     Logout as LogoutIcon,
-    ArrowBack as BackIcon
+    ArrowBack as BackIcon,
+    Inventory as PackageIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
@@ -25,7 +26,7 @@ const PortalSidebar = ({ open, onClose, variant }) => {
     const menuItems = [
         { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/portal/dashboard' },
         { text: 'Businesses', icon: <BusinessIcon />, path: '/portal/businesses' },
-        // { text: 'Bookings', icon: <CalendarIcon />, path: '/portal/bookings' },
+        { text: 'Packages', icon: <PackageIcon />, path: '/portal/packages' },
         { text: 'Users', icon: <PeopleIcon />, path: '/portal/users' },
         { text: 'Create Admin', icon: <AdminIcon />, path: '/portal/create-admin' },
     ];

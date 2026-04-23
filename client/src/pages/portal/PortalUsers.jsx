@@ -2,19 +2,21 @@ import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Chip, Avatar,
-    CircularProgress, TextField, InputAdornment, Tooltip
+    CircularProgress, TextField, InputAdornment, Tooltip, IconButton
+} from '@mui/material';
+import {
+    Tabs, Tab, Switch, Dialog, DialogTitle, DialogContent,
+    DialogActions, Button, FormControl, InputLabel, Select, MenuItem, FormControlLabel, Checkbox,
+    Grid
 } from '@mui/material';
 import {
     Search as SearchIcon,
     Person as UserIcon,
     AdminPanelSettings as AdminIcon,
     Work as OwnerIcon,
-    Info as InfoIcon
+    Info as InfoIcon,
+    Inventory as PackageIcon
 } from '@mui/icons-material';
-import {
-    Tabs, Tab, Switch, Dialog, DialogTitle, DialogContent,
-    DialogActions, Button
-} from '@mui/material';
 import axiosInstance from '../../api/axiosInstance';
 import PageTransition from '../../components/PageTransition';
 import { formatDate } from '../../utils/date';
@@ -42,6 +44,14 @@ const PortalUsers = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null);
     const [reason, setReason] = useState('');
+
+    // Package Assignment State
+    const [packages, setPackages] = useState([]);
+    const [assignDialogOpen, setAssignDialogOpen] = useState(false);
+    const [assignData, setAssignData] = useState({
+        packageId: '',
+        isOneTime: false
+    });
     const [processing, setProcessing] = useState(false);
 
     const fetchUsers = async () => {
@@ -58,9 +68,49 @@ const PortalUsers = () => {
         }
     };
 
+    const fetchPackages = async () => {
+        try {
+            const response = await axiosInstance.get('/packages/active');
+            if (response.data.success) {
+                setPackages(response.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch packages');
+        }
+    };
+
     useEffect(() => {
         fetchUsers();
+        fetchPackages();
     }, []);
+
+    const handleOpenAssign = (user) => {
+        setSelectedUser(user);
+        setAssignData({ packageId: user.package_id || '', isOneTime: false });
+        setAssignDialogOpen(true);
+    };
+
+    const confirmAssignment = async () => {
+        if (!assignData.packageId) return toast.error('Please select a package');
+        
+        setProcessing(true);
+        try {
+            const response = await axiosInstance.post('/packages/assign', {
+                userId: selectedUser.id,
+                packageId: assignData.packageId,
+                isOneTime: assignData.isOneTime
+            });
+            if (response.data.success) {
+                toast.success('Package assigned successfully');
+                setAssignDialogOpen(false);
+                fetchUsers();
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to assign package');
+        } finally {
+            setProcessing(false);
+        }
+    };
 
     const handleToggleStatus = async (user) => {
         if (user.status) {
@@ -147,7 +197,9 @@ const PortalUsers = () => {
                             <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Registered</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Package</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Access</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }} align="right">Actions</TableCell>
                         </TableRow>
                     </TableHead>
                     <TableBody>
@@ -187,6 +239,24 @@ const PortalUsers = () => {
                                 </TableCell>
                                 <TableCell sx={{ fontWeight: 500 }}>{formatDate(user.created_at)}</TableCell>
                                 <TableCell>
+                                    {user.package_id ? (
+                                        <Box>
+                                            <Chip 
+                                                label={user.package?.name || 'Standard Plan'} 
+                                                size="small" variant="outlined" color="primary" 
+                                                sx={{ fontWeight: 700, borderRadius: 1.5, mb: 0.5 }} 
+                                            />
+                                            {user.package_expiry && (
+                                                <Typography variant="caption" display="block" color="text.secondary" fontWeight={500}>
+                                                    Expires: {formatDate(user.package_expiry)}
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    ) : (
+                                        <Typography variant="caption" color="text.secondary">Free / None</Typography>
+                                    )}
+                                </TableCell>
+                                <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                         <Switch
                                             size="small"
@@ -205,6 +275,19 @@ const PortalUsers = () => {
                                             )}
                                         </Box>
                                     </Box>
+                                </TableCell>
+                                <TableCell align="right">
+                                    {user.role !== 'PORTAL_ADMIN' && (
+                                        <Tooltip title="Assign Package">
+                                            <IconButton 
+                                                onClick={() => handleOpenAssign(user)} 
+                                                size="small" 
+                                                sx={{ bgcolor: 'primary.50', color: 'primary.main' }}
+                                            >
+                                                <PackageIcon fontSize="small" />
+                                            </IconButton>
+                                        </Tooltip>
+                                    )}
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -239,6 +322,43 @@ const PortalUsers = () => {
                         sx={{ fontWeight: 700 }}
                     >
                         {processing ? 'Suspending...' : 'Confirm Suspension'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Package Assignment Dialog */}
+            <Dialog open={assignDialogOpen} onClose={() => setAssignDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ fontWeight: 800 }}>Assign Package</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
+                        Assign a subscription tier to **{selectedUser?.name}**. This will override their current restrictions.
+                    </Typography>
+                    
+                    <FormControl fullWidth>
+                        <InputLabel>Select Package</InputLabel>
+                        <Select
+                            value={assignData.packageId}
+                            label="Select Package"
+                            onChange={(e) => setAssignData({ ...assignData, packageId: e.target.value })}
+                        >
+                            <MenuItem value=""><em>None / Remove Package</em></MenuItem>
+                            {packages.map(pkg => (
+                                <MenuItem key={pkg.id} value={pkg.id}>
+                                    {pkg.name} - ₹{parseFloat(pkg.amount).toLocaleString()} ({pkg.duration_days} Days) {pkg.is_one_time ? '[1-TIME]' : ''}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setAssignDialogOpen(false)} color="inherit" sx={{ fontWeight: 700 }}>Cancel</Button>
+                    <Button
+                        onClick={confirmAssignment}
+                        variant="contained"
+                        disabled={processing}
+                        sx={{ fontWeight: 700 }}
+                    >
+                        {processing ? 'Assigning...' : 'Confirm Assignment'}
                     </Button>
                 </DialogActions>
             </Dialog>
