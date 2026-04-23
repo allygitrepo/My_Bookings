@@ -117,15 +117,28 @@ const LandingPage = () => {
     }
 
     return (
-        <Box sx={{ bgcolor: 'background.paper', minHeight: '100vh' }}>
-            {/* Navbar */}
-            <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid #e2e8f0' }}>
+        <Box sx={{ bgcolor: '#0f172a', minHeight: '100vh', color: 'white' }}>
+            <AppBar position="fixed" elevation={0} sx={{
+                background: 'rgba(15, 23, 42, 0.4)',
+                backdropFilter: 'blur(16px)',
+                borderBottom: '1px solid rgba(255,255,255,0.05)'
+            }}>
                 <Container maxWidth="lg">
-                    <Toolbar disableGutters sx={{ justifyContent: 'space-between' }}>
-                        <Logo size={42} />
+                    <Toolbar disableGutters sx={{ justifyContent: 'flex-end' }}>
                         <Stack direction="row" spacing={2} alignItems="center">
-                            {/* <Button color="inherit" sx={{ display: { xs: 'none', md: 'inline-flex' } }}>Features</Button> */}
-                            <Button variant="contained" component={NavLink} to={dashboardPath} sx={{ borderRadius: '12px', textTransform: 'none', fontWeight: 600 }}>
+                            <Button
+                                variant="contained"
+                                component={NavLink}
+                                to={dashboardPath}
+                                sx={{
+                                    borderRadius: '12px',
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                    boxShadow: '0 4px 15px rgba(99,102,241,0.35)',
+                                    px: 3
+                                }}
+                            >
                                 Get Started
                             </Button>
                         </Stack>
@@ -134,113 +147,289 @@ const LandingPage = () => {
             </AppBar>
 
             {/* Hero Section */}
-            <Box sx={{ py: { xs: 8, md: 15 }, bgcolor: '#f8fafc' }}>
+            <Box sx={{
+                position: 'relative',
+                minHeight: '100vh',
+                display: 'flex',
+                alignItems: 'center',
+                pt: { xs: 10, md: 0 },
+                background: 'linear-gradient(145deg, #0f172a 0%, #1e1b4b 30%, #2d1a4b 65%, #3b0764 100%)',
+                overflow: 'hidden',
+            }}>
+                {/* Decorative blobs */}
+                <Box sx={{
+                    position: 'absolute', top: '-10%', right: '-5%',
+                    width: { xs: 300, md: 600 }, height: { xs: 300, md: 600 }, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(99,102,241,0.15) 0%, transparent 70%)',
+                    pointerEvents: 'none'
+                }} />
+                <Box sx={{
+                    position: 'absolute', bottom: '0%', left: '-5%',
+                    width: { xs: 300, md: 500 }, height: { xs: 300, md: 500 }, borderRadius: '50%',
+                    background: 'radial-gradient(circle, rgba(168,85,247,0.12) 0%, transparent 70%)',
+                    pointerEvents: 'none'
+                }} />
+
+                {/* Animated grid lines */}
+                <Box sx={{
+                    position: 'absolute', inset: 0, opacity: 0.9,
+                    backgroundImage: 'repeating-linear-gradient(0deg, rgba(99,102,241,0.2) 0px, rgba(99,102,241,0.2) 1px, transparent 1px, transparent 80px), repeating-linear-gradient(90deg, rgba(99,102,241,0.2) 0px, rgba(99,102,241,0.2) 1px, transparent 1px, transparent 80px)',
+                    pointerEvents: 'none'
+                }} />
+
                 <Container maxWidth="lg">
-                    <Grid container spacing={4} alignItems="center">
-                        <Grid item xs={12} md={6}>
+                    <Grid container spacing={6} alignItems="center">
+                        {/* LEFT SIDE: TEXT */}
+                        <Grid item xs={12} md={7}>
                             <motion.div
-                                initial={{ opacity: 0, y: 30 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                transition={{ duration: 0.6 }}
+                                initial={{ opacity: 0, x: -50 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ duration: 1, ease: 'easeOut' }}
                             >
-                                <Typography variant="h1" gutterBottom sx={{ fontSize: { xs: '3rem', md: '4rem' } }}>
-                                    The Unified <Box component="span" color="primary.main">Booking</Box> Engine.
+                                <Chip
+                                    label="SaaS Portfolio Platform"
+                                    sx={{
+                                        mb: 3,
+                                        bgcolor: 'rgba(99,102,241,0.15)',
+                                        color: '#c7d2fe',
+                                        fontWeight: 700,
+                                        border: '1px solid rgba(99,102,241,0.3)',
+                                        px: 1
+                                    }}
+                                />
+                                <Typography variant="h1" gutterBottom sx={{
+                                    fontSize: { xs: '3rem', md: '4.5rem' },
+                                    fontWeight: 900,
+                                    color: 'white',
+                                    lineHeight: 1.1,
+                                    letterSpacing: '-2px',
+                                    mb: 3
+                                }}>
+                                    Automate your<br />
+                                    <Box component="span" sx={{
+                                        background: 'linear-gradient(90deg, #c084fc, #818cf8)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent'
+                                    }}>Business Workflow.</Box>
                                 </Typography>
-                                <Typography variant="h5" color="text.secondary" paragraph sx={{ mb: 4, fontWeight: 400 }}>
-                                    A complete SaaS solution for multi-business booking management, staff scheduling, and customer engagement.
+
+                                <Typography sx={{
+                                    color: 'rgba(255,255,255,0.6)',
+                                    fontSize: { xs: '1.1rem', md: '1.2rem' },
+                                    mb: 6,
+                                    fontWeight: 400,
+                                    lineHeight: 1.8,
+                                    maxWidth: '600px'
+                                }}>
+                                    From scheduling to staff management, MyBookings provides a high-performance
+                                    ecosystem to grow your service business effortlessly.
                                 </Typography>
-                                <Stack direction="row" spacing={2}>
-                                    <Button variant="contained" size="large" sx={{ px: 4, py: 1.5 }} component={NavLink} to={dashboardPath}>
-                                        Get Started Free
+
+                                <Stack direction={{ xs: 'column', sm: 'row' }} spacing={2}>
+                                    <Button
+                                        variant="contained"
+                                        size="large"
+                                        sx={{
+                                            px: 4,
+                                            py: 2,
+                                            borderRadius: '16px',
+                                            fontSize: '1rem',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                            boxShadow: '0 8px 25px rgba(99,102,241,0.4)',
+                                            '&:hover': {
+                                                transform: 'translateY(-2px)',
+                                                boxShadow: '0 12px 30px rgba(99,102,241,0.5)',
+                                            }
+                                        }}
+                                        component={NavLink}
+                                        to={dashboardPath}
+                                    >
+                                        Launch Dashboard
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        size="large"
+                                        sx={{
+                                            px: 4,
+                                            py: 2,
+                                            borderRadius: '16px',
+                                            fontSize: '1rem',
+                                            fontWeight: 700,
+                                            textTransform: 'none',
+                                            color: 'white',
+                                            borderColor: 'rgba(255,255,255,0.2)',
+                                            background: 'rgba(255,255,255,0.05)',
+                                            '&:hover': {
+                                                borderColor: 'rgba(255,255,255,0.4)',
+                                                background: 'rgba(255,255,255,0.1)',
+                                            }
+                                        }}
+                                    >
+                                        Explore Projects
                                     </Button>
                                 </Stack>
                             </motion.div>
                         </Grid>
-                        <Grid item xs={12} md={6}>
+
+                        {/* RIGHT SIDE: LOGO + HEADER */}
+                        <Grid item xs={12} md={5} sx={{ display: 'flex', justifyContent: 'flex-end', pr: 0 }}>
                             <motion.div
-                                initial={{ opacity: 0, scale: 0.8 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                transition={{ duration: 0.8 }}
+                                initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                                animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                                transition={{
+                                    duration: 1.2,
+                                    ease: [0.16, 1, 0.3, 1]
+                                }}
+                                style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end' }}
                             >
-                                <Box
-                                    component="img"
-                                    src="https://images.unsplash.com/photo-1460925895917-afdab827c52f?auto=format&fit=crop&q=80&w=2426&ixlib=rb-4.0.3"
-                                    alt="Dashboard Preview"
-                                    sx={{
-                                        width: '100%',
-                                        borderRadius: 4,
-                                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)',
+                                <motion.div
+                                    animate={{
+                                        y: [0, -20, 0],
                                     }}
-                                />
+                                    transition={{
+                                        duration: 4,
+                                        repeat: Infinity,
+                                        ease: "easeInOut"
+                                    }}
+                                >
+                                    <Logo size={280} showText={false} sx={{
+                                        filter: 'drop-shadow(0 20px 40px rgba(99,102,241,0.3))',
+                                    }} />
+                                </motion.div>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.5, duration: 0.8 }}
+                                    style={{ textAlign: 'right', marginTop: '2rem' }}
+                                >
+                                    <Typography variant="h3" sx={{
+                                        fontWeight: 900,
+                                        background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                        fontSize: { xs: '2.5rem', md: '3.5rem' },
+                                        letterSpacing: '-1px'
+                                    }}>
+                                        My Bookings
+                                    </Typography>
+                                    <Typography sx={{
+                                        color: 'rgba(255,255,255,0.5)',
+                                        fontSize: '1.2rem',
+                                        fontWeight: 600,
+                                        letterSpacing: '4px',
+                                        textTransform: 'uppercase',
+                                        mt: 1
+                                    }}>
+                                        Bookings seamlessly
+                                    </Typography>
+                                </motion.div>
                             </motion.div>
                         </Grid>
                     </Grid>
                 </Container>
             </Box>
 
-            {/* Features Section */}
-            <Container maxWidth="lg" sx={{ py: 10 }}>
-                <Box sx={{ textAlign: 'center', mb: 8 }}>
-                    <Typography variant="h3" fontWeight={700} gutterBottom>
-                        Everything you need for bookings
-                    </Typography>
-                    <Typography color="text.secondary" variant="h6">
-                        Powerful features to help you scale your service-based business.
-                    </Typography>
-                </Box>
-                <Grid container spacing={4} justifyContent="center">
-                    {Features.map((f, i) => (
-                        <Grid item xs={12} sm={6} md={3} key={i}>
-                            <Card
-                                variant="outlined"
-                                sx={{
-                                    p: 4,
-                                    height: '100%',
-                                    textAlign: 'center',
-                                    borderRadius: '24px',
-                                    transition: 'all 0.3s ease-in-out',
-                                    '&:hover': {
-                                        transform: 'translateY(-12px)',
-                                        borderColor: 'primary.main',
-                                        boxShadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)',
-                                        bgcolor: 'rgba(59, 130, 246, 0.02)'
-                                    }
-                                }}
-                            >
-                                <Box sx={{
-                                    mb: 3,
-                                    display: 'inline-flex',
-                                    p: 2,
-                                    borderRadius: '16px',
-                                    bgcolor: 'primary.light',
-                                    color: 'primary.main',
-                                    opacity: 0.8
-                                }}>
-                                    {f.icon}
-                                </Box>
-                                <Typography variant="h6" fontWeight={800} gutterBottom>{f.title}</Typography>
-                                <Typography variant="body2" color="text.secondary" sx={{ lineHeight: 1.6 }}>{f.desc}</Typography>
-                            </Card>
-                        </Grid>
-                    ))}
-                </Grid>
-            </Container>
 
-            {/* Pricing Section */}
-            <Box sx={{ py: 12, bgcolor: '#f1f5f9' }}>
-                <Container maxWidth="xl">
-                    <Box sx={{ textAlign: 'center', mb: 8 }}>
-                        <Typography variant="h3" fontWeight={800} gutterBottom>
-                            Simple, Transparent <Box component="span" color="primary.main">Pricing</Box>
+            {/* Features Section */}
+            <Box sx={{ py: 15, bgcolor: '#0f172a', position: 'relative' }}>
+                <Container maxWidth="lg">
+                    <Box sx={{ textAlign: 'center', mb: 10 }}>
+                        <Typography variant="h3" fontWeight={900} gutterBottom sx={{
+                            fontSize: { xs: '2.5rem', md: '3.5rem' },
+                            color: 'white',
+                            letterSpacing: '-1px'
+                        }}>
+                            Everything you need to <Box component="span" sx={{
+                                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                            }}>scale</Box>
                         </Typography>
-                        <Typography color="text.secondary" variant="h6">
-                            Choose the perfect plan for your business growth.
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', variant: 'h6', maxWidth: '600px', mx: 'auto', fontSize: '1.1rem' }}>
+                            Powerful features designed to streamline your operations and delight your customers.
+                        </Typography>
+                    </Box>
+                    <Grid container spacing={4}>
+                        {Features.map((f, i) => (
+                            <Grid item xs={12} md={6} key={i}>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 20 }}
+                                    whileInView={{ opacity: 1, y: 0 }}
+                                    transition={{ duration: 0.5, delay: i * 0.1 }}
+                                    viewport={{ once: true }}
+                                >
+                                    <Card
+                                        elevation={0}
+                                        sx={{
+                                            p: 6,
+                                            height: '100%',
+                                            textAlign: 'center',
+                                            borderRadius: '40px',
+                                            bgcolor: 'rgba(255,255,255,0.03)',
+                                            border: '1px solid rgba(255,255,255,0.06)',
+                                            backdropFilter: 'blur(10px)',
+                                            transition: 'all 0.4s cubic-bezier(0.4, 0, 0.2, 1)',
+                                            '&:hover': {
+                                                transform: 'translateY(-12px)',
+                                                bgcolor: 'rgba(255,255,255,0.06)',
+                                                borderColor: 'rgba(99,102,241,0.4)',
+                                                boxShadow: '0 20px 40px rgba(0,0,0,0.3)',
+                                                '& .feature-icon': {
+                                                    transform: 'scale(1.1) rotate(5deg)',
+                                                    bgcolor: 'rgba(99,102,241,0.2)',
+                                                    color: '#818cf8'
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <Box
+                                            className="feature-icon"
+                                            sx={{
+                                                mb: 4,
+                                                display: 'inline-flex',
+                                                p: 3,
+                                                borderRadius: '24px',
+                                                bgcolor: 'rgba(255,255,255,0.05)',
+                                                color: '#6366f1',
+                                                transition: 'all 0.3s ease'
+                                            }}
+                                        >
+                                            {f.icon}
+                                        </Box>
+                                        <Typography variant="h5" fontWeight={800} gutterBottom sx={{ color: 'white', mb: 2 }}>
+                                            {f.title}
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, fontSize: '1.1rem' }}>
+                                            {f.desc}
+                                        </Typography>
+                                    </Card>
+                                </motion.div>
+                            </Grid>
+                        ))}
+                    </Grid>
+                </Container>
+            </Box>
+
+            <Box sx={{ py: 15, background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}>
+                <Container maxWidth={false} sx={{ px: { xs: 2, md: 6 } }}>
+                    <Box sx={{ textAlign: 'center', mb: 10 }}>
+                        <Typography variant="h3" fontWeight={900} gutterBottom sx={{ color: 'white', fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
+                            Simple, Transparent <Box component="span" sx={{
+                                background: 'linear-gradient(90deg, #c084fc, #818cf8)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                            }}>Pricing</Box>
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', variant: 'h6' }}>
+                            Choose the perfect plan for your business growth. No hidden fees.
                         </Typography>
                     </Box>
 
                     {loading ? (
                         <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
-                            <CircularProgress />
+                            <CircularProgress sx={{ color: '#6366f1' }} />
                         </Box>
                     ) : (
                         <Grid container spacing={2} justifyContent="center">
@@ -251,115 +440,98 @@ const LandingPage = () => {
                                         whileInView={{ opacity: 1, y: 0 }}
                                         transition={{ duration: 0.5, delay: i * 0.1 }}
                                         viewport={{ once: true }}
+                                        style={{ height: '100%' }}
                                     >
                                         <Card
+                                            elevation={0}
                                             sx={{
-                                                p: 4,
-                                                borderRadius: '32px',
+                                                p: 3,
+                                                borderRadius: '24px',
                                                 height: '100%',
                                                 display: 'flex',
                                                 flexDirection: 'column',
                                                 position: 'relative',
                                                 overflow: 'hidden',
-                                                border: '2px solid transparent',
+                                                bgcolor: 'rgba(255,255,255,0.03)',
+                                                border: '1px solid rgba(255,255,255,0.06)',
+                                                backdropFilter: 'blur(10px)',
                                                 transition: 'all 0.3s ease',
                                                 '&:hover': {
-                                                    borderColor: 'primary.main',
+                                                    borderColor: 'rgba(99,102,241,0.5)',
                                                     transform: 'translateY(-8px)',
-                                                    boxShadow: '0 30px 60px -12px rgba(50, 50, 93, 0.25), 0 18px 36px -18px rgba(0, 0, 0, 0.3)'
+                                                    bgcolor: 'rgba(255,255,255,0.05)',
+                                                    boxShadow: '0 30px 60px rgba(0,0,0,0.4)'
                                                 }
                                             }}
                                         >
                                             {i === 1 && (
                                                 <Box sx={{
                                                     position: 'absolute',
-                                                    top: 20,
-                                                    right: -30,
-                                                    bgcolor: 'primary.main',
+                                                    top: 15,
+                                                    right: -35,
+                                                    bgcolor: '#6366f1',
                                                     color: 'white',
                                                     px: 6,
                                                     py: 0.5,
                                                     transform: 'rotate(45deg)',
                                                     fontWeight: 800,
-                                                    fontSize: '0.75rem',
-                                                    textTransform: 'uppercase'
+                                                    fontSize: '0.65rem',
+                                                    textTransform: 'uppercase',
+                                                    boxShadow: '0 4px 10px rgba(0,0,0,0.2)'
                                                 }}>
-                                                    Most Popular
+                                                    Popular
                                                 </Box>
                                             )}
 
-                                            <Typography variant="h6" fontWeight={800} gutterBottom>{pkg.name}</Typography>
-                                            <Box sx={{ mb: 4, display: 'flex', alignItems: 'baseline' }}>
-                                                <Typography variant="h3" fontWeight={900}>₹{parseFloat(pkg.amount).toLocaleString()}</Typography>
-                                                <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>/ {pkg.duration_days} days</Typography>
+                                            <Typography variant="subtitle1" fontWeight={800} gutterBottom sx={{ color: 'white' }}>{pkg.name}</Typography>
+                                            <Box sx={{ mb: 3, display: 'flex', alignItems: 'baseline' }}>
+                                                <Typography variant="h4" fontWeight={900} sx={{ color: 'white' }}>₹{parseFloat(pkg.amount).toLocaleString()}</Typography>
+                                                <Typography variant="caption" sx={{ ml: 1, color: 'rgba(255,255,255,0.5)' }}>/ {pkg.duration_days}d</Typography>
                                             </Box>
 
-                                            <Divider sx={{ mb: 4 }} />
+                                            <Divider sx={{ mb: 3, borderColor: 'rgba(255,255,255,0.1)' }} />
 
-                                            <Stack spacing={2} sx={{ mb: 4, flexGrow: 1 }}>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">
-                                                        {pkg.max_businesses === -1 ? 'Unlimited' : pkg.max_businesses} Business Account
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">
-                                                        {pkg.max_locations === -1 ? 'Unlimited' : pkg.max_locations} Branch Locations
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">
-                                                        {pkg.max_staff === -1 ? 'Unlimited' : pkg.max_staff} Staff Members
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">
-                                                        {pkg.max_services === -1 ? 'Unlimited' : pkg.max_services} Services
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">
-                                                        {pkg.max_bookings === -1 ? 'Unlimited' : pkg.max_bookings} Monthly Bookings
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} />
-                                                    <Typography variant="body2">{pkg.portal_payment_charges}% Platform Commission</Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, opacity: pkg.allow_api ? 1 : 0.4 }}>
-                                                    {pkg.allow_api ? 
-                                                        <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} /> : 
-                                                        <CancelIcon sx={{ color: 'error.light', fontSize: '1.2rem' }} />
-                                                    }
-                                                    <Typography variant="body2" sx={{ textDecoration: pkg.allow_api ? 'none' : 'line-through' }}>
-                                                        Custom API Integration
-                                                    </Typography>
-                                                </Box>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, opacity: pkg.allow_website_builder ? 1 : 0.4 }}>
-                                                    {pkg.allow_website_builder ? 
-                                                        <CheckIcon sx={{ color: 'success.main', fontSize: '1.2rem' }} /> : 
-                                                        <CancelIcon sx={{ color: 'error.light', fontSize: '1.2rem' }} />
-                                                    }
-                                                    <Typography variant="body2" sx={{ textDecoration: pkg.allow_website_builder ? 'none' : 'line-through' }}>
-                                                        Advanced Website Builder
-                                                    </Typography>
-                                                </Box>
+                                            <Stack spacing={1.5} sx={{ mb: 4, flexGrow: 1 }}>
+                                                {[
+                                                    { label: `${pkg.max_businesses === -1 ? 'Unlimited' : pkg.max_businesses} Biz`, icon: <CheckIcon fontSize="small" /> },
+                                                    { label: `${pkg.max_locations === -1 ? 'Unlimited' : pkg.max_locations} Loc`, icon: <CheckIcon fontSize="small" /> },
+                                                    { label: `${pkg.max_staff === -1 ? 'Unlimited' : pkg.max_staff} Staff`, icon: <CheckIcon fontSize="small" /> },
+                                                    { label: `${pkg.max_bookings === -1 ? 'Unlimited' : pkg.max_bookings} Bookings`, icon: <CheckIcon fontSize="small" /> },
+                                                    { label: 'API Access', icon: pkg.allow_api ? <CheckIcon fontSize="small" /> : <CancelIcon fontSize="small" />, disabled: !pkg.allow_api },
+                                                    { label: 'Website Builder', icon: pkg.allow_website_builder ? <CheckIcon fontSize="small" /> : <CancelIcon fontSize="small" />, disabled: !pkg.allow_website_builder },
+                                                ].map((item, idx) => (
+                                                    <Box key={idx} sx={{ display: 'flex', alignItems: 'center', gap: 1, opacity: item.disabled ? 0.3 : 1 }}>
+                                                        <Box sx={{ color: item.disabled ? '#ef4444' : '#10b981', display: 'flex' }}>
+                                                            {item.icon}
+                                                        </Box>
+                                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', textDecoration: item.disabled ? 'line-through' : 'none', fontWeight: 500 }}>
+                                                            {item.label}
+                                                        </Typography>
+                                                    </Box>
+                                                ))}
                                             </Stack>
 
                                             <Button
                                                 fullWidth
                                                 variant={i === 1 ? 'contained' : 'outlined'}
-                                                size="large"
+                                                size="small"
                                                 component={NavLink}
                                                 to="/register"
-                                                sx={{ borderRadius: '16px', py: 1.5, fontWeight: 700 }}
+                                                sx={{
+                                                    borderRadius: '12px',
+                                                    py: 1,
+                                                    fontWeight: 800,
+                                                    textTransform: 'none',
+                                                    fontSize: '0.75rem',
+                                                    ...(i === 1 ? {
+                                                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                                    } : {
+                                                        color: 'white',
+                                                        borderColor: 'rgba(255,255,255,0.2)',
+                                                    })
+                                                }}
                                             >
-                                                Get Started
+                                                Choose Plan
                                             </Button>
                                         </Card>
                                     </motion.div>
@@ -371,51 +543,65 @@ const LandingPage = () => {
             </Box>
 
 
+
             {/* FAQ Section */}
-            <Container maxWidth="md" sx={{ py: 12 }}>
-                <Box sx={{ textAlign: 'center', mb: 8 }}>
-                    <Typography variant="h3" fontWeight={800} gutterBottom sx={{ color: 'text.primary' }}>
-                        Frequently Asked Questions
-                    </Typography>
-                    <Typography color="text.secondary" variant="h6" sx={{ maxWidth: '600px', mx: 'auto' }}>
-                        Everything you need to know about our booking platform.
-                    </Typography>
-                </Box>
-                <Box>
-                    {FAQs.map((faq, index) => (
-                        <Accordion
-                            key={index}
-                            elevation={0}
-                            sx={{
-                                mb: 2,
-                                border: '1px solid #e2e8f0',
-                                borderRadius: '16px !important',
-                                '&:before': { display: 'none' },
-                                '&.Mui-expanded': { boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }
-                            }}
-                        >
-                            <AccordionSummary expandIcon={<ExpandMoreIcon color="primary" />}>
-                                <Typography variant="h6" fontWeight={600}>{faq.question}</Typography>
-                            </AccordionSummary>
-                            <AccordionDetails>
-                                <Typography color="text.secondary" variant="body1">
-                                    {faq.answer}
-                                </Typography>
-                            </AccordionDetails>
-                        </Accordion>
-                    ))}
-                </Box>
-            </Container>
+            <Box sx={{ py: 15, bgcolor: '#0f172a' }}>
+                <Container maxWidth="md">
+                    <Box sx={{ textAlign: 'center', mb: 10 }}>
+                        <Typography variant="h3" fontWeight={900} gutterBottom sx={{ color: 'white', fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
+                            Frequently Asked <Box component="span" sx={{
+                                background: 'linear-gradient(90deg, #6366f1, #a855f7)',
+                                WebkitBackgroundClip: 'text',
+                                WebkitTextFillColor: 'transparent'
+                            }}>Questions</Box>
+                        </Typography>
+                        <Typography sx={{ color: 'rgba(255,255,255,0.5)', variant: 'h6', maxWidth: '600px', mx: 'auto' }}>
+                            Everything you need to know about our booking platform.
+                        </Typography>
+                    </Box>
+                    <Box>
+                        {FAQs.map((faq, index) => (
+                            <Accordion
+                                key={index}
+                                elevation={0}
+                                sx={{
+                                    mb: 2,
+                                    bgcolor: 'rgba(255,255,255,0.02)',
+                                    border: '1px solid rgba(255,255,255,0.06)',
+                                    borderRadius: '20px !important',
+                                    color: 'white',
+                                    overflow: 'hidden',
+                                    '&:before': { display: 'none' },
+                                    '&.Mui-expanded': {
+                                        bgcolor: 'rgba(255,255,255,0.04)',
+                                        borderColor: 'rgba(99,102,241,0.3)',
+                                        boxShadow: '0 10px 30px rgba(0,0,0,0.2)'
+                                    }
+                                }}
+                            >
+                                <AccordionSummary expandIcon={<ExpandMoreIcon sx={{ color: '#6366f1' }} />}>
+                                    <Typography variant="h6" fontWeight={700}>{faq.question}</Typography>
+                                </AccordionSummary>
+                                <AccordionDetails sx={{ borderTop: '1px solid rgba(255,255,255,0.05)', pt: 3 }}>
+                                    <Typography sx={{ color: 'rgba(255,255,255,0.6)', variant: 'body1', lineHeight: 1.8 }}>
+                                        {faq.answer}
+                                    </Typography>
+                                </AccordionDetails>
+                            </Accordion>
+                        ))}
+                    </Box>
+                </Container>
+            </Box>
 
             {/* Footer */}
-            <Box sx={{ py: 8, borderTop: '1px solid #e2e8f0', bgcolor: '#f8fafc' }}>
+            <Box sx={{ py: 10, borderTop: '1px solid rgba(255,255,255,0.06)', bgcolor: '#0b1120' }}>
                 <Container maxWidth="xl">
-                    <Grid container spacing={4} alignItems="center" justifyContent="space-between">
+                    <Grid container spacing={6} alignItems="flex-start" justifyContent="space-between">
                         <Grid item xs={12} md={5}>
-                            <Logo size={40} />
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                                Empowering businesses with smart, unified booking solutions. <br />
-                                Managed and developed with excellence by Allysoft Solutions.
+                            <Logo size={42} />
+                            <Typography variant="body2" sx={{ mt: 3, color: 'rgba(255,255,255,0.5)', lineHeight: 1.8, maxWidth: '400px' }}>
+                                Empowering businesses with smart, unified booking solutions.
+                                Designed for modern service providers who value efficiency and premium customer experience.
                             </Typography>
                         </Grid>
 
@@ -430,7 +616,7 @@ const LandingPage = () => {
                                 textAlign: { xs: 'left', md: 'right' }
                             }}
                         >
-                            <Typography variant="subtitle2" color="text.secondary" fontWeight={700} textTransform="uppercase" letterSpacing="1px" gutterBottom>
+                            <Typography variant="subtitle2" sx={{ color: 'rgba(255,255,255,0.4)', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '2px', mb: 2 }}>
                                 Developed By
                             </Typography>
                             <Box
@@ -441,25 +627,33 @@ const LandingPage = () => {
                                 sx={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
-                                    gap: 1.5,
-                                    transition: 'transform 0.2s',
-                                    '&:hover': { transform: 'scale(1.02)' }
+                                    gap: 2,
+                                    transition: 'all 0.3s ease',
+                                    '&:hover': { transform: 'scale(1.05)' }
                                 }}
                             >
-                                <Typography variant="h5" sx={{ color: '#FACC15', fontWeight: 900 }}>
+                                <Typography variant="h4" sx={{ color: '#FACC15', fontWeight: 900, letterSpacing: '-1px' }}>
                                     Allysoft Solutions
                                 </Typography>
                                 <Box
                                     component="img"
                                     src="/company_logo.png"
                                     alt="Allysoft Logo"
-                                    sx={{ width: 44, height: 44, borderRadius: '8px', objectFit: 'contain' }}
+                                    sx={{
+                                        width: 50,
+                                        height: 50,
+                                        borderRadius: '12px',
+                                        objectFit: 'contain',
+                                        border: '1px solid rgba(255,255,255,0.1)',
+                                        p: 0.5,
+                                        bgcolor: 'rgba(255,255,255,0.05)'
+                                    }}
                                 />
                             </Box>
                         </Grid>
                     </Grid>
-                    <Box sx={{ pt: 4, borderTop: '1px solid #e2e8f0' }}>
-                        <Typography align="center" color="text.secondary" variant="body2">
+                    <Box sx={{ mt: 8, pt: 4, borderTop: '1px solid rgba(255,255,255,0.05)' }}>
+                        <Typography align="center" sx={{ color: 'rgba(255,255,255,0.4)', variant: 'body2' }}>
                             Copyright © {new Date().getFullYear()} Allysoft Solutions. All rights reserved.
                         </Typography>
                     </Box>
