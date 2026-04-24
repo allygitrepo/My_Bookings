@@ -13,7 +13,20 @@ const subscriptionController = {
                 return res.status(404).json({ success: false, message: "Package not found" });
             }
 
-            // 1. Create Razorpay Order
+            // 1. Check for One-Time Plan restriction
+            if (pkg.is_one_time) {
+                const existingSub = await UserSubscription.findOne({
+                    where: { user_id: userId, package_id: packageId }
+                });
+                if (existingSub) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: `The '${pkg.name}' plan is a one-time offer and has already been used by your account.` 
+                    });
+                }
+            }
+
+            // 2. Create Razorpay Order
             const order = await razorpayService.createOrder(pkg.amount, `sub_${userId}_${Date.now()}`, {
                 package_id: String(packageId),
                 user_id: String(userId),
@@ -117,6 +130,19 @@ const subscriptionController = {
 
             if (!user || !pkg) {
                 return res.status(404).json({ success: false, message: "User or Package not found" });
+            }
+
+            // Check for One-Time Plan restriction
+            if (pkg.is_one_time) {
+                const existingSub = await UserSubscription.findOne({
+                    where: { user_id: userId, package_id: packageId }
+                });
+                if (existingSub) {
+                    return res.status(400).json({ 
+                        success: false, 
+                        message: `The '${pkg.name}' plan is a one-time offer and has already been used by your account.` 
+                    });
+                }
             }
 
             if (parseFloat(pkg.amount) > 0) {

@@ -34,8 +34,8 @@ const SubscriptionModal = ({ open }) => {
         const fetchData = async () => {
             setLoading(true);
             try {
-                // Fetch all active packages
-                const pkgRes = await axiosInstance.get('/packages/active');
+                // Fetch all active packages with 'already_used' info for this user
+                const pkgRes = await axiosInstance.get('/packages/available');
                 if (pkgRes.data.success) {
                     setPackages(pkgRes.data.data);
                     
@@ -43,7 +43,8 @@ const SubscriptionModal = ({ open }) => {
                     const savedId = sessionStorage.getItem('selectedPackageId');
                     if (savedId) {
                         const pkg = pkgRes.data.data.find(p => String(p.id) === String(savedId));
-                        if (pkg) {
+                        // Only auto-select if NOT already used
+                        if (pkg && !pkg.already_used) {
                             setSelectedPkg(pkg);
                             setStep('pay');
                         }
@@ -199,25 +200,44 @@ const SubscriptionModal = ({ open }) => {
                                                 <Grid item xs={12} sm={6} md={md} key={pkg.id}>
                                                 <Card 
                                                     elevation={0}
-                                                    onClick={() => { setSelectedPkg(pkg); setStep('pay'); }}
+                                                    onClick={() => { 
+                                                        if (pkg.already_used) return;
+                                                        setSelectedPkg(pkg); 
+                                                        setStep('pay'); 
+                                                    }}
                                                     sx={{ 
-                                                        cursor: 'pointer', p: 3, height: '100%', 
+                                                        cursor: pkg.already_used ? 'not-allowed' : 'pointer', 
+                                                        p: 3, height: '100%', 
                                                         borderRadius: '24px',
                                                         border: '1px solid #e2e8f0',
+                                                        opacity: pkg.already_used ? 0.6 : 1,
+                                                        filter: pkg.already_used ? 'grayscale(0.5)' : 'none',
                                                         transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                         display: 'flex',
                                                         flexDirection: 'column',
-                                                        '&:hover': { 
+                                                        position: 'relative',
+                                                        '&:hover': !pkg.already_used && { 
                                                             borderColor: '#6366f1', 
                                                             transform: 'translateY(-8px)',
                                                             boxShadow: '0 20px 40px rgba(99,102,241,0.08)'
                                                         }
                                                     }}
                                                 >
+                                                    {pkg.already_used && (
+                                                        <Box sx={{ 
+                                                            position: 'absolute', top: 12, right: 12,
+                                                            bgcolor: '#fee2e2', color: '#ef4444', 
+                                                            px: 1.5, py: 0.5, borderRadius: 10,
+                                                            fontSize: '0.65rem', fontWeight: 800,
+                                                            textTransform: 'uppercase'
+                                                        }}>
+                                                            Used
+                                                        </Box>
+                                                    )}
                                                     <Typography variant="subtitle1" fontWeight={800} sx={{ color: '#0f172a', mb: 2 }}>{pkg.name}</Typography>
                                                     
                                                     <Box sx={{ mb: 3, display: 'flex', alignItems: 'baseline' }}>
-                                                        <Typography variant="h4" fontWeight={900} sx={{ color: '#6366f1' }}>
+                                                        <Typography variant="h4" fontWeight={900} sx={{ color: pkg.already_used ? '#94a3b8' : '#6366f1' }}>
                                                             ₹{parseFloat(pkg.amount).toLocaleString()}
                                                         </Typography>
                                                     </Box>
@@ -248,22 +268,23 @@ const SubscriptionModal = ({ open }) => {
                                                     <Button 
                                                         fullWidth 
                                                         variant="outlined" 
+                                                        disabled={pkg.already_used}
                                                         sx={{ 
                                                             borderRadius: '12px',
                                                             py: 1,
                                                             fontWeight: 800,
                                                             textTransform: 'none',
                                                             fontSize: '0.85rem',
-                                                            borderColor: '#6366f1',
-                                                            color: '#6366f1',
-                                                            '&:hover': {
+                                                            borderColor: pkg.already_used ? '#e2e8f0' : '#6366f1',
+                                                            color: pkg.already_used ? '#94a3b8' : '#6366f1',
+                                                            '&:hover': !pkg.already_used && {
                                                                 bgcolor: '#6366f1',
                                                                 color: 'white',
                                                                 borderColor: '#6366f1'
                                                             }
                                                         }}
                                                     >
-                                                        Select Plan
+                                                        {pkg.already_used ? 'Already Used' : 'Select Plan'}
                                                     </Button>
                                                 </Card>
                                             </Grid>

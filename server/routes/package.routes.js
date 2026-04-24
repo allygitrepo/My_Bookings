@@ -12,6 +12,7 @@ router.get("/active", (req, res, next) => {
 
 // Routes accessible by any authenticated user
 router.use(authMiddleware);
+router.get("/available", packageController.getAvailable);
 router.get("/:id", packageController.getById);
 
 // Protected routes (Portal Admin only)

@@ -1,4 +1,4 @@
-const { Package, User } = require("../models/associations");
+const { Package, User, UserSubscription } = require("../models/associations");
 
 const packageController = {
     getAll: async (req, res) => {
@@ -16,6 +16,35 @@ const packageController = {
                 order: [['amount', 'ASC']]
             });
             res.json({ success: true, data: rows });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getAvailable: async (req, res) => {
+        try {
+            const userId = req.user.user_id;
+            const packages = await Package.findAll({
+                where: { status: true },
+                order: [['amount', 'ASC']]
+            });
+
+            const userSubs = await UserSubscription.findAll({
+                where: { user_id: userId },
+                attributes: ['package_id']
+            });
+
+            const usedPackageIds = userSubs.map(s => s.package_id);
+
+            const data = packages.map(pkg => {
+                const isAlreadyUsed = pkg.is_one_time && usedPackageIds.includes(pkg.id);
+                return {
+                    ...pkg.toJSON(),
+                    already_used: isAlreadyUsed
+                };
+            });
+
+            res.json({ success: true, data });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
