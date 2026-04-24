@@ -120,7 +120,7 @@ const StaffServices = () => {
             <PageHeader title="Staff Services" subtitle="Manage which staff members can perform which services." onAddClick={() => handleOpen()} buttonText="Assign Service" disabled={isSuspended} />
             <TableContainer component={Paper}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Staff Name</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Service Name</TableCell>

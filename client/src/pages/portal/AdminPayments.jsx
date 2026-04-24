@@ -61,20 +61,20 @@ const AdminPayments = () => {
                     <Typography variant="body2" color="text.secondary">Monitor all SaaS subscription payments and platform revenue.</Typography>
                 </Box>
                 <Tooltip title="Export CSV">
-                    <IconButton sx={{ bgcolor: 'white', border: '1px solid #e2e8f0' }}>
+                    <IconButton sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
                         <DownloadIcon />
                     </IconButton>
                 </Tooltip>
             </Box>
 
-            <Card sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid #e2e8f0', mb: 4 }}>
-                <Box sx={{ p: 2, bgcolor: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+            <Card sx={{ mb: 4 }}>
+                <Box sx={{ p: 2, borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
                     <TextField
                         size="small"
                         placeholder="Search by user, order ID or plan..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        sx={{ bgcolor: 'white', width: { xs: '100%', md: 400 } }}
+                        sx={{ width: { xs: '100%', md: 400 } }}
                         InputProps={{
                             startAdornment: (
                                 <InputAdornment position="start">
@@ -87,7 +87,7 @@ const AdminPayments = () => {
 
                 <TableContainer>
                     <Table>
-                        <TableHead sx={{ bgcolor: '#f8fafc' }}>
+                        <TableHead>
                             <TableRow>
                                 <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -121,7 +121,7 @@ const AdminPayments = () => {
                                         <Chip label={payment.package?.name} size="small" sx={{ fontWeight: 600 }} />
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: '#f1f5f9', p: 0.5, borderRadius: 1 }}>
+                                        <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,0.2)', p: 0.5, borderRadius: 1 }}>
                                             {payment.razorpay_order_id}
                                         </Typography>
                                     </TableCell>

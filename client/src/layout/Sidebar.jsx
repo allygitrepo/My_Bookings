@@ -53,7 +53,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const { isFeatureAllowed, usage } = useSubscription();
 
     const drawerContent = (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Logo size={36} />
             </Box>
@@ -152,26 +152,8 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                     boxSizing: 'border-box',
                     borderRight: '1px solid',
                     borderColor: 'divider',
-                    direction: 'rtl', // Move scrollbar to start (left)
                     overflowX: 'hidden',
-                    scrollbarWidth: 'thin',
-                    '&::-webkit-scrollbar': {
-                        width: '6px',
-                    },
-                    '&::-webkit-scrollbar-track': {
-                        background: 'transparent',
-                    },
-                    '&::-webkit-scrollbar-thumb': {
-                        background: (theme) =>
-                            theme.palette.mode === 'dark'
-                                ? 'rgba(255, 255, 255, 0.2)'
-                                : 'rgba(0, 0, 0, 0.1)',
-                        borderRadius: '10px',
-                        transition: 'background 0.3s ease',
-                    },
-                    '&::-webkit-scrollbar-thumb:hover': {
-                        background: (theme) => theme.palette.primary.main,
-                    },
+                    overflowY: 'auto',
                 },
             }}
         >

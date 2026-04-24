@@ -135,7 +135,7 @@ const ApiKeys = () => {
 
             <TableContainer component={Paper}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business</TableCell>

@@ -55,9 +55,9 @@ const Customers = () => {
                 subtitle="Customers are created automatically when a booking is made via the widget."
             />
             {/* Desktop Table */}
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -104,11 +104,11 @@ const Customers = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : filteredCustomers.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No customers found</Typography>
                     </Paper>
                 ) : filteredCustomers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((c) => (
-                    <Card key={c.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                    <Card key={c.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                             <Avatar sx={{ bgcolor: 'secondary.main', fontWeight: 800 }}>{c.name?.charAt(0)?.toUpperCase()}</Avatar>
                             <Box>

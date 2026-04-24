@@ -4,7 +4,7 @@ import {
     TableContainer, TableHead, TableRow, Chip,
     IconButton, Button, Tooltip, CircularProgress, Divider,
     Grid, TextField, InputAdornment, Card, CardContent,
-    Switch, FormControlLabel
+    Switch, FormControlLabel, TablePagination
 } from '@mui/material';
 import {
     Add as AddIcon,
@@ -30,6 +30,15 @@ const PortalPackages = () => {
     const [showForm, setShowForm] = useState(false);
     const [editingId, setEditingId] = useState(null);
     const [processing, setProcessing] = useState(false);
+
+    // Pagination State
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const handleChangePage = (event, newPage) => setPage(newPage);
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     // Form State
     const [formData, setFormData] = useState({
@@ -189,7 +198,7 @@ const PortalPackages = () => {
             </Box>
 
             {showForm && (
-                <Card sx={{ mb: 4, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                <Card sx={{ mb: 4, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                     <CardContent sx={{ p: 3 }}>
                         <Typography variant="h6" fontWeight={800} mb={3}>
                             {editingId ? 'Edit Package' : 'Create New Package'}
@@ -321,7 +330,7 @@ const PortalPackages = () => {
                                     </Typography>
                                     <Grid container spacing={4}>
                                         <Grid item xs={12} md={4}>
-                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default' }}>
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
                                                 <FormControlLabel
                                                     sx={{ width: '100%', m: 0 }}
                                                     control={
@@ -341,7 +350,7 @@ const PortalPackages = () => {
                                         </Grid>
 
                                         <Grid item xs={12} md={4}>
-                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'background.default' }}>
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(0,0,0,0.2)' }}>
                                                 <FormControlLabel
                                                     sx={{ width: '100%', m: 0 }}
                                                     control={
@@ -410,9 +419,10 @@ const PortalPackages = () => {
                 </Card>
             )}
 
-            <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <Card sx={{ mb: 4 }}>
+                <TableContainer>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Package Details</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Pricing</TableCell>
@@ -434,7 +444,7 @@ const PortalPackages = () => {
                                     No packages created yet.
                                 </TableCell>
                             </TableRow>
-                        ) : packages.map((pkg) => (
+                        ) : packages.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((pkg) => (
                             <TableRow key={pkg.id} hover>
                                 <TableCell>
                                     <Typography variant="body2" fontWeight={800}>{pkg.name}</Typography>
@@ -493,17 +503,17 @@ const PortalPackages = () => {
                                 <TableCell align="right">
                                     <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
                                         <Tooltip title={pkg.status ? 'Disable' : 'Enable'}>
-                                            <IconButton onClick={() => handleToggleStatus(pkg)} size="small" sx={{ bgcolor: pkg.status ? 'error.50' : 'success.50' }}>
+                                            <IconButton onClick={() => handleToggleStatus(pkg)} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
                                                 {pkg.status ? <DisableIcon fontSize="small" color="error" /> : <EnableIcon fontSize="small" color="success" />}
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Edit">
-                                            <IconButton onClick={() => handleEdit(pkg)} size="small" sx={{ bgcolor: 'primary.50' }}>
+                                            <IconButton onClick={() => handleEdit(pkg)} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
                                                 <EditIcon fontSize="small" color="primary" />
                                             </IconButton>
                                         </Tooltip>
                                         <Tooltip title="Delete">
-                                            <IconButton onClick={() => handleDelete(pkg.id)} size="small" sx={{ bgcolor: 'error.50' }}>
+                                            <IconButton onClick={() => handleDelete(pkg.id)} size="small" sx={{ bgcolor: 'rgba(255,255,255,0.05)' }}>
                                                 <DeleteIcon fontSize="small" color="error" />
                                             </IconButton>
                                         </Tooltip>
@@ -513,7 +523,17 @@ const PortalPackages = () => {
                         ))}
                     </TableBody>
                 </Table>
-            </TableContainer>
+                </TableContainer>
+                <TablePagination
+                    rowsPerPageOptions={[10, 25, 50]}
+                    component="div"
+                    count={packages.length}
+                    rowsPerPage={rowsPerPage}
+                    page={page}
+                    onPageChange={handleChangePage}
+                    onRowsPerPageChange={handleChangeRowsPerPage}
+                />
+            </Card>
         </PageTransition>
     );
 };

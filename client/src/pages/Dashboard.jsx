@@ -131,7 +131,7 @@ const Dashboard = () => {
                     icon={<WarningIcon />}
                     sx={{ 
                         mb: 4, 
-                        borderRadius: 3, 
+                        borderRadius: '16px', 
                         fontWeight: 700,
                         boxShadow: '0 8px 24px -12px rgba(239, 68, 68, 0.5)',
                         '& .MuiAlert-message': { width: '100%' }
@@ -200,9 +200,9 @@ const Dashboard = () => {
             </Box>
 
             {/* Desktop Table View */}
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, overflow: 'hidden', mb: 4 }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead >
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -292,7 +292,7 @@ const Dashboard = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : recentBookings.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No bookings found</Typography>
                     </Paper>
                 ) : recentBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => {
@@ -306,7 +306,7 @@ const Dashboard = () => {
                     const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
 
                     return (
-                        <Card key={b.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                        <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                     <Avatar sx={{ width: 40, height: 40, bgcolor: 'primary.main', fontWeight: 700 }}>

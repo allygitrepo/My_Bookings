@@ -213,9 +213,9 @@ const Businesses = () => {
                 disabled={!canAdd('business')}
             />
 
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Business Name</TableCell>
@@ -303,13 +303,13 @@ const Businesses = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : filteredBusinesses.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No businesses found</Typography>
                     </Paper>
                 ) : filteredBusinesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz) => {
                     const industry = INDUSTRY_OPTIONS.find(opt => opt.value === biz.business_type);
                     return (
-                        <Card key={biz.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                        <Card key={biz.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
                                     <Box sx={{ 
@@ -485,7 +485,7 @@ const Businesses = () => {
                 <Divider sx={{ my: 2.5 }} />
 
                 <FieldSection label="Location Structure">
-                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 3, border: '1px dashed', borderColor: 'divider' }}>
+                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: '16px', border: '1px dashed', borderColor: 'divider' }}>
                         <Controller
                             name="has_multiple_locations"
                             control={control}

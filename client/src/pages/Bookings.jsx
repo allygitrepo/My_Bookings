@@ -62,7 +62,7 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
     };
 
     return (
-        <Paper sx={{ p: 4, borderRadius: 4, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+        <Paper sx={{ p: 4, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 4 }}>
                 <Typography variant="h5" fontWeight={800} color="primary">
                     {MONTH_NAMES[currentDate.month()]} {currentDate.year()}
@@ -223,10 +223,17 @@ const Bookings = () => {
 
     useEffect(() => {
         fetchData();
-        // Automatic Polling every 30 seconds to fetch new bookings from widget
-        const interval = setInterval(fetchData, 30000);
+        if (typeof refreshUsage === 'function') refreshUsage();
+        
+        const interval = setInterval(() => {
+            fetchData();
+            if (typeof refreshUsage === 'function') refreshUsage();
+        }, 30000);
         return () => clearInterval(interval);
     }, []);
+
+    // ... (rest of the filteredBookings logic) ...
+
 
     const filteredBookings = [...bookings].sort((a, b) => {
         const dateA = a.booking_date || "";
@@ -288,16 +295,35 @@ const Bookings = () => {
                 title={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         Bookings
-                        {usage && usage.limits.bookings !== -1 && (
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
-                                {usage.usage.bookings} / {usage.limits.bookings} Used
-                            </Typography>
-                        )}
                     </Box>
                 }
                 subtitle="All customer appointments. Bookings are created via the widget."
                 extraActions={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        {usage && usage.limits.bookings !== -1 && (
+                            <Box sx={{ minWidth: 140, display: { xs: 'none', lg: 'block' } }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
+                                    <Typography variant="caption" fontWeight={800} color="text.secondary">
+                                        Quota: {usage.usage.bookings}/{usage.limits.bookings}
+                                    </Typography>
+                                    {usage.usage.bookings >= usage.limits.bookings && (
+                                        <Typography variant="caption" fontWeight={900} color="error.main" sx={{ fontSize: '0.65rem' }}>LIMIT</Typography>
+                                    )}
+                                </Box>
+                                <LinearProgress 
+                                    variant="determinate" 
+                                    value={Math.min((usage.usage.bookings / usage.limits.bookings) * 100, 100)} 
+                                    sx={{ 
+                                        height: 8, borderRadius: 4, bgcolor: 'rgba(255,255,255,0.1)',
+                                        '& .MuiLinearProgress-bar': {
+                                            borderRadius: 4,
+                                            bgcolor: usage.usage.bookings >= usage.limits.bookings ? 'error.main' : 'primary.main',
+                                            boxShadow: '0 0 10px rgba(99, 102, 241, 0.5)'
+                                        }
+                                    }}
+                                />
+                            </Box>
+                        )}
                         {/* 
                         // Calendar Sync Disabled
                         isGoogleConnected && (
@@ -389,40 +415,18 @@ const Bookings = () => {
                 }
             />
 
-            {/* --- Booking Quota Progress --- */}
-            {usage && usage.limits.bookings !== -1 && (
-                <Paper sx={{ 
-                    p: 2.5, mb: 3, borderRadius: 4, bgcolor: 'background.paper', 
-                    border: '1px solid', borderColor: 'divider', boxShadow: 'none' 
-                }}>
-                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Typography variant="subtitle2" fontWeight={800}>Monthly Booking Quota</Typography>
-                            {usage.usage.bookings >= usage.limits.bookings && (
-                                <Chip label="Limit Reached" color="error" size="small" sx={{ fontWeight: 800, height: 20 }} />
-                            )}
-                        </Box>
-                        <Typography variant="caption" fontWeight={800} color="text.secondary">
-                            {usage.usage.bookings} / {usage.limits.bookings} Used
-                        </Typography>
-                    </Box>
-                    <LinearProgress 
-                        variant="determinate" 
-                        value={Math.min((usage.usage.bookings / usage.limits.bookings) * 100, 100)} 
-                        sx={{ 
-                            height: 10, borderRadius: 5, bgcolor: 'action.hover',
-                            '& .MuiLinearProgress-bar': {
-                                borderRadius: 5,
-                                bgcolor: usage.usage.bookings >= usage.limits.bookings ? 'error.main' : 'primary.main'
-                            }
-                        }}
-                    />
-                    {usage.usage.bookings >= usage.limits.bookings && (
-                        <Typography variant="caption" color="error.main" sx={{ mt: 1, display: 'block', fontWeight: 700 }}>
-                            You have reached your booking limit. Your widget is now disabled. Please upgrade to accept more bookings.
-                        </Typography>
-                    )}
-                </Paper>
+            {/* Quota limit warning */}
+            {usage && usage.limits.bookings !== -1 && usage.usage.bookings >= usage.limits.bookings && (
+                <Alert severity="error" sx={{ mb: 3, borderRadius: '12px', fontWeight: 700 }}>
+                    You have reached your booking limit. Your widget is now disabled. Please upgrade to accept more bookings.
+                </Alert>
+            )}
+
+            {/* Expiration warning */}
+            {usage && usage.isExpired && (
+                <Alert severity="warning" sx={{ mb: 3, borderRadius: '12px', fontWeight: 700 }}>
+                    Your subscription has expired. Please renew your plan to continue receiving bookings and accessing all features.
+                </Alert>
             )}
 
             {/* --- Filters Bar --- */}
@@ -431,7 +435,7 @@ const Bookings = () => {
                     <Paper sx={{ 
                         p: 2, 
                         mb: 3, 
-                        borderRadius: 3, 
+                        borderRadius: '16px', 
                         display: 'flex', 
                         flexDirection: { xs: 'column', sm: 'row' },
                         gap: 2, 
@@ -497,9 +501,9 @@ const Bookings = () => {
             ) : (
                 <>
                     {/* Desktop Table View */}
-                    <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                    <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, overflow: 'hidden', mb: 4 }}>
                         <Table>
-                            <TableHead sx={{ bgcolor: 'background.default' }}>
+                            <TableHead >
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -590,7 +594,7 @@ const Bookings = () => {
                         {loading ? (
                             <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                         ) : filteredBookings.length === 0 ? (
-                            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 4, border: '1px dashed', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed', borderColor: 'divider', boxShadow: 'none' }}>
                                 <Typography variant="body2" color="text.secondary">No bookings found</Typography>
                             </Paper>
                         ) : filteredBookings.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((b) => {
@@ -609,7 +613,7 @@ const Bookings = () => {
                             const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
 
                             return (
-                                <Card key={b.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                                <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 800 }}>{customer?.name?.charAt(0)}</Avatar>

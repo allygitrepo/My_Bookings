@@ -234,9 +234,9 @@ const Locations = () => {
                 }
             />
             {/* Desktop Table */}
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Location Name</TableCell>
@@ -298,11 +298,11 @@ const Locations = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : filteredLocations.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No locations found</Typography>
                     </Paper>
                 ) : filteredLocations.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((loc) => (
-                    <Card key={loc.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                    <Card key={loc.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                             <Box>
                                 <Typography variant="subtitle1" fontWeight={900}>{loc.location_name}</Typography>

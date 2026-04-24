@@ -55,7 +55,7 @@ const MainLayout = () => {
     }
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'background.default' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'transparent' }}>
             <Sidebar
                 open={isSidebarOpen}
                 onClose={() => setIsSidebarOpen(false)}

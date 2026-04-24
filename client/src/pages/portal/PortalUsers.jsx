@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Box, Typography, Paper, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Chip, Avatar,
-    CircularProgress, TextField, InputAdornment, Tooltip, IconButton
+    CircularProgress, TextField, InputAdornment, Tooltip, IconButton, TablePagination
 } from '@mui/material';
 import {
     Tabs, Tab, Switch, Dialog, DialogTitle, DialogContent,
@@ -39,6 +39,15 @@ const PortalUsers = () => {
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
     const [currentTab, setCurrentTab] = useState(0);
+
+    // Pagination State
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const handleChangePage = (event, newPage) => setPage(newPage);
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     // Suspension Dialog State
     const [openDialog, setOpenDialog] = useState(false);
@@ -190,9 +199,9 @@ const PortalUsers = () => {
                 />
             </Box>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <TableContainer component={Paper} sx={{ overflow: 'hidden', mb: 4 }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead >
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
@@ -215,7 +224,7 @@ const PortalUsers = () => {
                                     No users found matching your search.
                                 </TableCell>
                             </TableRow>
-                        ) : filteredUsers.map((user) => (
+                        ) : filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((user) => (
                             <TableRow key={user.id} hover>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -294,6 +303,15 @@ const PortalUsers = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={filteredUsers.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+            />
 
             {/* Suspend Reason Dialog */}
             <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="xs" fullWidth>

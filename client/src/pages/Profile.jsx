@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { 
-    Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined, 
-    PhotoCamera, Bolt as BoltIcon 
+import {
+    Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined,
+    PhotoCamera, Bolt as BoltIcon
 } from '@mui/icons-material';
 import {
     Box, Card, Typography, TextField, Button, Alert, Avatar,
-    Divider, InputAdornment, IconButton, Chip
+    Divider, InputAdornment, IconButton, Chip, Grid
 } from '@mui/material';
 import PageHeader from '../components/PageHeader';
 import { updateUser, getUserById } from '../api/user.api';
@@ -150,137 +150,201 @@ const Profile = () => {
 
     return (
         <>
-            <PageHeader title="My Profile" subtitle="Manage your account information and security settings." />
+            {/* <PageHeader title="My Profile" subtitle="Manage your account information and security settings." sx={{ mb: 4 }} /> */}
 
-            <Box sx={{ maxWidth: 700 }}>
+            <Box sx={{ maxWidth: 850 }}>
                 {/* Subscription Plan Card */}
                 {currentUser?.role === 'OWNER' && (
-                    <Card sx={{ p: 4, mb: 3, border: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
-                        <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <BoltIcon sx={{ color: '#6366f1' }} /> Current Subscription
+                    <Card sx={{
+                        p: 2.5, mb: 3,
+                        background: 'linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(30, 41, 59, 0.7) 100%)',
+                        border: '1px solid rgba(99, 102, 241, 0.2)',
+                    }}>
+                        <Typography variant="subtitle1" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                            <Box sx={{ p: 0.8, borderRadius: '10px', bgcolor: 'rgba(99, 102, 241, 0.2)', display: 'flex' }}>
+                                <BoltIcon sx={{ color: '#818cf8', fontSize: 18 }} />
+                            </Box>
+                            Current Subscription
                         </Typography>
-                        <Divider sx={{ mb: 3 }} />
-                        
+
                         {profileForm.package_id ? (
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                            <Box sx={{
+                                display: 'flex',
+                                justifyContent: 'space-between',
+                                alignItems: 'center',
+                                p: 2,
+                                borderRadius: '12px',
+                                bgcolor: 'rgba(255,255,255,0.03)',
+                                border: '1px solid rgba(255,255,255,0.05)'
+                            }}>
                                 <Box>
-                                    <Typography variant="h5" fontWeight={900} color="primary.main">
+                                    <Typography variant="h5" fontWeight={900} sx={{
+                                        background: 'linear-gradient(90deg, #818cf8, #c084fc)',
+                                        WebkitBackgroundClip: 'text',
+                                        WebkitTextFillColor: 'transparent',
+                                    }}>
                                         {profileForm.package_name || 'Active Plan'}
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        Expires on: {profileForm.package_expiry ? new Date(profileForm.package_expiry).toLocaleDateString() : 'N/A'}
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500}>
+                                        Expires on: {profileForm.package_expiry ? new Date(profileForm.package_expiry).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' }) : 'N/A'}
                                     </Typography>
                                 </Box>
-                                <Chip 
-                                    label="Active" 
-                                    sx={{ bgcolor: '#ecfdf5', color: '#059669', fontWeight: 700, borderRadius: 2 }} 
+                                <Chip
+                                    label="Active"
+                                    size="small"
+                                    sx={{
+                                        bgcolor: 'rgba(16, 185, 129, 0.15)',
+                                        color: '#10b981',
+                                        fontWeight: 800,
+                                        borderRadius: '6px',
+                                        height: 24, fontSize: '0.7rem'
+                                    }}
                                 />
                             </Box>
                         ) : (
-                            <Box sx={{ textAlign: 'center', py: 2 }}>
-                                <Typography color="text.secondary" mb={2}>No active subscription found.</Typography>
-                                <Button variant="contained" onClick={() => window.location.href = '/'}>
-                                    View Plans
+                            <Box sx={{ textAlign: 'center', py: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: '12px' }}>
+                                <Typography variant="body2" color="text.secondary" mb={1.5}>No active subscription.</Typography>
+                                <Button
+                                    variant="contained" size="small"
+                                    onClick={() => window.location.href = '/'}
+                                    sx={{ borderRadius: '8px', px: 3, fontWeight: 700 }}
+                                >
+                                    Plans
                                 </Button>
                             </Box>
                         )}
                     </Card>
                 )}
 
-                {/* Profile Info Card */}
-                <Card sx={{ p: 4, mb: 3 }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>
-                        <Box sx={{ position: 'relative' }}>
-                            <Avatar
-                                src={profileForm.profile_picture || undefined}
-                                sx={{ width: 86, height: 86, bgcolor: 'primary.main', fontSize: '1.8rem', fontWeight: 700, border: '4px solid white', boxShadow: '0 4px 14px rgba(0,0,0,0.1)' }}
-                            >
-                                {!profileForm.profile_picture && userInitials}
-                            </Avatar>
-                            <IconButton 
-                                component="label" 
-                                size="small" 
-                                sx={{ position: 'absolute', bottom: -5, right: -5, bgcolor: 'white', border: '1px solid #ddd', '&:hover': { bgcolor: '#f0f0f0' } }}
-                            >
-                                <PhotoCamera fontSize="small" sx={{ color: 'text.secondary' }} />
-                                <input hidden accept="image/*" type="file" onChange={handleImageUpload} />
-                            </IconButton>
-                        </Box>
-                        <Box>
-                            <Typography variant="h5" fontWeight={700}>{currentUser?.name}</Typography>
-                            <Typography variant="body2" color="text.secondary">{currentUser?.email}</Typography>
-                        </Box>
-                    </Box>
+                <Grid container spacing={3}>
+                    <Grid item xs={12} md={6}>
+                        {/* Profile Info Card */}
+                        <Card sx={{ height: '100%', p: 2.5 }}>
+                            <Typography variant="subtitle1" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 3 }}>
+                                <EditIcon sx={{ color: 'primary.main', fontSize: 18 }} /> Profile Details
+                            </Typography>
 
-                    <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <EditIcon fontSize="small" /> Edit Profile
-                    </Typography>
-                    <Divider sx={{ mb: 3 }} />
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2.5, mb: 3.5 }}>
+                                <Box sx={{ position: 'relative' }}>
+                                    <Avatar
+                                        src={profileForm.profile_picture || undefined}
+                                        sx={{
+                                            width: 72, height: 72,
+                                            bgcolor: 'primary.main',
+                                            fontSize: '1.5rem',
+                                            fontWeight: 800,
+                                            border: '3px solid rgba(255,255,255,0.1)',
+                                            boxShadow: '0 4px 12px rgba(0,0,0,0.3)'
+                                        }}
+                                    >
+                                        {!profileForm.profile_picture && userInitials}
+                                    </Avatar>
+                                    <IconButton
+                                        component="label"
+                                        size="small"
+                                        sx={{
+                                            position: 'absolute', bottom: -2, right: -2,
+                                            bgcolor: 'primary.main',
+                                            color: 'white', p: 0.5,
+                                            '&:hover': { bgcolor: 'primary.dark' },
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.3)'
+                                        }}
+                                    >
+                                        <PhotoCamera sx={{ fontSize: 14 }} />
+                                        <input hidden accept="image/*" type="file" onChange={handleImageUpload} />
+                                    </IconButton>
+                                </Box>
+                                <Box>
+                                    <Typography variant="h6" fontWeight={800} lineHeight={1.2}>{currentUser?.name}</Typography>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={500}>{currentUser?.role}</Typography>
+                                </Box>
+                            </Box>
 
-                    {profileError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{profileError}</Alert>}
+                            {profileError && <Alert severity="error" size="small" sx={{ mb: 2, py: 0, borderRadius: '8px', fontSize: '0.75rem' }}>{profileError}</Alert>}
 
-                    <form onSubmit={handleProfileSave}>
-                        <TextField
-                            fullWidth label="Full Name" value={profileForm.name}
-                            onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
-                            sx={{ mb: 2 }} required
-                        />
-                        <TextField
-                            fullWidth label="Email Address" type="email" value={profileForm.email}
-                            onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
-                            sx={{ mb: 3 }} required
-                        />
-                        <Button type="submit" variant="contained" size="large" sx={{ borderRadius: 2, px: 4 }}>
-                            Save Changes
-                        </Button>
-                    </form>
-                </Card>
+                            <form onSubmit={handleProfileSave}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <TextField
+                                        fullWidth label="Full Name" value={profileForm.name} size="small"
+                                        onChange={e => setProfileForm({ ...profileForm, name: e.target.value })}
+                                        required
+                                    />
+                                    <TextField
+                                        fullWidth label="Email Address" type="email" value={profileForm.email} size="small"
+                                        onChange={e => setProfileForm({ ...profileForm, email: e.target.value })}
+                                        required
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="contained"
+                                        size="medium"
+                                        sx={{ borderRadius: '10px', fontWeight: 800, mt: 0.5 }}
+                                    >
+                                        Save Changes
+                                    </Button>
+                                </Box>
+                            </form>
+                        </Card>
+                    </Grid>
 
-                {/* Change Password Card */}
-                <Card sx={{ p: 4 }}>
-                    <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                        <AccountCircleOutlined fontSize="small" /> Change Password
-                    </Typography>
-                    <Divider sx={{ mb: 3 }} />
+                    <Grid item xs={12} md={6}>
+                        {/* Change Password Card */}
+                        <Card sx={{ height: '100%', p: 2.5 }}>
+                            <Typography variant="subtitle1" fontWeight={800} sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 2 }}>
+                                <AccountCircleOutlined sx={{ color: 'primary.main', fontSize: 18 }} /> Security
+                            </Typography>
 
-                    {passwordError && <Alert severity="error" sx={{ mb: 2, borderRadius: 2 }}>{passwordError}</Alert>}
+                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2.5, lineHeight: 1.4 }}>
+                                Update your account password to maintain a high level of security.
+                            </Typography>
 
-                    <form onSubmit={handlePasswordChange}>
-                        <TextField
-                            fullWidth label="Current Password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={passwordForm.currentPassword}
-                            onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
-                            sx={{ mb: 2 }} required
-                            InputProps={{
-                                endAdornment: (
-                                    <InputAdornment position="end">
-                                        <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
-                                            {showPassword ? <VisibilityOff /> : <Visibility />}
-                                        </IconButton>
-                                    </InputAdornment>
-                                ),
-                            }}
-                        />
-                        <TextField
-                            fullWidth label="New Password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={passwordForm.newPassword}
-                            onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
-                            sx={{ mb: 2 }} required helperText="At least 6 characters"
-                        />
-                        <TextField
-                            fullWidth label="Confirm New Password"
-                            type={showPassword ? 'text' : 'password'}
-                            value={passwordForm.confirmPassword}
-                            onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
-                            sx={{ mb: 3 }} required
-                        />
-                        <Button type="submit" variant="outlined" size="large" sx={{ borderRadius: 2, px: 4 }}>
-                            Update Password
-                        </Button>
-                    </form>
-                </Card>
+                            {passwordError && <Alert severity="error" size="small" sx={{ mb: 2, py: 0, borderRadius: '8px', fontSize: '0.75rem' }}>{passwordError}</Alert>}
+
+                            <form onSubmit={handlePasswordChange}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <TextField
+                                        fullWidth label="Current Password" size="small"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={passwordForm.currentPassword}
+                                        onChange={e => setPasswordForm({ ...passwordForm, currentPassword: e.target.value })}
+                                        required
+                                        InputProps={{
+                                            endAdornment: (
+                                                <InputAdornment position="end">
+                                                    <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small" sx={{ color: 'text.secondary' }}>
+                                                        {showPassword ? <VisibilityOff sx={{ fontSize: 18 }} /> : <Visibility sx={{ fontSize: 18 }} />}
+                                                    </IconButton>
+                                                </InputAdornment>
+                                            ),
+                                        }}
+                                    />
+                                    <TextField
+                                        fullWidth label="New Password" size="small"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={passwordForm.newPassword}
+                                        onChange={e => setPasswordForm({ ...passwordForm, newPassword: e.target.value })}
+                                        required
+                                    />
+                                    <TextField
+                                        fullWidth label="Confirm Password" size="small"
+                                        type={showPassword ? 'text' : 'password'}
+                                        value={passwordForm.confirmPassword}
+                                        onChange={e => setPasswordForm({ ...passwordForm, confirmPassword: e.target.value })}
+                                        required
+                                    />
+                                    <Button
+                                        type="submit"
+                                        variant="outlined"
+                                        size="medium"
+                                        sx={{ borderRadius: '10px', fontWeight: 800, mt: 0.5 }}
+                                    >
+                                        Update Password
+                                    </Button>
+                                </Box>
+                            </form>
+                        </Card>
+                    </Grid>
+                </Grid>
             </Box>
         </>
     );

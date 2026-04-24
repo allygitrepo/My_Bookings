@@ -421,9 +421,9 @@ const Staff = () => {
             />
 
             {/* Desktop Table */}
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Staff Name</TableCell>
@@ -519,13 +519,13 @@ const Staff = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : filteredStaff.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No staff members found</Typography>
                     </Paper>
                 ) : filteredStaff.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((s) => {
                     const workingDays = [...new Set(availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.slice(0, 3)))];
                     return (
-                        <Card key={s.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                        <Card key={s.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, mb: 2 }}>
                                 <Avatar src={s.photo} sx={{ width: 48, height: 48, borderRadius: 2, bgcolor: 'primary.main', fontWeight: 800 }}>{s.staff_name.charAt(0)}</Avatar>
                                 <Box sx={{ flex: 1 }}>

@@ -40,7 +40,7 @@ const SummaryCard = ({ title, value, icon, color, subtitle }) => (
         p: 3, height: '100%',
         background: `linear-gradient(135deg, ${color}08 0%, transparent 100%)`,
         border: '1px solid', borderColor: `${color}20`,
-        boxShadow: 'none', borderRadius: 3
+        boxShadow: 'none', borderRadius: '16px'
     }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
             <Box sx={{
@@ -274,7 +274,7 @@ const Reports = () => {
                 }
             />
 
-            <Paper sx={{ p: 2, mb: 4, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <Paper sx={{ p: 2, mb: 4, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Grid container spacing={2} alignItems="center">
                     <Grid item xs={12} md={3}>
                         <TextField
@@ -372,9 +372,9 @@ const Reports = () => {
                 {reportType === 'bookings' && (
                     <>
                         {/* Desktop Table */}
-                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                             <Table>
-                                <TableHead sx={{ bgcolor: 'background.default' }}>
+                                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -421,7 +421,7 @@ const Reports = () => {
                             {loading ? (
                                 <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                             ) : filteredBookings.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                                     <Typography color="text.secondary">No reports found</Typography>
                                 </Paper>
                             ) : filteredBookings.map((b) => {
@@ -433,7 +433,7 @@ const Reports = () => {
                                 const statusColor = statusLabel === 'Completed' ? 'info' : statusLabel === 'Confirmed' ? 'success' : 'error';
 
                                 return (
-                                    <Card key={b.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                                    <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                                             <Box>
                                                 <Typography variant="subtitle2" fontWeight={800}>{formatDate(b.booking_date)}</Typography>
@@ -456,9 +456,9 @@ const Reports = () => {
                 {reportType === 'payments' && (
                     <>
                         {/* Desktop Table */}
-                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                             <Table>
-                                <TableHead sx={{ bgcolor: 'background.default' }}>
+                                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 700 }}>Txn Date</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
@@ -501,14 +501,14 @@ const Reports = () => {
                             {loading ? (
                                 <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                             ) : filteredPayments.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                                     <Typography color="text.secondary">No payments found</Typography>
                                 </Paper>
                             ) : filteredPayments.map((p) => {
                                 const booking = bookings.find(b => b.id === p.booking_id);
                                 const customer = customers.find(c => c.id === booking?.customer_id);
                                 return (
-                                    <Card key={p.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                                    <Card key={p.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
                                             <Typography variant="subtitle2" fontWeight={800}>{dayjs(p.created_at).format('DD/MM/YYYY')}</Typography>
                                             <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
@@ -528,9 +528,9 @@ const Reports = () => {
                 {reportType === 'ledger' && (
                     <>
                         {/* Desktop Table */}
-                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                        <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                             <Table>
-                                <TableHead sx={{ bgcolor: 'background.default' }}>
+                                <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                                     <TableRow>
                                         <TableCell sx={{ fontWeight: 700 }}>Customer Name</TableCell>
                                         <TableCell align="center" sx={{ fontWeight: 700 }}>Bookings</TableCell>
@@ -574,11 +574,11 @@ const Reports = () => {
                             {loading ? (
                                 <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                             ) : ledgerData.length === 0 ? (
-                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                                <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                                     <Typography color="text.secondary">No ledger data found</Typography>
                                 </Paper>
                             ) : ledgerData.map((c) => (
-                                <Card key={c.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                                <Card key={c.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
                                         <Avatar sx={{ bgcolor: 'secondary.main', fontWeight: 800 }}>{c.name?.charAt(0)}</Avatar>
                                         <Box>

@@ -63,9 +63,9 @@ const Payments = () => {
                 title="Payments"
                 subtitle="Payment records are created automatically when a booking is completed via the widget."
             />
-            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Customer</TableCell>
@@ -130,7 +130,7 @@ const Payments = () => {
                 {loading ? (
                     <Box sx={{ py: 4, textAlign: 'center' }}><CircularProgress size={24} /></Box>
                 ) : filteredPayments.length === 0 ? (
-                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: 3, border: '1px dashed divider' }}>
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
                         <Typography color="text.secondary">No payment records found</Typography>
                     </Paper>
                 ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p) => {
@@ -140,7 +140,7 @@ const Payments = () => {
                     const remaining = (Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(0);
 
                     return (
-                        <Card key={p.id} sx={{ p: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                        <Card key={p.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 2 }}>
                                 <Box>
                                     <Typography variant="subtitle2" fontWeight={800}>{customer?.name || '—'}</Typography>

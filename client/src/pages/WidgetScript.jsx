@@ -161,7 +161,7 @@ const WidgetScript = () => {
 
                 {/* Integration guide */}
                 <Grid item xs={12} md={4}>
-                    <Card sx={{ p: 3.5, bgcolor: 'background.default', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                    <Card sx={{ p: 3.5, bgcolor: 'rgba(0,0,0,0.2)', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                         <Typography variant="h6" fontWeight={700} gutterBottom>
                             Integration Guide
                         </Typography>

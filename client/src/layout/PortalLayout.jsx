@@ -14,7 +14,7 @@ const PortalLayout = () => {
     const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: '#f8fafc' }}>
+        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'transparent' }}>
             <PortalSidebar
                 variant={isMobile ? 'temporary' : 'permanent'}
                 open={isMobile ? mobileOpen : true}

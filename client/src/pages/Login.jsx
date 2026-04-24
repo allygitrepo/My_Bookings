@@ -145,7 +145,7 @@ const Login = () => {
                         alt="MyBookings"
                         sx={{
                             width: 180, height: 180,
-                            borderRadius: 4,
+                            borderRadius: '16px',
                             objectFit: 'contain',
                             bgcolor: 'rgba(255,255,255,0.08)',
                             p: 1.5,
@@ -222,7 +222,7 @@ const Login = () => {
                 >
                     {/* Mobile logo */}
                     <Box sx={{ display: { xs: 'flex', md: 'none' }, mb: 5, justifyContent: 'center' }}>
-                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: 3, objectFit: 'contain' }} />
+                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: '16px', objectFit: 'contain' }} />
                     </Box>
 
                     <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', mb: 1 }}>
@@ -240,7 +240,7 @@ const Login = () => {
                                 exit={{ opacity: 0, height: 0 }}
                                 style={{ marginBottom: 20, overflow: 'hidden' }}
                             >
-                                <Alert severity="error" sx={{ borderRadius: 3, fontWeight: 600 }}>{error}</Alert>
+                                <Alert severity="error" sx={{ borderRadius: '16px', fontWeight: 600 }}>{error}</Alert>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -266,11 +266,15 @@ const Login = () => {
                                     variant="outlined"
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            borderRadius: 3,
+                                            borderRadius: '16px',
                                             bgcolor: 'white',
                                             transition: 'all 0.2s',
                                             boxShadow: focused === 'email' ? '0 0 0 4px rgba(99,102,241,0.12)' : '0 1px 2px rgba(0,0,0,0.05)',
                                             '& fieldset': { borderColor: focused === 'email' ? '#6366f1' : '#e5e7eb' },
+                                            '& input:-webkit-autofill': {
+                                                WebkitBoxShadow: '0 0 0 100px white inset !important',
+                                                WebkitTextFillColor: '#1e293b !important',
+                                            },
                                         }
                                     }}
                                 />
@@ -298,7 +302,12 @@ const Login = () => {
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                                                <IconButton 
+                                                    onClick={() => setShowPassword(!showPassword)} 
+                                                    edge="end" 
+                                                    size="small"
+                                                    sx={{ color: 'text.secondary' }}
+                                                >
                                                     {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                 </IconButton>
                                             </InputAdornment>
@@ -306,11 +315,15 @@ const Login = () => {
                                     }}
                                     sx={{
                                         '& .MuiOutlinedInput-root': {
-                                            borderRadius: 3,
+                                            borderRadius: '16px',
                                             bgcolor: 'white',
                                             transition: 'all 0.2s',
                                             boxShadow: focused === 'password' ? '0 0 0 4px rgba(99,102,241,0.12)' : '0 1px 2px rgba(0,0,0,0.05)',
                                             '& fieldset': { borderColor: focused === 'password' ? '#6366f1' : '#e5e7eb' },
+                                            '& input:-webkit-autofill': {
+                                                WebkitBoxShadow: '0 0 0 100px white inset !important',
+                                                WebkitTextFillColor: '#1e293b !important',
+                                            },
                                         }
                                     }}
                                 />
@@ -327,7 +340,7 @@ const Login = () => {
                                 sx={{
                                     mt: 1,
                                     py: 1.8,
-                                    borderRadius: 3,
+                                    borderRadius: '16px',
                                     fontWeight: 800,
                                     fontSize: '1rem',
                                     textTransform: 'none',

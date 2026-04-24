@@ -39,11 +39,15 @@ const getPasswordStrength = (pwd) => {
 
 const inputSx = (focused, name) => ({
     '& .MuiOutlinedInput-root': {
-        borderRadius: 3,
+        borderRadius: '16px',
         bgcolor: 'white',
         transition: 'all 0.2s',
         boxShadow: focused === name ? '0 0 0 4px rgba(99,102,241,0.12)' : '0 1px 2px rgba(0,0,0,0.05)',
         '& fieldset': { borderColor: focused === name ? '#6366f1' : '#e5e7eb', transition: 'border-color 0.2s' },
+        '& input:-webkit-autofill': {
+            WebkitBoxShadow: '0 0 0 100px white inset !important',
+            WebkitTextFillColor: '#1e293b !important',
+        },
     }
 });
 
@@ -143,7 +147,7 @@ const Register = () => {
                             alt="MyBookings"
                             sx={{
                                 width: 180, height: 180,
-                                borderRadius: 4,
+                                borderRadius: '16px',
                                 objectFit: 'contain',
                                 bgcolor: 'rgba(255,255,255,0.07)',
                                 p: 1.5,
@@ -209,7 +213,7 @@ const Register = () => {
                 >
                     {/* Mobile logo */}
                     <Box sx={{ display: { xs: 'flex', md: 'none' }, mb: 5, justifyContent: 'center' }}>
-                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: 3, objectFit: 'contain' }} />
+                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: '16px', objectFit: 'contain' }} />
                     </Box>
 
                     <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', mb: 0.5 }}>
@@ -229,7 +233,7 @@ const Register = () => {
                                 exit={{ opacity: 0, y: -8 }}
                                 style={{ marginBottom: 20 }}
                             >
-                                <Alert severity="error" sx={{ borderRadius: 3 }}>{error}</Alert>
+                                <Alert severity="error" sx={{ borderRadius: '16px' }}>{error}</Alert>
                             </motion.div>
                         )}
                     </AnimatePresence>
@@ -273,7 +277,12 @@ const Register = () => {
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <IconButton onClick={() => setShowPassword(!showPassword)} edge="end" size="small">
+                                                <IconButton
+                                                    onClick={() => setShowPassword(!showPassword)}
+                                                    edge="end"
+                                                    size="small"
+                                                    sx={{ color: 'text.secondary' }}
+                                                >
                                                     {showPassword ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                 </IconButton>
                                             </InputAdornment>
@@ -312,7 +321,12 @@ const Register = () => {
                                     InputProps={{
                                         endAdornment: (
                                             <InputAdornment position="end">
-                                                <IconButton onClick={() => setShowConfirm(!showConfirm)} edge="end" size="small">
+                                                <IconButton
+                                                    onClick={() => setShowConfirm(!showConfirm)}
+                                                    edge="end"
+                                                    size="small"
+                                                    sx={{ color: 'text.secondary' }}
+                                                >
                                                     {showConfirm ? <VisibilityOff fontSize="small" /> : <Visibility fontSize="small" />}
                                                 </IconButton>
                                             </InputAdornment>
@@ -358,7 +372,7 @@ const Register = () => {
                                 sx={{
                                     mt: 1,
                                     py: 1.8,
-                                    borderRadius: 3,
+                                    borderRadius: '16px',
                                     fontWeight: 800,
                                     fontSize: '1rem',
                                     textTransform: 'none',
@@ -375,7 +389,7 @@ const Register = () => {
                                 {loading ? <CircularProgress size={22} sx={{ color: 'white' }} /> : 'Create Free Account'}
                             </Button>
 
-                            <Typography variant="caption" color="text.disabled" textAlign="center" sx={{ mt: -1 }}>
+                            <Typography variant="caption" color="text.secondary" textAlign="center" sx={{ mt: -1 }}>
                                 Already Have an Account?.
                                 <MuiLink component={Link} to="/login" sx={{
                                     fontWeight: 700, color: '#6366f1',

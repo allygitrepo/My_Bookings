@@ -154,7 +154,7 @@ const Checkout = () => {
 
     if (loading) {
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: '#f8fafc' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh', bgcolor: 'transparent' }}>
                 <CircularProgress color="primary" />
             </Box>
         );
@@ -186,7 +186,7 @@ const Checkout = () => {
                                 You're almost there! Complete your payment to unlock professional booking tools.
                             </Typography>
 
-                            <Paper sx={{ p: 0, borderRadius: 4, overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
+                            <Paper sx={{ p: 0, borderRadius: '16px', overflow: 'hidden', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)' }}>
                                 <Box sx={{ p: 4, bgcolor: '#6366f1', color: 'white' }}>
                                     <Stack direction="row" justifyContent="space-between" alignItems="center">
                                         <Box>
@@ -220,7 +220,7 @@ const Checkout = () => {
                                 </Box>
                             </Paper>
 
-                            <Box sx={{ mt: 4, display: 'flex', alignItems: 'center', gap: 2, p: 3, borderRadius: 3, bgcolor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
+                            <Box sx={{ mt: 4, display: 'flex', alignItems: 'center', gap: 2, p: 3, borderRadius: '16px', bgcolor: '#ecfdf5', border: '1px solid #a7f3d0' }}>
                                 <SecurityIcon sx={{ color: '#059669' }} />
                                 <Typography variant="body2" sx={{ color: '#065f46', fontWeight: 600 }}>
                                     Secure SSL encrypted payment. Your data is protected by industry standard encryption.
@@ -236,12 +236,12 @@ const Checkout = () => {
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ duration: 0.5, delay: 0.2 }}
                         >
-                            <Card sx={{ borderRadius: 4, border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}>
+                            <Card sx={{ borderRadius: '16px', border: '1px solid #e2e8f0', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1)' }}>
                                 <CardContent sx={{ p: 4 }}>
                                     <Typography variant="h6" fontWeight={800} mb={3}>Payment Method</Typography>
                                     
                                     <Box sx={{ 
-                                        p: 3, mb: 4, borderRadius: 3, border: '2px solid #6366f1', bgcolor: '#f5f3ff',
+                                        p: 3, mb: 4, borderRadius: '16px', border: '2px solid #6366f1', bgcolor: '#f5f3ff',
                                         display: 'flex', alignItems: 'center', gap: 2
                                     }}>
                                         <PaymentIcon color="primary" />

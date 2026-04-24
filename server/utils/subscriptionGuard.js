@@ -63,20 +63,19 @@ const subscriptionGuard = {
 
         let bookingCount = 0;
         let isExpired = false;
-        let expiryDate = lastSub ? lastSub.expiry_date : null;
+        let expiryDate = lastSub ? lastSub.expiry_date : (user.package_expiry || null);
+
+        if (bizIds.length > 0) {
+            bookingCount = await Booking.count({
+                where: { business_id: bizIds }
+            });
+        }
 
         if (activeSub) {
             isExpired = new Date() > new Date(expiryDate);
-            
-            if (bizIds.length > 0) {
-                bookingCount = await Booking.count({
-                    where: {
-                        business_id: bizIds,
-                        created_at: {
-                            [Op.between]: [activeSub.start_date, activeSub.expiry_date]
-                        }
-                    }
-                });
+        } else if (user.package) {
+            if (expiryDate) {
+                isExpired = new Date() > new Date(expiryDate);
             }
         } else {
             isExpired = true;

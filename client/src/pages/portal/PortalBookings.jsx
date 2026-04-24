@@ -64,9 +64,9 @@ const PortalBookings = () => {
                 />
             </Box>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <TableContainer component={Paper} sx={{ overflow: 'hidden', mb: 4 }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead >
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Business</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Schedule</TableCell>

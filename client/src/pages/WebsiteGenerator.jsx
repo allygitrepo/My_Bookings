@@ -193,7 +193,7 @@ const WebsiteGenerator = () => {
                             elevation={0}
                             sx={{
                                 p: { xs: 2, sm: 3 },
-                                borderRadius: 4,
+                                borderRadius: '16px',
                                 border: '1px solid',
                                 borderColor: 'divider',
                                 height: 'fit-content',
@@ -337,7 +337,7 @@ const WebsiteGenerator = () => {
                                                 onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
                                                 sx={{
                                                     cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                    opacity: isSuspended ? 0.6 : 1,                                                    borderRadius: 3,
+                                                    opacity: isSuspended ? 0.6 : 1,                                                    borderRadius: '16px',
                                                     position: 'relative',
                                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                     border: '2.5px solid',
@@ -473,7 +473,7 @@ const WebsiteGenerator = () => {
                                     border: '1px solid',
                                     borderColor: 'divider',
                                     position: 'relative',
-                                    bgcolor: '#f8fafc',
+                                    bgcolor: 'transparent',
                                     minHeight: '80vh',
                                     display: 'flex',
                                     justifyContent: 'center',

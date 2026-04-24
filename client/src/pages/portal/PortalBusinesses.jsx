@@ -3,7 +3,7 @@ import {
     Box, Typography, Paper, Table, TableBody, TableCell,
     TableContainer, TableHead, TableRow, Chip, Avatar,
     IconButton, Button, Tooltip, CircularProgress, Divider,
-    Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid
+    Dialog, DialogTitle, DialogContent, DialogActions, TextField, Grid, TablePagination
 } from '@mui/material';
 import {
     Block as BlockIcon,
@@ -37,6 +37,15 @@ const PortalBusinesses = () => {
     // View Details State
     const [viewDialogOpen, setViewDialogOpen] = useState(false);
     const [viewingBiz, setViewingBiz] = useState(null);
+
+    // Pagination State
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const handleChangePage = (event, newPage) => setPage(newPage);
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
 
     const fetchBusinesses = async () => {
         setLoading(true);
@@ -122,9 +131,9 @@ const PortalBusinesses = () => {
                 </Button>
             </Box>
 
-            <TableContainer component={Paper} sx={{ borderRadius: 4, overflow: 'hidden', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+            <TableContainer component={Paper} sx={{ overflow: 'hidden', mb: 4 }}>
                 <Table>
-                    <TableHead sx={{ bgcolor: 'background.default' }}>
+                    <TableHead >
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Business Name</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Owner</TableCell>
@@ -148,7 +157,7 @@ const PortalBusinesses = () => {
                                     No businesses found on the platform.
                                 </TableCell>
                             </TableRow>
-                        ) : businesses.map((biz) => (
+                        ) : businesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz) => (
                             <TableRow key={biz.id} hover>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -213,6 +222,15 @@ const PortalBusinesses = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+            <TablePagination
+                rowsPerPageOptions={[10, 25, 50]}
+                component="div"
+                count={businesses.length}
+                rowsPerPage={rowsPerPage}
+                page={page}
+                onPageChange={handleChangePage}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+            />
 
             {/* Business Details Dialog */}
             <Dialog
@@ -220,7 +238,7 @@ const PortalBusinesses = () => {
                 onClose={() => setViewDialogOpen(false)}
                 maxWidth="md"
                 fullWidth
-                PaperProps={{ sx: { borderRadius: 4 } }}
+                PaperProps={{ sx: { borderRadius: '16px' } }}
             >
                 <DialogTitle sx={{ fontWeight: 800, display: 'flex', alignItems: 'center', gap: 1.5, pb: 1 }}>
                     <BusinessIcon color="primary" />
@@ -333,7 +351,7 @@ const PortalBusinesses = () => {
                             {/* System Status */}
                             <Grid item xs={12}>
                                 <Typography variant="overline" color="text.secondary" fontWeight={800}>System Information</Typography>
-                                <Box sx={{ mt: 1, p: 2, bgcolor: 'background.default', borderRadius: 2 }}>
+                                <Box sx={{ mt: 1, p: 2, bgcolor: 'rgba(0,0,0,0.2)', borderRadius: 2 }}>
                                     <Grid container spacing={2}>
                                         <Grid item xs={6} md={3}>
                                             <Typography variant="caption" color="text.secondary" display="block">Website Template</Typography>
