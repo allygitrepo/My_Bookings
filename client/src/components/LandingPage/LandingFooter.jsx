@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Twitter, Linkedin, Instagram, Calendar, Users, CreditCard, BarChart3, Layout, ArrowRight, Shield } from 'lucide-react';
+import { MessageCircle, Briefcase, Camera, Calendar, Users, CreditCard, BarChart3, Layout, ArrowRight, Shield } from 'lucide-react';
 
 const QUICK_LINKS = [
     { label: 'Features', href: '#features' },
@@ -11,9 +11,9 @@ const QUICK_LINKS = [
 ];
 
 const SOCIAL_LINKS = [
-    { label: 'Twitter', Icon: Twitter, href: '#' },
-    { label: 'LinkedIn', Icon: Linkedin, href: '#' },
-    { label: 'Instagram', Icon: Instagram, href: '#' },
+    { label: 'Twitter', Icon: MessageCircle, href: '#' },
+    { label: 'LinkedIn', Icon: Briefcase, href: '#' },
+    { label: 'Instagram', Icon: Camera, href: '#' },
 ];
 
 const PLATFORM_ITEMS = [
@@ -131,8 +131,11 @@ const LandingFooter = () => {
                     <p style={{ color: 'rgba(255,255,255,0.3)', fontSize: '0.82rem', margin: 0 }}>
                         © {new Date().getFullYear()} MyBookings. All rights reserved.
                     </p>
-                    <p style={{ fontSize: '0.82rem', margin: 0, fontWeight: 700, background: 'linear-gradient(90deg, #c084fc, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                        Developed by Allysoft Solutions
+                    <p style={{ color: 'rgba(255, 255, 255, 0.4)', fontSize: '0.82rem', margin: 0, fontWeight: 500 }}>
+                        Developed by{' '}
+                        <a href="https://allysoftsolutions.com" target="_blank" rel="noopener noreferrer" style={{ color: 'yellow', fontWeight: 700, textDecoration: 'none', transition: 'color 0.2s' }} onMouseEnter={e => e.currentTarget.style.color = '#c084fc'} onMouseLeave={e => e.currentTarget.style.color = 'yellow'}>
+                            Allysoft Solutions
+                        </a>
                     </p>
                     <div style={{ display: 'flex', gap: 20, alignItems: 'center' }}>
                         <Shield size={13} color="rgba(255,255,255,0.25)" strokeWidth={2} />
