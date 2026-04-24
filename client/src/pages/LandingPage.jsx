@@ -17,7 +17,7 @@ import {
     Chip,
     Divider,
 } from '@mui/material';
-import { NavLink, useLocation } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import PublicBusinessWebsite from './PublicBusinessWebsite';
 import {
     CalendarMonth as BookingIcon,
@@ -78,6 +78,7 @@ const FAQs = [
 
 const LandingPage = () => {
     const location = useLocation();
+    const navigate = useNavigate();
     const searchParams = new URLSearchParams(location.search);
     const bizId = searchParams.get('biz');
 
@@ -128,8 +129,15 @@ const LandingPage = () => {
                         <Stack direction="row" spacing={2} alignItems="center">
                             <Button
                                 variant="contained"
-                                component={NavLink}
-                                to={dashboardPath}
+                                onClick={() => {
+                                    const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                                    const user = currentUser.user || currentUser;
+                                    if (user && user.role === 'OWNER' && !user.package_id) {
+                                        document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+                                    } else {
+                                        navigate(dashboardPath);
+                                    }
+                                }}
                                 sx={{
                                     borderRadius: '12px',
                                     textTransform: 'none',
@@ -229,6 +237,15 @@ const LandingPage = () => {
                                     <Button
                                         variant="contained"
                                         size="large"
+                                        onClick={() => {
+                                            const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
+                                            const user = currentUser.user || currentUser;
+                                            if (user && user.role === 'OWNER' && !user.package_id) {
+                                                document.getElementById('pricing-section')?.scrollIntoView({ behavior: 'smooth' });
+                                            } else {
+                                                navigate(dashboardPath);
+                                            }
+                                        }}
                                         sx={{
                                             px: 4,
                                             py: 2,
@@ -243,8 +260,6 @@ const LandingPage = () => {
                                                 boxShadow: '0 12px 30px rgba(99,102,241,0.5)',
                                             }
                                         }}
-                                        component={NavLink}
-                                        to={dashboardPath}
                                     >
                                         Launch Dashboard
                                     </Button>
@@ -412,7 +427,7 @@ const LandingPage = () => {
                 </Container>
             </Box>
 
-            <Box sx={{ py: 15, background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}>
+            <Box id="pricing-section" sx={{ py: 15, background: 'linear-gradient(180deg, #0f172a 0%, #1e1b4b 100%)' }}>
                 <Container maxWidth={false} sx={{ px: { xs: 2, md: 6 } }}>
                     <Box sx={{ textAlign: 'center', mb: 10 }}>
                         <Typography variant="h3" fontWeight={900} gutterBottom sx={{ color: 'white', fontSize: { xs: '2.5rem', md: '3.5rem' } }}>
@@ -515,8 +530,15 @@ const LandingPage = () => {
                                                 fullWidth
                                                 variant={i === 1 ? 'contained' : 'outlined'}
                                                 size="small"
-                                                component={NavLink}
-                                                to="/register"
+                                                onClick={() => {
+                                                    sessionStorage.setItem('selectedPackageId', pkg.id);
+                                                    sessionStorage.setItem('selectedPackageName', pkg.name);
+                                                    if (localStorage.getItem('currentUser')) {
+                                                        navigate(`/checkout?packageId=${pkg.id}`);
+                                                    } else {
+                                                        navigate('/register');
+                                                    }
+                                                }}
                                                 sx={{
                                                     borderRadius: '12px',
                                                     py: 1,

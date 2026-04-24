@@ -111,6 +111,7 @@ const authController = {
                     email: user.email,
                     avatar: user.avatar,
                     role: user.role,
+                    package_id: user.package_id,
                     isPortalAdmin: user.role === 'PORTAL_ADMIN'
                 },
                 businesses,

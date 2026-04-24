@@ -10,12 +10,14 @@ router.get("/active", (req, res, next) => {
     next();
 }, packageController.getAll);
 
-// Protected routes (Portal Admin only)
+// Routes accessible by any authenticated user
 router.use(authMiddleware);
+router.get("/:id", packageController.getById);
+
+// Protected routes (Portal Admin only)
 router.use(portalAdminMiddleware);
 
 router.get("/", packageController.getAll);
-router.get("/:id", packageController.getById);
 router.post("/", packageController.create);
 router.put("/:id", packageController.update);
 router.delete("/:id", packageController.delete);

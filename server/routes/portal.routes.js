@@ -12,6 +12,7 @@ router.get("/dashboard", portalController.dashboard);
 router.get("/businesses", portalController.businesses);
 router.get("/bookings", portalController.bookings);
 router.get("/users", portalController.users);
+router.get("/payments", portalController.getPayments);
 router.put("/users/:id/manage", portalController.manageUser);
 router.post("/create-admin", portalController.createAdmin);
 router.put("/business/:id/manage", portalController.manageBusiness);

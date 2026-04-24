@@ -1,19 +1,23 @@
-const { User, Business, Booking, Payment, Customer, Service, Package } = require("../models/associations");
+const { User, Business, Booking, Payment, Customer, Service, Package, UserSubscription } = require("../models/associations");
 const bcrypt = require("bcryptjs");
 
 const portalController = {
     dashboard: async (req, res) => {
         try {
-            const [totalBusinesses, totalUsers, totalBookings, payments] = await Promise.all([
+            const [totalBusinesses, totalUsers, totalBookings, payments, subscriptions] = await Promise.all([
                 Business.count({ where: { status: true } }),
                 User.count({ where: { status: true } }),
                 Booking.count(),
-                Payment.findAll({ where: { status: true } })
+                Payment.findAll({ where: { status: true } }),
+                UserSubscription.findAll({ where: { status: 'active' } })
             ]);
 
-            const totalRevenue = (payments || [])
+            const bookingRevenue = (payments || [])
                 .filter(p => p.payment_status === true || p.payment_status === 1)
                 .reduce((sum, p) => sum + parseFloat(p.paid_amount || 0), 0);
+
+            const subscriptionRevenue = (subscriptions || [])
+                .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
 
             res.json({
                 success: true,
@@ -21,11 +25,29 @@ const portalController = {
                     totalBusinesses,
                     totalUsers,
                     totalBookings,
-                    totalRevenue
+                    bookingRevenue,
+                    subscriptionRevenue,
+                    totalRevenue: bookingRevenue + subscriptionRevenue
                 }
             });
         } catch (error) {
             console.error('Portal Dashboard Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getPayments: async (req, res) => {
+        try {
+            const rows = await UserSubscription.findAll({
+                include: [
+                    { model: User, attributes: ['name', 'email'] },
+                    { model: Package, as: 'package', attributes: ['name'] }
+                ],
+                order: [['created_at', 'DESC']]
+            });
+            res.json({ success: true, data: rows });
+        } catch (error) {
+            console.error('Portal Payments Error:', error);
             res.status(500).json({ success: false, message: error.message });
         }
     },

@@ -11,7 +11,8 @@ import {
     AdminPanelSettings as AdminIcon,
     Logout as LogoutIcon,
     ArrowBack as BackIcon,
-    Inventory as PackageIcon
+    Inventory as PackageIcon,
+    Payments as PaymentsIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
@@ -27,6 +28,7 @@ const PortalSidebar = ({ open, onClose, variant }) => {
         { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/portal/dashboard' },
         { text: 'Businesses', icon: <BusinessIcon />, path: '/portal/businesses' },
         { text: 'Packages', icon: <PackageIcon />, path: '/portal/packages' },
+        { text: 'Payments', icon: <PaymentsIcon />, path: '/portal/payments' },
         { text: 'Users', icon: <PeopleIcon />, path: '/portal/users' },
         { text: 'Create Admin', icon: <AdminIcon />, path: '/portal/create-admin' },
     ];

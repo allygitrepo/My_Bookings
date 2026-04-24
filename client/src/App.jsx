@@ -28,6 +28,7 @@ import LandingPage from './pages/LandingPage';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
+import Checkout from './pages/Checkout';
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -41,6 +42,7 @@ import PortalBookings from './pages/portal/PortalBookings';
 import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
 import PortalPackages from './pages/portal/PortalPackages';
+import AdminPayments from './pages/portal/AdminPayments';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -113,6 +115,7 @@ function App() {
                         <Route path="/widget-script" element={<WidgetScript />} />
                         <Route path="/website-builder" element={<WebsiteGenerator />} />
                         <Route path="/profile" element={<Profile />} />
+                        <Route path="/checkout" element={<Checkout />} />
                     </Route>
 
                     {/* Portal Admin Routes */}
@@ -123,6 +126,7 @@ function App() {
                         <Route path="/portal/users" element={<PortalUsers />} />
                         <Route path="/portal/create-admin" element={<CreateAdmin />} />
                         <Route path="/portal/packages" element={<PortalPackages />} />
+                        <Route path="/portal/payments" element={<AdminPayments />} />
                     </Route>
 
                   <Route path="/:id" element={<PublicBusinessWebsite />} />

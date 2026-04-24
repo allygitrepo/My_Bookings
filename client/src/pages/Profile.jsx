@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
+import { 
+    Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined, 
+    PhotoCamera, Bolt as BoltIcon 
+} from '@mui/icons-material';
 import {
     Box, Card, Typography, TextField, Button, Alert, Avatar,
-    Divider, InputAdornment, IconButton,
+    Divider, InputAdornment, IconButton, Chip
 } from '@mui/material';
-import { Edit as EditIcon, Visibility, VisibilityOff, AccountCircleOutlined, PhotoCamera } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import { updateUser, getUserById } from '../api/user.api';
 import toast from 'react-hot-toast';
@@ -41,6 +44,9 @@ const Profile = () => {
                         name: freshUser.name || '',
                         email: freshUser.email || '',
                         profile_picture: freshUser.profile_picture || '',
+                        package_id: freshUser.package_id,
+                        package_name: freshUser.package?.name,
+                        package_expiry: freshUser.package_expiry,
                     });
                     // Sync localStorage
                     const updatedStorageUser = { ...currentUser, ...freshUser };
@@ -147,6 +153,40 @@ const Profile = () => {
             <PageHeader title="My Profile" subtitle="Manage your account information and security settings." />
 
             <Box sx={{ maxWidth: 700 }}>
+                {/* Subscription Plan Card */}
+                {currentUser?.role === 'OWNER' && (
+                    <Card sx={{ p: 4, mb: 3, border: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #ffffff 0%, #f8fafc 100%)' }}>
+                        <Typography variant="h6" fontWeight={700} gutterBottom sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <BoltIcon sx={{ color: '#6366f1' }} /> Current Subscription
+                        </Typography>
+                        <Divider sx={{ mb: 3 }} />
+                        
+                        {profileForm.package_id ? (
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Box>
+                                    <Typography variant="h5" fontWeight={900} color="primary.main">
+                                        {profileForm.package_name || 'Active Plan'}
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary">
+                                        Expires on: {profileForm.package_expiry ? new Date(profileForm.package_expiry).toLocaleDateString() : 'N/A'}
+                                    </Typography>
+                                </Box>
+                                <Chip 
+                                    label="Active" 
+                                    sx={{ bgcolor: '#ecfdf5', color: '#059669', fontWeight: 700, borderRadius: 2 }} 
+                                />
+                            </Box>
+                        ) : (
+                            <Box sx={{ textAlign: 'center', py: 2 }}>
+                                <Typography color="text.secondary" mb={2}>No active subscription found.</Typography>
+                                <Button variant="contained" onClick={() => window.location.href = '/'}>
+                                    View Plans
+                                </Button>
+                            </Box>
+                        )}
+                    </Card>
+                )}
+
                 {/* Profile Info Card */}
                 <Card sx={{ p: 4, mb: 3 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3, mb: 4 }}>

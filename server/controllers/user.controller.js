@@ -1,4 +1,4 @@
-const Users = require("../models/user.model");
+const { User: Users, Package } = require("../models/associations");
 const Business = require("../models/business.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
@@ -86,7 +86,7 @@ const userController = {
                 message: "Login successful",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, package_id: user.package_id, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
                 }
             });
         } catch (err) {
@@ -137,7 +137,9 @@ const userController = {
 
     getById: async (req, res) => {
         try {
-            const user = await Users.findByPk(req.params.id);
+            const user = await Users.findByPk(req.params.id, {
+                include: [{ model: Package, as: 'package' }]
+            });
             if (!user) return res.status(404).json({ success: false, message: "User not found" });
             res.json({ success: true, message: "User fetched successfully", data: user });
         } catch (error) {
@@ -181,7 +183,7 @@ const userController = {
                 message: "Token refreshed",
                 data: {
                     token,
-                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
+                    user: { id: user.id, name: user.name, email: user.email, business_id: businessId, role: user.role, package_id: user.package_id, isPortalAdmin: user.role === 'PORTAL_ADMIN', profile_picture: user.profile_picture }
                 }
             });
         } catch (error) {

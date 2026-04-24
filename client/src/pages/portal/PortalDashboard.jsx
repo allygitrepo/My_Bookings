@@ -43,6 +43,8 @@ const PortalDashboard = () => {
     const [stats, setStats] = useState({
         totalBusinesses: 0,
         totalUsers: 0,
+        bookingRevenue: 0,
+        subscriptionRevenue: 0,
         totalRevenue: 0
     });
     const [loading, setLoading] = useState(true);
@@ -73,29 +75,38 @@ const PortalDashboard = () => {
             </Box>
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} sm={6} md={3}>
                     <StatCard
-                        title="Total Businesses"
+                        title="Businesses"
                         value={loading ? '...' : stats.totalBusinesses}
                         icon={<BusinessIcon sx={{ fontSize: 26 }} />}
                         color="#6366f1"
                     />
                 </Grid>
-                <Grid item xs={12} sm={6} md={4}>
+                <Grid item xs={12} sm={6} md={3}>
                     <StatCard
-                        title="Registered Users"
+                        title="Subscription Revenue"
+                        value={loading ? '...' : `₹${stats.subscriptionRevenue.toLocaleString()}`}
+                        icon={<TrendIcon sx={{ fontSize: 26 }} />}
+                        color="#10b981"
+                        subtitle="Revenue from SaaS plans"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                        title="Booking Revenue"
+                        value={loading ? '...' : `₹${stats.bookingRevenue.toLocaleString()}`}
+                        icon={<RevenueIcon sx={{ fontSize: 26 }} />}
+                        color="#f59e0b"
+                        subtitle="Revenue from transactions"
+                    />
+                </Grid>
+                <Grid item xs={12} sm={6} md={3}>
+                    <StatCard
+                        title="Platform Users"
                         value={loading ? '...' : stats.totalUsers}
                         icon={<UserIcon sx={{ fontSize: 26 }} />}
                         color="#0ea5e9"
-                    />
-                </Grid>
-                <Grid item xs={12} sm={6} md={4}>
-                    <StatCard
-                        title="Platform Revenue"
-                        value={loading ? '...' : `₹${stats.totalRevenue.toLocaleString()}`}
-                        icon={<RevenueIcon sx={{ fontSize: 26 }} />}
-                        color="#f59e0b"
-                        subtitle="Total processed payments"
                     />
                 </Grid>
             </Grid>
