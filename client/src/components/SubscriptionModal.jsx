@@ -127,6 +127,24 @@ const SubscriptionModal = ({ open, onClose }) => {
                     }
                 },
                 theme: { color: "#6366f1" },
+                config: {
+                    display: {
+                        blocks: {
+                            banks: {
+                                name: 'Netbanking',
+                                instruments: [
+                                    {
+                                        method: 'netbanking'
+                                    }
+                                ]
+                            }
+                        },
+                        sequence: ['block.banks', 'upi', 'card'],
+                        preferences: {
+                            show_default_blocks: false
+                        }
+                    }
+                }
             };
 
             if (!window.Razorpay) {

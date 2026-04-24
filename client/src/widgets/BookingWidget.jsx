@@ -503,6 +503,24 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     contact: bookingData.customer.phone
                 },
                 theme: { color: "#6366f1" },
+                config: {
+                    display: {
+                        blocks: {
+                            banks: {
+                                name: 'Netbanking',
+                                instruments: [
+                                    {
+                                        method: 'netbanking'
+                                    }
+                                ]
+                            }
+                        },
+                        sequence: ['block.banks', 'upi', 'card'],
+                        preferences: {
+                            show_default_blocks: false
+                        }
+                    }
+                },
                 modal: {
                     ondismiss: () => {
                         setLoading(false);
