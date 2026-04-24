@@ -9,6 +9,7 @@ import MainLayout from './layout/MainLayout';
 import AuthGuard from './components/AuthGuard';
 import { SearchProvider } from './context/SearchContext';
 import { BusinessProvider } from './context/BusinessContext';
+import { SubscriptionProvider } from './context/SubscriptionContext';
 import axiosInstance from './api/axiosInstance';
 
 import Dashboard from './pages/Dashboard';
@@ -91,8 +92,9 @@ function App() {
           <SearchProvider>
             <BusinessProvider>
               <Router>
-                <Toaster position="top-right" />
-                <Routes>
+                <SubscriptionProvider>
+                  <Toaster position="top-right" />
+                  <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
                   <Route path="/login" element={<Login />} />
@@ -132,6 +134,7 @@ function App() {
                   <Route path="/:id" element={<PublicBusinessWebsite />} />
                   <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>
+                </SubscriptionProvider>
               </Router>
             </BusinessProvider>
           </SearchProvider>

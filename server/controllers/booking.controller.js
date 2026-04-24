@@ -20,6 +20,17 @@ const bookingController = {
             const business_id = getBusinessId(req);
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
             
+            // Subscription Limit Check
+            const subscriptionGuard = require("../utils/subscriptionGuard");
+            const canBook = await subscriptionGuard.canAcceptBookingByBusiness(business_id);
+            if (!canBook) {
+                return res.status(403).json({ 
+                    success: false, 
+                    message: "This business is currently not accepting new bookings due to reached subscription limits. Please contact the business owner.",
+                    limitReached: true
+                });
+            }
+
             // Extract service_ids from body if present
             const { service_ids, ...bookingData } = req.body;
             

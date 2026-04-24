@@ -172,7 +172,7 @@ const Reports = () => {
 
         // Add Logo (if possible)
         try {
-            const logo64 = await toBase64(logoImg);
+            const logo64 = await toBase64('/logo.png');
             doc.addImage(logo64, 'PNG', 15, 8, 24, 24);
         } catch (e) {
             console.error('Logo add failed', e);

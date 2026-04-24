@@ -7,7 +7,7 @@ const Logo = ({ size = 150, showText = true, sx = {} }) => {
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...sx }}>
             <Box
                 component="img"
-                src={logoImg}
+                src="/logo.png"
                 alt="MyBookings Logo"
                 sx={{
                     width: size,

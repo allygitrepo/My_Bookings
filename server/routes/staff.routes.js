@@ -2,8 +2,9 @@ const express = require("express");
 const router = express.Router();
 const staffController = require("../controllers/staff.controller");
 const authMiddleware = require("../middleware/auth.middleware");
+const { limitCheck } = require("../utils/subscriptionGuard");
 
-router.post("/create", authMiddleware, staffController.create);
+router.post("/create", authMiddleware, limitCheck('staff'), staffController.create);
 router.get("/all", authMiddleware, staffController.getAll);
 router.get("/:id", authMiddleware, staffController.getById);
 router.put("/update/:id", authMiddleware, staffController.update);

@@ -17,6 +17,7 @@ import { getStaff } from '../api/staff.api';
 import { getStaffServices, createStaffService, deleteStaffService } from '../api/staffService.api';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -31,6 +32,7 @@ const FieldSection = ({ label, children }) => (
 const Services = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId, isSuspended } = useBusiness();
+    const { usage, canAdd, refreshUsage } = useSubscription();
     const [servicesList, setServicesList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -85,6 +87,7 @@ const Services = () => {
     });
 
     const watchedBusinessId = watch('business_id');
+    const watchedMinCharge = watch('minimum_booking_charge');
 
     // Filter data based on form selection
     const availableLocations = locations.filter(l => !watchedBusinessId || String(l.business_id) === String(watchedBusinessId));
@@ -117,15 +120,15 @@ const Services = () => {
         } else {
             const bizId = selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || '');
             const bizLocs = locations.filter(l => !bizId || l.business_id === bizId);
-            reset({ 
-                business_id: bizId, 
-                service_name: '', 
-                duration_minutes: '', 
-                price: '', 
-                minimum_booking_charge: '', 
-                assignedStaff: [], 
-                assignedLocations: bizLocs.map(l => l.id) 
-            }); 
+            reset({
+                business_id: bizId,
+                service_name: '',
+                duration_minutes: '',
+                price: '',
+                minimum_booking_charge: '',
+                assignedStaff: [],
+                assignedLocations: bizLocs.map(l => l.id)
+            });
         }
         setOpen(true);
     };
@@ -149,6 +152,7 @@ const Services = () => {
                     ]);
                     toast.success('Service updated successfully');
                     fetchData();
+                    refreshUsage();
                 }
             } else {
                 const response = await createService(svcData);
@@ -160,6 +164,7 @@ const Services = () => {
                     ]);
                     toast.success('Service created successfully');
                     fetchData();
+                    refreshUsage();
                 }
             }
         } catch (error) {
@@ -203,6 +208,7 @@ const Services = () => {
                 if (response.success) {
                     toast.success('Service deleted successfully');
                     fetchData();
+                    refreshUsage();
                 }
             } catch (error) {
                 toast.error('Failed to delete service');
@@ -212,7 +218,22 @@ const Services = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Services" subtitle="Define the services you offer and assign staff." onAddClick={() => handleOpen()} buttonText="Add Service" disabled={isSuspended} />
+            <PageHeader
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        Services
+                        {usage && usage.limits.services !== -1 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
+                                {usage.usage.services} / {usage.limits.services} Used
+                            </Typography>
+                        )}
+                    </Box>
+                }
+                subtitle="Define the services you offer and assign staff."
+                onAddClick={() => handleOpen()}
+                buttonText="Add Service"
+                disabled={isSuspended || !canAdd('service')}
+            />
             {/* Desktop Table */}
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
@@ -305,9 +326,9 @@ const Services = () => {
                                     <IconButton onClick={() => handleDelete(svc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
-                            
+
                             <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
-                            
+
                             <Grid container spacing={1}>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Price</Typography>
@@ -344,12 +365,12 @@ const Services = () => {
                 }}
             />
 
-            <FormDrawer 
-                open={open} 
-                onClose={() => setOpen(false)} 
-                title={editId ? 'Edit Service' : 'Add New Service'} 
-                subtitle="Define a service offering for your business." 
-                onSave={handleSubmit(onSubmit)} 
+            <FormDrawer
+                open={open}
+                onClose={() => setOpen(false)}
+                title={editId ? 'Edit Service' : 'Add New Service'}
+                subtitle="Define a service offering for your business."
+                onSave={handleSubmit(onSubmit)}
                 isLoading={isSubmitting}
                 saveLabel={editId ? (isSubmitting ? 'Updating...' : 'Update Service') : (isSubmitting ? 'Creating...' : 'Create Service')}
             >
@@ -411,8 +432,8 @@ const Services = () => {
 
                 <FieldSection label="Service Details">
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Controller name="service_name" control={control} 
-                            rules={{ 
+                        <Controller name="service_name" control={control}
+                            rules={{
                                 validate: {
                                     required: v => v?.trim() ? true : 'Service name is required',
                                     format: v => validateName(v),
@@ -422,11 +443,11 @@ const Services = () => {
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} placeholder="e.g. Full Body Checkup" />
                             )} />
-                        
+
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}>
                                 <Controller name="duration_minutes" control={control}
-                                    rules={{ 
+                                    rules={{
                                         required: 'Duration is required',
                                         min: { value: 1, message: 'Duration must be at least 1 minute' }
                                     }}
@@ -440,7 +461,7 @@ const Services = () => {
                                         <TextField {...field} fullWidth label="Price *" type="number" placeholder="500" error={!!errors.price} helperText={errors.price?.message} inputProps={{ min: 0 }} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                     )} />
                             </Grid>
-                            <Grid item xs={12}>
+                            <Grid item xs={12} md={6}>
                                 <Controller name="minimum_booking_charge" control={control}
                                     rules={{
                                         validate: v => {
@@ -455,6 +476,26 @@ const Services = () => {
                                     render={({ field }) => (
                                         <TextField {...field} fullWidth label="Min. Booking Charge" type="number" placeholder="100" error={!!errors.minimum_booking_charge} helperText={errors.minimum_booking_charge?.message} inputProps={{ min: 0 }} InputProps={{ startAdornment: <InputAdornment position="start">₹</InputAdornment> }} />
                                     )} />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Box sx={{
+                                    px: 2,
+                                    borderRadius: 2,
+                                    bgcolor: '#f1f5f9',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
+                                    height: 56,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                }}>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ textTransform: 'uppercase' }}>
+                                        Platform Fee ({usage?.portal_payment_charges || 0}%)
+                                    </Typography>
+                                    <Typography variant="h6" fontWeight={900} color="primary.main">
+                                        ₹ {((parseFloat(watchedMinCharge) || 0) * (usage?.portal_payment_charges || 0) / 100).toFixed(2)}
+                                    </Typography>
+                                </Box>
                             </Grid>
                         </Grid>
                     </Box>
@@ -484,12 +525,12 @@ const Services = () => {
                                         })
                                     }
                                     renderInput={(params) => (
-                                        <TextField 
-                                            {...params} 
-                                            label="Assign Staff" 
+                                        <TextField
+                                            {...params}
+                                            label="Assign Staff"
                                             error={!!errors.assignedStaff}
                                             helperText={errors.assignedStaff?.message}
-                                            placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''} 
+                                            placeholder={selectedIds.length === 0 ? 'Search and select staff...' : ''}
                                         />
                                     )}
                                 />

@@ -10,26 +10,25 @@ import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBusinesses } from '../api/business.api';
 import { getApiKeys } from '../api/apiKey.api';
+import { useBusiness } from '../context/BusinessContext';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
 
 const WidgetScript = () => {
-    const [businesses, setBusinesses] = useState([]);
+    const { businesses, selectedBusinessId: globalBusinessId, setSelectedBusinessId: setGlobalBusinessId } = useBusiness();
     const [apiKeys, setApiKeys] = useState([]);
     const [loading, setLoading] = useState(true);
-    const [selectedBusinessId, setSelectedBusinessId] = useState('');
+
+    // If global is 'all', we pick the first business for the script generation
+    const selectedBusinessId = globalBusinessId === 'all' ? (businesses[0]?.id || '') : globalBusinessId;
 
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [bizRes, keyRes] = await Promise.all([getBusinesses(), getApiKeys()]);
-            if (bizRes.success) {
-                setBusinesses(bizRes.data);
-                if (bizRes.data.length > 0) setSelectedBusinessId(bizRes.data[0].id);
-            }
+            const keyRes = await getApiKeys();
             if (keyRes.success) setApiKeys(keyRes.data);
         } catch (error) {
-            toast.error('Failed to fetch data');
+            toast.error('Failed to fetch API keys');
         } finally {
             setLoading(false);
         }
@@ -40,9 +39,9 @@ const WidgetScript = () => {
     }, []);
 
     // Find the active API key for the selected business
-    const matchedKey = apiKeys.find(k => k.business_id === selectedBusinessId);
+    const matchedKey = apiKeys.find(k => String(k.business_id) === String(selectedBusinessId));
     const apiKeyValue = matchedKey?.api_key || null;
-    const selectedBusiness = businesses.find(b => b.id === selectedBusinessId);
+    const selectedBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId));
     const isSuspended = selectedBusiness?.status === false;
 
     const scriptTag = apiKeyValue
@@ -75,7 +74,7 @@ const WidgetScript = () => {
                             <Select
                                 value={selectedBusinessId}
                                 label="Business"
-                                onChange={e => setSelectedBusinessId(e.target.value)}
+                                onChange={e => setGlobalBusinessId(e.target.value)}
                                 disabled={loading}
                             >
                                 {loading ? <MenuItem value=""><em>Loading businesses...</em></MenuItem> : businesses.length === 0 ? <MenuItem value=""><em>No businesses added yet</em></MenuItem> : null}

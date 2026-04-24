@@ -5,6 +5,10 @@ import Sidebar from './Sidebar';
 import Navbar from './Navbar';
 import BookingWidget from '../widgets/BookingWidget';
 import SubscriptionModal from '../components/SubscriptionModal';
+import { useSubscription } from '../context/SubscriptionContext';
+import { Typography, Button, Alert, AlertTitle } from '@mui/material';
+import { Warning as WarningIcon } from '@mui/icons-material';
+import dayjs from 'dayjs';
 
 const DRAWER_WIDTH = 260;
 
@@ -13,6 +17,10 @@ const MainLayout = () => {
     const location = useLocation();
     const isMobile = useMediaQuery(theme.breakpoints.down('md'));
     const [isSidebarOpen, setIsSidebarOpen] = useState(!isMobile);
+    const { usage, loading } = useSubscription();
+    const isExpired = usage?.isExpired;
+    const expiryDate = usage?.expiryDate;
+    const [modalOpen, setModalOpen] = useState(false);
 
     const currentUser = JSON.parse(localStorage.getItem('currentUser') || '{}');
     const user = currentUser.user || currentUser; // Handle nested structure
@@ -72,13 +80,47 @@ const MainLayout = () => {
                     drawerWidth={DRAWER_WIDTH}
                 />
                 <Box sx={{ mt: 10 }}>
+                    {isExpired && !loading && (
+                        <Alert 
+                            severity="error" 
+                            variant="filled"
+                            icon={<WarningIcon />}
+                            action={
+                                <Button 
+                                    color="inherit" 
+                                    size="small" 
+                                    onClick={() => setModalOpen(true)}
+                                    sx={{ fontWeight: 800, textTransform: 'none' }}
+                                >
+                                    Renew Plan
+                                </Button>
+                            }
+                            sx={{ 
+                                mb: 3, borderRadius: 3, 
+                                boxShadow: '0 8px 24px -12px rgba(239, 68, 68, 0.5)',
+                                '& .MuiAlert-message': { width: '100%' }
+                            }}
+                        >
+                            <AlertTitle sx={{ fontWeight: 800, mb: 0 }}>Subscription Expired</AlertTitle>
+                            <Typography variant="caption" sx={{ opacity: 0.9 }}>
+                                Your plan expired {expiryDate ? <b>on {dayjs(expiryDate).format('DD MMM YYYY')}</b> : 'recently'}. 
+                                Your booking widget and all resource creation are currently disabled.
+                            </Typography>
+                        </Alert>
+                    )}
                     <Outlet />
                 </Box>
+
+                <SubscriptionModal 
+                    open={modalOpen} 
+                    onClose={() => setModalOpen(false)} 
+                />
                 {/* Widget Preview for Admin - Show on relevant pages */}
                 {showWidget && (
                     <BookingWidget 
                         isSidebarOpen={isSidebarOpen && !isMobile} 
                         drawerWidth={DRAWER_WIDTH} 
+                        isExpired={isExpired}
                     />
                 )}
             </Box>

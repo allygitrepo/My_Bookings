@@ -13,6 +13,7 @@ import { getLocations, createLocation, updateLocation, deleteLocation } from '..
 import { getBusinesses } from '../api/business.api';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -28,6 +29,7 @@ const FieldSection = ({ label, children }) => (
 const Locations = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId, isSuspended } = useBusiness();
+    const { usage, canAdd, refreshUsage } = useSubscription();
     const [locations, setLocations] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
@@ -162,12 +164,14 @@ const Locations = () => {
                 if (response.success) {
                     toast.success('Location updated successfully');
                     fetchData();
+                    refreshUsage();
                 }
             } else {
                 const response = await createLocation(data);
                 if (response.success) {
                     toast.success('Location created successfully');
                     fetchData();
+                    refreshUsage();
                 }
             }
         } catch (error) {
@@ -182,7 +186,11 @@ const Locations = () => {
         if (window.confirm('Are you sure you want to delete this location?')) {
             try {
                 const response = await deleteLocation(id);
-                if (response.success) { toast.success('Location deleted successfully'); fetchData(); }
+                if (response.success) { 
+                    toast.success('Location deleted successfully'); 
+                    fetchData(); 
+                    refreshUsage();
+                }
             } catch (error) {
                 toast.error('Failed to delete location');
             }
@@ -191,7 +199,21 @@ const Locations = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Locations" subtitle="Manage business locations and branches." onAddClick={() => handleOpen()} buttonText="Add Location" disabled={isSuspended} 
+            <PageHeader 
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        Locations
+                        {usage && usage.limits.locations !== -1 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
+                                {usage.usage.locations} / {usage.limits.locations} Used
+                            </Typography>
+                        )}
+                    </Box>
+                }
+                subtitle="Manage business locations and branches." 
+                onAddClick={() => handleOpen()} 
+                buttonText="Add Location" 
+                disabled={isSuspended || !canAdd('location')} 
                 extraActions={
                     <TextField
                         select

@@ -22,6 +22,7 @@ import { getStaffAvailability, bulkCreateStaffAvailability, deleteStaffAvailabil
 import { useNavigate } from 'react-router-dom';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { validateName, validateMobile, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
@@ -85,6 +86,7 @@ const FieldSection = ({ label, children }) => (
 const Staff = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId, isSuspended } = useBusiness();
+    const { usage, canAdd, refreshUsage } = useSubscription();
     const [staffList, setStaffList] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [locations, setLocations] = useState([]);
@@ -320,6 +322,7 @@ const Staff = () => {
                     await createNewAvailabilityRecords(staffId);
                     toast.success('Staff member updated successfully');
                     fetchData();
+                    refreshUsage();
                 }
             } else {
                 const response = await createStaff(data);
@@ -328,6 +331,7 @@ const Staff = () => {
                     await createNewAvailabilityRecords(staffId);
                     toast.success('Staff member added successfully');
                     fetchData();
+                    refreshUsage();
                 }
             }
         } catch (error) {
@@ -368,6 +372,7 @@ const Staff = () => {
                 if (response.success) {
                     toast.success('Staff member deleted successfully');
                     fetchData();
+                    refreshUsage();
                 }
             } catch (error) {
                 toast.error('Failed to delete staff member');
@@ -377,7 +382,22 @@ const Staff = () => {
 
     return (
         <PageTransition>
-            <PageHeader title="Staff Members" subtitle="Manage your team and their weekly availability." onAddClick={() => handleOpen()} buttonText="Add Staff" disabled={isSuspended}                extraActions={
+            <PageHeader 
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        Staff Members
+                        {usage && usage.limits.staff !== -1 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
+                                {usage.usage.staff} / {usage.limits.staff} Used
+                            </Typography>
+                        )}
+                    </Box>
+                }
+                subtitle="Manage your team and their weekly availability schedule." 
+                onAddClick={() => handleOpen()} 
+                buttonText="Add Staff" 
+                disabled={isSuspended || !canAdd('staff')}
+                extraActions={
                     <Autocomplete
                         multiple
                         size="small"

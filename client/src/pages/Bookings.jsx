@@ -4,7 +4,7 @@ import axiosInstance from '../api/axiosInstance';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
-    TextField, MenuItem, Card, CircularProgress, Grid, Divider
+    TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -34,6 +34,7 @@ import { getPayments } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { formatDate } from '../utils/date';
 import dayjs from 'dayjs';
 
@@ -144,6 +145,7 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
 const Bookings = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId } = useBusiness();
+    const { usage } = useSubscription();
     const [view, setView] = useState(localStorage.getItem('bookingsView') || 'table');
     const [bookings, setBookings] = useState([]);
     const [businesses, setBusinesses] = useState([]);
@@ -283,7 +285,16 @@ const Bookings = () => {
     return (
         <PageTransition>
             <PageHeader
-                title="Bookings"
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        Bookings
+                        {usage && usage.limits.bookings !== -1 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
+                                {usage.usage.bookings} / {usage.limits.bookings} Used
+                            </Typography>
+                        )}
+                    </Box>
+                }
                 subtitle="All customer appointments. Bookings are created via the widget."
                 extraActions={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -377,6 +388,42 @@ const Bookings = () => {
                     </Box>
                 }
             />
+
+            {/* --- Booking Quota Progress --- */}
+            {usage && usage.limits.bookings !== -1 && (
+                <Paper sx={{ 
+                    p: 2.5, mb: 3, borderRadius: 4, bgcolor: 'background.paper', 
+                    border: '1px solid', borderColor: 'divider', boxShadow: 'none' 
+                }}>
+                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Typography variant="subtitle2" fontWeight={800}>Monthly Booking Quota</Typography>
+                            {usage.usage.bookings >= usage.limits.bookings && (
+                                <Chip label="Limit Reached" color="error" size="small" sx={{ fontWeight: 800, height: 20 }} />
+                            )}
+                        </Box>
+                        <Typography variant="caption" fontWeight={800} color="text.secondary">
+                            {usage.usage.bookings} / {usage.limits.bookings} Used
+                        </Typography>
+                    </Box>
+                    <LinearProgress 
+                        variant="determinate" 
+                        value={Math.min((usage.usage.bookings / usage.limits.bookings) * 100, 100)} 
+                        sx={{ 
+                            height: 10, borderRadius: 5, bgcolor: 'action.hover',
+                            '& .MuiLinearProgress-bar': {
+                                borderRadius: 5,
+                                bgcolor: usage.usage.bookings >= usage.limits.bookings ? 'error.main' : 'primary.main'
+                            }
+                        }}
+                    />
+                    {usage.usage.bookings >= usage.limits.bookings && (
+                        <Typography variant="caption" color="error.main" sx={{ mt: 1, display: 'block', fontWeight: 700 }}>
+                            You have reached your booking limit. Your widget is now disabled. Please upgrade to accept more bookings.
+                        </Typography>
+                    )}
+                </Paper>
+            )}
 
             {/* --- Filters Bar --- */}
             {showFilters && (

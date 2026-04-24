@@ -19,6 +19,7 @@ import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { createBusiness, updateBusiness, deleteBusiness } from '../api/business.api';
 import { refreshToken } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
@@ -51,6 +52,7 @@ const FieldSection = ({ label, children }) => (
 const Businesses = () => {
     const { searchQuery } = useSearch();
     const { businesses, refreshBusinesses, loading } = useBusiness();
+    const { canAdd, usage, refreshUsage } = useSubscription();
     const currentUser = JSON.parse(localStorage.getItem('currentUser'));
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -151,6 +153,7 @@ const Businesses = () => {
                 if (response.success) {
                     toast.success('Business created successfully');
                     refreshBusinesses();
+                    refreshUsage();
                     // Refresh the JWT token to embed the new business_id.
                     try {
                         const refreshed = await refreshToken();
@@ -183,6 +186,7 @@ const Businesses = () => {
                 if (response.success) {
                     toast.success('Business deleted successfully');
                     refreshBusinesses();
+                    refreshUsage();
                 }
             } catch (error) {
                 toast.error('Failed to delete business');
@@ -193,11 +197,20 @@ const Businesses = () => {
     return (
         <PageTransition>
             <PageHeader
-                title="Businesses"
+                title={
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        Businesses
+                        {usage && usage.limits.businesses !== -1 && (
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, bgcolor: 'action.hover', px: 1, py: 0.5, borderRadius: 1.5 }}>
+                                {usage.usage.businesses} / {usage.limits.businesses} Used
+                            </Typography>
+                        )}
+                    </Box>
+                }
                 subtitle="Manage your business profiles and settings."
                 onAddClick={() => handleOpen()}
                 buttonText="Add Business"
-                disabled={false} // Always allowed to create new ones? Or keep it? Let's keep it enabled.
+                disabled={!canAdd('business')}
             />
 
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: 3, boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
@@ -477,19 +490,36 @@ const Businesses = () => {
                             name="has_multiple_locations"
                             control={control}
                             render={({ field: { value, onChange } }) => (
-                                <FormControlLabel
-                                    control={<Switch checked={value} onChange={onChange} color="primary" />}
-                                    label={
-                                        <Box>
-                                            <Typography variant="body2" fontWeight={700}>Operating from multiple locations?</Typography>
-                                            <Typography variant="caption" color="text.secondary">
-                                                {value 
-                                                    ? "Use the 'Locations' page to manage your branches." 
-                                                    : "Provide address details here to bypass manual location setup."}
-                                            </Typography>
-                                        </Box>
-                                    }
-                                />
+                                <Tooltip 
+                                    title={usage?.limits?.locations === 1 ? "Upgrade your plan to enable multiple locations for this business." : ""}
+                                    placement="top"
+                                    arrow
+                                >
+                                    <FormControlLabel
+                                        control={
+                                            <Switch 
+                                                checked={usage?.limits?.locations === 1 ? false : !!value} 
+                                                onChange={usage?.limits?.locations === 1 ? undefined : onChange} 
+                                                disabled={usage?.limits?.locations === 1}
+                                                color="primary" 
+                                            />
+                                        }
+                                        label={
+                                            <Box>
+                                                <Typography variant="body2" fontWeight={700} color={usage?.limits?.locations === 1 ? 'text.disabled' : 'inherit'}>
+                                                    Operating from multiple locations?
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    {usage?.limits?.locations === 1 
+                                                        ? "Your current plan supports 1 location only."
+                                                        : value 
+                                                            ? "Use the 'Locations' page to manage your branches." 
+                                                            : "Provide address details here to bypass manual location setup."}
+                                                </Typography>
+                                            </Box>
+                                        }
+                                    />
+                                </Tooltip>
                             )}
                         />
                     </Box>

@@ -113,7 +113,7 @@ const formatDuration = (mins) => {
     return m > 0 ? `${h} hr ${m} min` : `${h === 1 ? '1 hr' : `${h} hrs`}`;
 };
 
-const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false }) => {
+const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false, isExpired: externalIsExpired = null }) => {
     const [services, setServices] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [staff, setStaff] = useState([]);
@@ -125,6 +125,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     const [locations, setLocations] = useState([]);
     const [loading, setLoading] = useState(true);
     const [resolvedBusinessId, setResolvedBusinessId] = useState(null);
+    const [quotaExceeded, setQuotaExceeded] = useState(false);
+    const [isExpired, setIsExpired] = useState(false);
 
     const [open, setOpen] = useState(false);
     const isMobile = typeof window !== 'undefined' && window.innerWidth < 600;
@@ -186,6 +188,24 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
             const effectiveBizId = bizId || (bizRes.success && bizRes.data[0]?.id);
             setResolvedBusinessId(effectiveBizId);
+
+            // Quota Check
+            if (effectiveBizId) {
+                try {
+                    const usageRes = await axiosInstance.get(`/businesses/usage/${effectiveBizId}`);
+                    if (usageRes.data.success) {
+                        console.log('Widget: Usage Status for', effectiveBizId, ':', usageRes.data);
+                        setQuotaExceeded(usageRes.data.canAcceptBooking === false);
+                        setIsExpired(usageRes.data.isExpired === true);
+                    } else {
+                        console.error('Widget: Usage API returned success:false');
+                        setQuotaExceeded(false);
+                        setIsExpired(false);
+                    }
+                } catch (e) {
+                    console.error('Widget Quota Check Failed:', e);
+                }
+            }
 
             // Filter data by resolvedBusinessId if provided
             if (svcRes.success) {
@@ -1222,53 +1242,88 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     }
                 }}>
 
-                {/* ── Gradient Header ── */}
-                {activeStep < 6 && (
-                    <Box sx={{
-                        background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
-                        px: { xs: 2.5, sm: 3 },
-                        pt: { xs: 2, sm: 2.5 },
-                        pb: 2,
-                    }}>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                            <Box>
-                                <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                                    Step {activeStep + 1} of {steps.length}
-                                </Typography>
-                                <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                                    {steps[activeStep]}
-                                </Typography>
-                            </Box>
-                            <IconButton onClick={resetBooking} size="small"
-                                sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
+                { (quotaExceeded || isExpired || externalIsExpired === true) ? (
+                    <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'white' }}>
+                        <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
+                            <IconButton onClick={resetBooking} size="small">
                                 <CloseIcon fontSize="small" />
                             </IconButton>
                         </Box>
-
-                        {/* Pill step dots */}
-                        <Box sx={{ display: 'flex', gap: 0.6 }}>
-                            {steps.map((_, i) => (
-                                <Box key={i} sx={{
-                                    height: 4, flex: 1, borderRadius: 10,
-                                    bgcolor: i <= activeStep ? 'white' : 'rgba(255,255,255,0.25)',
-                                    transition: 'background 0.3s',
-                                }} />
-                            ))}
-                        </Box>
+                        <Avatar sx={{ width: 80, height: 80, bgcolor: 'error.light', color: 'error.main', mx: 'auto', mb: 3 }}>
+                            <BookIcon sx={{ fontSize: 40 }} />
+                        </Avatar>
+                        <Typography variant="h5" fontWeight={900} gutterBottom>
+                            {isExpired ? 'Not Accepting Bookings' : 'Limit Reached'}
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 4, px: 2 }}>
+                            {isExpired 
+                                ? 'We are not accepting bookings right now.' 
+                                : 'We have reached our booking limit for this period and are not accepting new appointments right now. Please contact us directly for assistance.'
+                            }
+                        </Typography>
+                        <Button 
+                            fullWidth 
+                            variant="contained" 
+                            onClick={resetBooking}
+                            sx={{ 
+                                borderRadius: 3, py: 1.5, fontWeight: 800,
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                            }}
+                        >
+                            Got it
+                        </Button>
                     </Box>
-                )}
+                ) : (
+                    <>
+                        {/* ── Gradient Header ── */}
+                        {activeStep < 6 && (
+                            <Box sx={{
+                                background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
+                                px: { xs: 2.5, sm: 3 },
+                                pt: { xs: 2, sm: 2.5 },
+                                pb: 2,
+                            }}>
+                                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                    <Box>
+                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                            Step {activeStep + 1} of {steps.length}
+                                        </Typography>
+                                        <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
+                                            {steps[activeStep]}
+                                        </Typography>
+                                    </Box>
+                                    <IconButton onClick={resetBooking} size="small"
+                                        sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>
+                                        <CloseIcon fontSize="small" />
+                                    </IconButton>
+                                </Box>
 
-                <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
-                    <AnimatePresence mode="wait">
-                        <motion.div key={activeStep}
-                            initial={{ opacity: 0, y: 12 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            exit={{ opacity: 0, y: -12 }}
-                            transition={{ duration: 0.2 }}>
-                            {renderStep()}
-                        </motion.div>
-                    </AnimatePresence>
-                </DialogContent>
+                                {/* Pill step dots */}
+                                <Box sx={{ display: 'flex', gap: 0.6 }}>
+                                    {steps.map((_, i) => (
+                                        <Box key={i} sx={{
+                                            height: 4, flex: 1, borderRadius: 10,
+                                            bgcolor: i <= activeStep ? 'white' : 'rgba(255,255,255,0.25)',
+                                            transition: 'background 0.3s',
+                                        }} />
+                                    ))}
+                                </Box>
+                            </Box>
+                        )}
+
+                        <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
+                            <AnimatePresence mode="wait">
+                                <motion.div key={activeStep}
+                                    initial={{ opacity: 0, y: 12 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    exit={{ opacity: 0, y: -12 }}
+                                    transition={{ duration: 0.2 }}>
+                                    {renderStep()}
+                                </motion.div>
+                            </AnimatePresence>
+                        </DialogContent>
+                    </>
+                )}
             </Dialog>
         </>
     );

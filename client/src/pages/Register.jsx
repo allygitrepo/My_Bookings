@@ -139,7 +139,7 @@ const Register = () => {
                     }}>
                         <Box
                             component="img"
-                            src={logoImg}
+                            src="/logo.png"
                             alt="MyBookings"
                             sx={{
                                 width: 180, height: 180,
@@ -209,7 +209,7 @@ const Register = () => {
                 >
                     {/* Mobile logo */}
                     <Box sx={{ display: { xs: 'flex', md: 'none' }, mb: 5, justifyContent: 'center' }}>
-                        <Box component="img" src={logoImg} alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: 3, objectFit: 'contain' }} />
+                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: 3, objectFit: 'contain' }} />
                     </Box>
 
                     <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', mb: 0.5 }}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import {
     Drawer,
     List,
@@ -49,6 +50,7 @@ const menuItems = [
 const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const location = useLocation();
     const { selectedBusinessId, setSelectedBusinessId, businesses } = useBusiness();
+    const { isFeatureAllowed, usage } = useSubscription();
 
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', direction: 'ltr' }}>
@@ -83,7 +85,14 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
             <Divider sx={{ mb: 1 }} />
             <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
                 {menuItems.filter(item => {
+                    // Feature-based filtering
+                    if (item.text === 'Website Builder') return isFeatureAllowed('website');
+                    if (item.text === 'API Keys') return isFeatureAllowed('api');
+                    
                     if (item.text === 'Locations') {
+                        // Package-based filtering: Hide if max_locations is 1
+                        if (usage?.limits?.locations === 1) return false;
+
                         // Show if 'all' is selected and ANY business is multi-location
                         if (selectedBusinessId === 'all') {
                             return businesses.some(b => b.has_multiple_locations == true || b.has_multiple_locations == 1);

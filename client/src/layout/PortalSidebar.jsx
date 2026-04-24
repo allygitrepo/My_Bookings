@@ -43,7 +43,7 @@ const PortalSidebar = ({ open, onClose, variant }) => {
             <Toolbar sx={{ px: 3, py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
                 <Box
                     component="img"
-                    src={logoImg}
+                    src="/logo.png"
                     alt="Logo"
                     sx={{ width: 60, height: 60, borderRadius: 2, cursor: 'pointer' }}
                     onClick={() => navigate('/portal/dashboard')}

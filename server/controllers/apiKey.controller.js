@@ -25,7 +25,7 @@ const apiKeyController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 20;
+            const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
 
             const whereClause = { status: true };
@@ -45,7 +45,8 @@ const apiKeyController = {
             const { count, rows } = await ApiKey.findAndCountAll({
                 where: whereClause,
                 limit,
-                offset
+                offset,
+                order: [['created_at', 'DESC']]
             });
 
             res.json({

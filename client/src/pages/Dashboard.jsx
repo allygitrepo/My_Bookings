@@ -20,6 +20,7 @@ import { useSearch } from '../context/SearchContext';
 import toast from 'react-hot-toast';
 import PageTransition from '../components/PageTransition';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { formatDate } from '../utils/date';
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
@@ -55,6 +56,7 @@ const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default'
 const Dashboard = () => {
     const { searchQuery } = useSearch();
     const { isSuspended, suspendedReason, businesses: contextBusinesses, selectedBusinessId } = useBusiness();
+    const { usage } = useSubscription();
     const [staff, setStaff] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [services, setServices] = useState([]);
@@ -156,18 +158,43 @@ const Dashboard = () => {
 
             <Grid container spacing={3} sx={{ mb: 5 }}>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Businesses" value={loading ? '...' : contextBusinesses.length} icon={<BusinessIcon sx={{ fontSize: 26 }} />} color="#6366f1" />
+                    <StatCard 
+                        title="Total Businesses" 
+                        value={loading ? '...' : contextBusinesses.length} 
+                        icon={<BusinessIcon sx={{ fontSize: 26 }} />} 
+                        color="#6366f1" 
+                        subtitle={usage && usage.limits.businesses !== -1 ? `${usage.usage.businesses} / ${usage.limits.businesses} Plan Limit` : 'Current usage'}
+                    />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Staff" value={loading ? '...' : filteredStaff.length} icon={<StaffIcon sx={{ fontSize: 26 }} />} color="#0ea5e9" />
+                    <StatCard 
+                        title="Total Staff" 
+                        value={loading ? '...' : filteredStaff.length} 
+                        icon={<StaffIcon sx={{ fontSize: 26 }} />} 
+                        color="#0ea5e9" 
+                        subtitle={usage && usage.limits.staff !== -1 ? `${usage.usage.staff} / ${usage.limits.staff} Plan Limit` : 'Active members'}
+                    />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Bookings" value={loading ? '...' : filteredDashboardBookings.length} icon={<BookingsIcon sx={{ fontSize: 26 }} />} color="#10b981" />
+                    <StatCard 
+                        title="Total Bookings" 
+                        value={loading ? '...' : filteredDashboardBookings.length} 
+                        icon={<BookingsIcon sx={{ fontSize: 26 }} />} 
+                        color="#10b981" 
+                        subtitle={usage && usage.limits.bookings !== -1 ? `${usage.usage.bookings} / ${usage.limits.bookings} Plan Limit` : 'This period'}
+                    />
                 </Grid>
                 <Grid item xs={12} sm={6} md={3}>
-                    <StatCard title="Total Payments" value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`} icon={<RevenueIcon sx={{ fontSize: 26 }} />} color="#f59e0b" />
+                    <StatCard 
+                        title="Total Revenue" 
+                        value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`} 
+                        icon={<RevenueIcon sx={{ fontSize: 26 }} />} 
+                        color="#f59e0b" 
+                        subtitle="Total earnings"
+                    />
                 </Grid>
-            </Grid>            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
+            </Grid>            
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                 <TrendIcon sx={{ color: 'primary.main' }} />
                 <Typography variant="h6" fontWeight={800}>Recent Bookings</Typography>
             </Box>

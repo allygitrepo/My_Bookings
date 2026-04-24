@@ -36,7 +36,7 @@ const ApiKeys = () => {
     }, [selectedBusinessId]);
 
     const filteredKeys = apiKeys.filter(k => {
-        const matchesBusiness = selectedBusinessId === 'all' || k.business_id === selectedBusinessId;
+        const matchesBusiness = selectedBusinessId === 'all' || String(k.business_id) === String(selectedBusinessId);
         return matchesBusiness;
     });
 

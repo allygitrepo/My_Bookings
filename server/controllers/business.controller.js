@@ -186,6 +186,15 @@ const businessController = {
             res.status(500).json({ success: false, message: error.message });
         }
     },
+    getPublicUsage: async (req, res) => {
+        try {
+            const subscriptionGuard = require("../utils/subscriptionGuard");
+            const subscriptionStatus = await subscriptionGuard.canAcceptBookingByBusiness(req.params.id);
+            res.json({ success: true, ...subscriptionStatus });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
     update: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
