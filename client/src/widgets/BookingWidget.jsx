@@ -633,8 +633,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         sx={{
                                             p: 2, borderRadius: 3, cursor: 'pointer',
                                             border: '1.5px solid', borderColor: bookingData.location?.id === loc.id ? '#6366f1' : 'rgba(99,102,241,0.15)',
-                                            bgcolor: bookingData.location?.id === loc.id ? 'rgba(99,102,241,0.05)' : 'white',
-                                            boxShadow: '0 2px 8px rgba(99,102,241,0.06)',
+                                            bgcolor: bookingData.location?.id === loc.id ? 'rgba(99,102,241,0.05)' : 'background.paper',
+                                            boxShadow: '0 2px 8px rgba(0,0,0,0.06)',
                                             transition: 'all 0.18s',
                                             '&:hover': {
                                                 borderColor: '#6366f1',
@@ -681,8 +681,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         sx={{
                                             p: 2, borderRadius: 3, cursor: 'pointer',
                                             border: '1.5px solid', borderColor: isSelected ? '#6366f1' : 'rgba(99,102,241,0.15)',
-                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'white',
-                                            boxShadow: isSelected ? '0 4px 12px rgba(99,102,241,0.12)' : '0 2px 8px rgba(99,102,241,0.06)',
+                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'background.paper',
+                                            boxShadow: isSelected ? '0 4px 12px rgba(99,102,241,0.12)' : '0 2px 8px rgba(0,0,0,0.06)',
                                             transition: 'all 0.18s',
                                             '&:hover': {
                                                 borderColor: '#6366f1',
@@ -728,16 +728,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     <Typography variant="h6" fontWeight={800}>{formatDuration(totalDuration)}</Typography>
                                 </Box>
                                 <Button
-                                    variant="contained"
                                     onClick={handleNext}
                                     sx={{
-                                        bgcolor: 'white',
-                                        color: '#6366f1',
-                                        fontWeight: 800,
+                                        backgroundColor: '#ffffff !important',
+                                        color: '#6366f1 !important',
+                                        fontWeight: 900,
                                         px: 3,
-                                        borderRadius: 2,
-                                        '&:hover': { bgcolor: '#f8f9ff', transform: 'scale(1.05)' },
-                                        transition: 'all 0.2s'
+                                        py: 1,
+                                        borderRadius: '12px',
+                                        textTransform: 'none',
+                                        '&:hover': { backgroundColor: '#f0f0f0 !important' },
                                     }}
                                 >
                                     Continue
@@ -770,7 +770,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                             <Box onClick={() => { setBookingData({ ...bookingData, staff: s, slots: [] }); handleNext(); }}
                                                 sx={{
                                                     p: 2, textAlign: 'center', cursor: 'pointer',
-                                                    borderRadius: 4, bgcolor: 'white',
+                                                    borderRadius: 4, bgcolor: 'background.paper',
                                                     border: '1.5px solid', borderColor: isSelected ? '#6366f1' : 'rgba(99,102,241,0.1)',
                                                     boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.12)' : '0 2px 8px rgba(0,0,0,0.04)',
                                                     transition: 'all 0.2s cubic-bezier(0.4, 0, 0.2, 1)',
@@ -866,8 +866,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         <Box sx={{
                             border: '1.5px solid', borderColor: 'divider', borderRadius: 3,
                             overflow: 'hidden', mb: 2.5,
-                            background: 'linear-gradient(135deg, #f8f9ff 0%, #fff 100%)',
-                            boxShadow: '0 2px 12px rgba(99,102,241,0.08)',
+                            bgcolor: 'background.paper',
+                            boxShadow: '0 2px 12px rgba(0,0,0,0.08)',
                         }}>
                             {/* Month nav */}
                             <Box sx={{
@@ -978,9 +978,9 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                                             fontWeight: isSelected ? 800 : 600,
                                                             borderColor: isSelected ? 'transparent' : 'rgba(99,102,241,0.2)',
                                                             color: isSelected ? 'white' : '#6366f1',
-                                                            bgcolor: isSelected ? '#6366f1' : 'white',
+                                                            bgcolor: isSelected ? '#6366f1' : 'background.paper',
                                                             '&:hover': {
-                                                                bgcolor: isSelected ? '#4f46e5' : 'rgba(99,102,241,0.05)',
+                                                                bgcolor: isSelected ? '#4f46e5' : 'action.hover',
                                                                 borderColor: '#6366f1'
                                                             }
                                                         }}
@@ -1000,10 +1000,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     onClick={handleNext}
                                     sx={{
                                         mt: 3, borderRadius: 3, py: 1.5, fontWeight: 800,
-                                        background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : '#f1f5f9',
-                                        color: (isDurationMet && areSlotsConsecutive) ? 'white' : '#94a3b8',
+                                        background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)' : 'rgba(255,255,255,0.05)',
+                                        color: (isDurationMet && areSlotsConsecutive) ? 'white' : 'text.disabled',
                                         boxShadow: (isDurationMet && areSlotsConsecutive) ? '0 10px 20px rgba(99,102,241,0.25)' : 'none',
-                                        '&:hover': { background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : '#f1f5f9' }
+                                        '&:hover': { background: (isDurationMet && areSlotsConsecutive) ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : 'rgba(255,255,255,0.05)' }
                                     }}
                                 >
                                     {isDurationMet ? 'Continue' : `Selected ${formatDuration(selectedDuration)} of ${formatDuration(totalDuration)}`}
@@ -1261,7 +1261,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 }}>
 
                 { (quotaExceeded || isExpired || externalIsExpired === true) ? (
-                    <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'white' }}>
+                    <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.paper' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <IconButton onClick={resetBooking} size="small">
                                 <CloseIcon fontSize="small" />
@@ -1329,7 +1329,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             </Box>
                         )}
 
-                        <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: 3, pt: 2.5, bgcolor: '#fafbff' }}>
+                        <DialogContent sx={{ px: { xs: 2, sm: 3 }, pb: 3, pt: 2.5, bgcolor: 'background.default' }}>
                             <AnimatePresence mode="wait">
                                 <motion.div key={activeStep}
                                     initial={{ opacity: 0, y: 12 }}

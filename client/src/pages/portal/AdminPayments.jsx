@@ -41,10 +41,12 @@ const AdminPayments = () => {
         fetchPayments();
     }, []);
 
-    const filteredPayments = payments.filter(p => 
-        p.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-        p.razorpay_order_id?.toLowerCase().includes(search.toLowerCase()) ||
-        p.package?.name?.toLowerCase().includes(search.toLowerCase())
+    const filteredPayments = payments.filter(p =>
+        parseFloat(p.amount) > 0 && (
+            p.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+            p.razorpay_order_id?.toLowerCase().includes(search.toLowerCase()) ||
+            p.package?.name?.toLowerCase().includes(search.toLowerCase())
+        )
     );
 
     const handleChangePage = (event, newPage) => setPage(newPage);
@@ -60,11 +62,7 @@ const AdminPayments = () => {
                     <Typography variant="h4" fontWeight={800}>Subscription Transactions</Typography>
                     <Typography variant="body2" color="text.secondary">Monitor all SaaS subscription payments and platform revenue.</Typography>
                 </Box>
-                <Tooltip title="Export CSV">
-                    <IconButton sx={{ bgcolor: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.1)' }}>
-                        <DownloadIcon />
-                    </IconButton>
-                </Tooltip>
+
             </Box>
 
             <Card sx={{ mb: 4 }}>
@@ -129,8 +127,8 @@ const AdminPayments = () => {
                                         <Typography fontWeight={800} color="primary">₹{parseFloat(payment.amount).toLocaleString()}</Typography>
                                     </TableCell>
                                     <TableCell>
-                                        <Chip 
-                                            label={payment.status.toUpperCase()} 
+                                        <Chip
+                                            label={payment.status.toUpperCase()}
                                             size="small"
                                             color={payment.status === 'active' ? 'success' : 'warning'}
                                             sx={{ fontWeight: 700, borderRadius: 1.5 }}

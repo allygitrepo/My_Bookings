@@ -2,10 +2,10 @@
  * Formats a date string or Date object into various formats.
  * 
  * @param {string|Date} date - The date to format.
- * @param {string} format - The desired format (default: 'DD:MM:YYYY').
+ * @param {string} format - The desired format (default: 'DD/MM/YYYY').
  * @returns {string} - The formatted date string.
  */
-export const formatDate = (date, format = 'DD:MM:YYYY') => {
+export const formatDate = (date, format = 'DD/MM/YYYY') => {
     if (!date) return '—';
 
     const d = new Date(date);
@@ -18,16 +18,16 @@ export const formatDate = (date, format = 'DD:MM:YYYY') => {
     const year = d.getFullYear();
 
     switch (format) {
-        case 'DD:MM:YYYY':
-            return `${day}:${month}:${year}`;
+        case 'DD/MM/YYYY':
+            return `${day}/${month}/${year}`;
         case 'DD-MM-YYYY':
             return `${day}-${month}-${year}`;
-        case 'MM:DD:YYYY':
-            return `${month}:${day}:${year}`;
+        case 'MM/DD/YYYY':
+            return `${month}/${day}/${year}`;
         case 'YYYY-MM-DD':
             return `${year}-${month}-${day}`;
         default:
-            return `${day}:${month}:${year}`;
+            return `${day}/${month}/${year}`;
     }
 };
 

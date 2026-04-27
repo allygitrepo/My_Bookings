@@ -420,6 +420,20 @@ const WebsiteGenerator = () => {
                                         }}>
                                             {settings.website_enabled ? 'Live' : 'Draft'}
                                         </Box>
+                                        {settings.website_enabled && (
+                                            <Typography 
+                                                variant="caption" 
+                                                sx={{ 
+                                                    color: 'primary.light', 
+                                                    fontWeight: 700, 
+                                                    cursor: 'pointer',
+                                                    '&:hover': { textDecoration: 'underline' }
+                                                }}
+                                                onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                            >
+                                                {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                            </Typography>
+                                        )}
                                         <Switch
                                             size="small"
                                             checked={settings.website_enabled}

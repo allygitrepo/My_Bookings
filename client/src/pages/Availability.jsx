@@ -359,7 +359,7 @@ const Availability = () => {
                                 {schedule[day] && (
                                     <Box sx={{ 
                                         pl: 4, mt: 0.5, p: 1.5, borderRadius: 2, 
-                                        bgcolor: 'rgba(255,255,255,0.7)', border: '1px solid', borderColor: 'divider'
+                                        bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid', borderColor: 'divider'
                                     }}>
                                         {schedule[day].map((slot, idx) => {
                                             const errKey = `${day}-${idx}`;
@@ -369,7 +369,7 @@ const Availability = () => {
                                             return (
                                                 <Grid container spacing={1} key={idx} sx={{ 
                                                     alignItems: 'center', p: 1, 
-                                                    borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
+                                                    borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid',
                                                     borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                                                     mb: 1

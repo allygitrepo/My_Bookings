@@ -787,7 +787,7 @@ const Staff = () => {
                                             return (
                                                 <Grid container spacing={1} sx={{ 
                                                     alignItems: 'center', p: 1, 
-                                                    borderRadius: 1.5, bgcolor: 'white', border: '1px solid',
+                                                    borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid',
                                                     borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
                                                     mb: 1

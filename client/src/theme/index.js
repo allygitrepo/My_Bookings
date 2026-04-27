@@ -126,8 +126,9 @@ const theme = createTheme({
                         backgroundColor: 'rgba(0,0,0,0.2)',
                         borderRadius: 10,
                         '& input:-webkit-autofill': {
+                            WebkitBoxShadow: '0 0 0 1000px #1e293b inset !important',
+                            WebkitTextFillColor: '#f8fafc !important',
                             transition: 'background-color 5000s ease-in-out 0s',
-                            WebkitTextFillColor: 'inherit !important',
                         },
                         '& fieldset': {
                             borderColor: 'rgba(255,255,255,0.1)',
