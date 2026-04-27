@@ -57,7 +57,7 @@ const HeroSection = () => {
                         >
                             Your Bookings,{' '}<br />
                             <span style={{ background: 'linear-gradient(90deg, #c084fc, #818cf8, #60a5fa)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-                                Beautifully Managed.
+                                Seamlessly Managed.
                             </span>
                         </motion.h1>
 

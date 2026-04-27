@@ -41,6 +41,7 @@ const inputSx = (focused, name) => ({
     '& .MuiOutlinedInput-root': {
         borderRadius: '16px',
         bgcolor: 'white',
+        color: '#1e293b', // Ensure text is dark on white background
         transition: 'all 0.2s',
         boxShadow: focused === name ? '0 0 0 4px rgba(99,102,241,0.12)' : '0 1px 2px rgba(0,0,0,0.05)',
         '& fieldset': { borderColor: focused === name ? '#6366f1' : '#e5e7eb', transition: 'border-color 0.2s' },
