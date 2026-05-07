@@ -98,7 +98,16 @@ const portalController = {
     users: async (req, res) => {
         try {
             const rows = await User.findAll({
-                include: [{ model: Package, as: 'package', attributes: ['name'] }],
+                include: [
+                    { model: Package, as: 'package', attributes: ['name'] },
+                    { 
+                        model: UserSubscription, 
+                        as: 'subscriptions', 
+                        limit: 1, 
+                        order: [['created_at', 'DESC']],
+                        attributes: ['razorpay_payment_id']
+                    }
+                ],
                 order: [['created_at', 'DESC']]
             });
             res.json({ success: true, data: rows });

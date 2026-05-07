@@ -42,11 +42,9 @@ const AdminPayments = () => {
     }, []);
 
     const filteredPayments = payments.filter(p =>
-        parseFloat(p.amount) > 0 && (
-            p.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
-            p.razorpay_order_id?.toLowerCase().includes(search.toLowerCase()) ||
-            p.package?.name?.toLowerCase().includes(search.toLowerCase())
-        )
+        p.user?.name?.toLowerCase().includes(search.toLowerCase()) ||
+        p.razorpay_order_id?.toLowerCase().includes(search.toLowerCase()) ||
+        p.package?.name?.toLowerCase().includes(search.toLowerCase())
     );
 
     const handleChangePage = (event, newPage) => setPage(newPage);
@@ -119,20 +117,41 @@ const AdminPayments = () => {
                                         <Chip label={payment.package?.name} size="small" sx={{ fontWeight: 600 }} />
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,0.2)', p: 0.5, borderRadius: 1 }}>
-                                            {payment.razorpay_order_id}
-                                        </Typography>
+                                        {payment.razorpay_payment_id === 'MANUAL_ASSIGN' ? (
+                                            <Chip 
+                                                label="ADMIN ASSIGNED" 
+                                                size="small" 
+                                                variant="filled" 
+                                                color="secondary"
+                                                sx={{ fontWeight: 800, borderRadius: 1, fontSize: '0.65rem' }} 
+                                            />
+                                        ) : (
+                                            <Typography variant="caption" sx={{ fontFamily: 'monospace', bgcolor: 'rgba(0,0,0,0.1)', p: 0.5, borderRadius: 1 }}>
+                                                {payment.razorpay_order_id || '—'}
+                                            </Typography>
+                                        )}
                                     </TableCell>
                                     <TableCell>
-                                        <Typography fontWeight={800} color="primary">₹{parseFloat(payment.amount).toLocaleString()}</Typography>
+                                        {payment.razorpay_payment_id === 'MANUAL_ASSIGN' ? (
+                                            <Typography variant="body2" fontWeight={800} color="text.secondary">Free Grant</Typography>
+                                        ) : (
+                                            <Typography variant="body2" fontWeight={800} color="primary.main">₹{parseFloat(payment.amount).toLocaleString()}</Typography>
+                                        )}
                                     </TableCell>
                                     <TableCell>
-                                        <Chip
-                                            label={payment.status.toUpperCase()}
-                                            size="small"
-                                            color={payment.status === 'active' ? 'success' : 'warning'}
-                                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
-                                        />
+                                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                            <Chip
+                                                label={payment.status.toUpperCase()}
+                                                size="small"
+                                                color={payment.status === 'active' ? 'success' : 'warning'}
+                                                sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                                            />
+                                            {payment.razorpay_payment_id === 'MANUAL_ASSIGN' && (
+                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.6rem', fontWeight: 600 }}>
+                                                    Assigned without payment
+                                                </Typography>
+                                            )}
+                                        </Box>
                                     </TableCell>
                                 </TableRow>
                             ))}

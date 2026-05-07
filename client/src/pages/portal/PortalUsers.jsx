@@ -38,7 +38,7 @@ const PortalUsers = () => {
     const [users, setUsers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
-    const [currentTab, setCurrentTab] = useState(0);
+    const [currentTab, setCurrentTab] = useState(1);
 
     // Pagination State
     const [page, setPage] = useState(0);
@@ -250,11 +250,21 @@ const PortalUsers = () => {
                                 <TableCell>
                                     {user.package_id ? (
                                         <Box>
-                                            <Chip 
-                                                label={user.package?.name || 'Standard Plan'} 
-                                                size="small" variant="outlined" color="primary" 
-                                                sx={{ fontWeight: 700, borderRadius: 1.5, mb: 0.5 }} 
-                                            />
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
+                                                <Chip 
+                                                    label={user.package?.name || 'Standard Plan'} 
+                                                    size="small" variant="outlined" color="primary" 
+                                                    sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                                                />
+                                                {user.subscriptions?.[0]?.razorpay_payment_id === 'MANUAL_ASSIGN' && (
+                                                    <Chip 
+                                                        label="Manual" 
+                                                        size="small" 
+                                                        color="secondary"
+                                                        sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.6rem', height: 20 }} 
+                                                    />
+                                                )}
+                                            </Box>
                                             {user.package_expiry && (
                                                 <Typography variant="caption" display="block" color="text.secondary" fontWeight={500}>
                                                     Expires: {formatDate(user.package_expiry)}

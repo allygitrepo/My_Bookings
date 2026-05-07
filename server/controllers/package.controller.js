@@ -140,6 +140,17 @@ const packageController = {
                 one_time_packages: user.one_time_packages
             });
 
+            // Create a manual subscription record for history/tracking
+            await UserSubscription.create({
+                user_id: user.id,
+                package_id: pkg.id,
+                amount: 0, // Assigned for free by admin
+                status: 'active',
+                start_date: new Date(),
+                expiry_date: expiryDate,
+                razorpay_payment_id: 'MANUAL_ASSIGN'
+            });
+
             res.json({ success: true, message: `Package ${pkg.name} assigned to ${user.name} successfully` });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
