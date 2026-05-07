@@ -3,6 +3,7 @@ const router = express.Router();
 const userController = require("../controllers/user.controller");
 const authMiddleware = require("../middleware/auth.middleware");
 
+router.post("/send-otp", userController.sendOtp);
 router.post("/register", userController.register);
 router.post("/login", userController.login);
 router.post("/refresh-token", authMiddleware, userController.refreshToken);

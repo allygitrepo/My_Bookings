@@ -15,6 +15,11 @@ export const register = async (userData) => {
     return response.data;
 };
 
+export const sendOtp = async (email) => {
+    const response = await axiosInstance.post('/users/send-otp', { email });
+    return response.data;
+};
+
 export const getUserById = async (id) => {
     const response = await axiosInstance.get(`/users/${id}`);
     return response.data;

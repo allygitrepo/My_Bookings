@@ -2,6 +2,7 @@ const { User: Users, Package } = require("../models/associations");
 const Business = require("../models/business.model");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
+const emailService = require("../utils/emailService");
 
 const NAME_REGEX = /^[A-Za-z ]+$/;
 
@@ -18,11 +19,55 @@ const issueToken = async (user) => {
 };
 
 const userController = {
+    sendOtp: async (req, res) => {
+        try {
+            const { email } = req.body;
+            if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+            const existingUser = await Users.findOne({ where: { email } });
+            if (existingUser) {
+                return res.status(400).json({ success: false, message: "Email already exists" });
+            }
+
+            const otp = Math.floor(100000 + Math.random() * 900000).toString();
+            
+            // Sign a token with OTP (valid for 10 minutes)
+            const otpToken = jwt.sign({ email, otp }, process.env.JWT_SECRET, { expiresIn: '10m' });
+
+            const emailRes = await emailService.sendOtpEmail(email, otp);
+            if (!emailRes.success) {
+                return res.status(500).json({ success: false, message: "Failed to send OTP email" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "OTP sent successfully to your email",
+                otpToken // Client needs to send this back with the OTP
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: "Server Error", error: err.message });
+        }
+    },
+
     register: async (req, res) => {
         try {
-            const { name, email, password } = req.body;
+            const { name, email, password, otp, otpToken } = req.body;
 
-            // Validate name format
+            // 1. Verify OTP
+            if (!otp || !otpToken) {
+                return res.status(400).json({ success: false, message: "OTP and OTP Token are required" });
+            }
+
+            try {
+                const decoded = jwt.verify(otpToken, process.env.JWT_SECRET);
+                if (decoded.otp !== otp || decoded.email !== email) {
+                    return res.status(400).json({ success: false, message: "Invalid OTP or email" });
+                }
+            } catch (error) {
+                return res.status(400).json({ success: false, message: "OTP expired or invalid token" });
+            }
+
+            // 2. Validate name format
             if (!name || !NAME_REGEX.test(name)) {
                 return res.status(400).json({
                     success: false,

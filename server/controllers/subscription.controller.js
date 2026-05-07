@@ -1,6 +1,7 @@
 const { User, Package, UserSubscription } = require("../models/associations");
 const razorpayService = require("../services/razorpay.service");
 const crypto = require("crypto");
+const emailService = require("../utils/emailService");
 
 const subscriptionController = {
     createOrder: async (req, res) => {
@@ -107,6 +108,9 @@ const subscriptionController = {
                 one_time_packages: JSON.stringify(oneTimePackages)
             });
 
+            // Send Welcome Email
+            await emailService.sendWelcomeEmail(user.email, user.name, pkg.name, expiryDate);
+
             res.json({ 
                 success: true, 
                 message: "Subscription activated successfully", 
@@ -171,6 +175,9 @@ const subscriptionController = {
                 package_id: pkg.id,
                 package_expiry: expiryDate
             });
+
+            // Send Welcome Email
+            await emailService.sendWelcomeEmail(user.email, user.name, pkg.name, expiryDate);
 
             res.json({ 
                 success: true, 

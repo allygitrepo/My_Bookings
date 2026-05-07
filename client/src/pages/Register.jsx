@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import {
     Box, Typography, TextField, Button, Alert, Link as MuiLink,
-    InputAdornment, IconButton, CircularProgress, LinearProgress
+    InputAdornment, IconButton, CircularProgress, LinearProgress,
+    useTheme
 } from '@mui/material';
 import {
     Visibility, VisibilityOff,
@@ -13,8 +14,12 @@ import {
     Language as GlobeIcon,
 } from '@mui/icons-material';
 import { useNavigate, Link } from 'react-router-dom';
-import { register } from '../api/user.api';
+import { register, sendOtp } from '../api/user.api';
 import { motion, AnimatePresence } from 'framer-motion';
+import { 
+    Dialog, DialogContent, DialogTitle, 
+    DialogActions, Stack 
+} from '@mui/material';
 import logoImg from '../assets/logo.png';
 
 const STATS = [
@@ -53,6 +58,8 @@ const inputSx = (focused, name) => ({
 });
 
 const Register = () => {
+    const theme = useTheme();
+    const isDark = theme.palette.mode === 'dark';
     const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
     const [showPassword, setShowPassword] = useState(false);
@@ -60,6 +67,12 @@ const Register = () => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
     const [focused, setFocused] = useState('');
+    
+    // OTP States
+    const [showOtpModal, setShowOtpModal] = useState(false);
+    const [otp, setOtp] = useState('');
+    const [otpToken, setOtpToken] = useState('');
+    const [resending, setResending] = useState(false);
 
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
@@ -70,7 +83,7 @@ const Register = () => {
         { label: 'Passwords match', pass: form.password && form.password === form.confirmPassword },
     ];
 
-    const handleRegister = async (e) => {
+    const handleSendOtp = async (e) => {
         e.preventDefault();
         setError('');
         if (!form.name.trim()) { setError('Full Name is required'); return; }
@@ -79,16 +92,62 @@ const Register = () => {
 
         setLoading(true);
         try {
-            const response = await register({ name: form.name, email: form.email, password: form.password });
+            const response = await sendOtp(form.email);
             if (response.success) {
-                navigate('/login');
+                setOtpToken(response.otpToken);
+                setShowOtpModal(true);
             } else {
-                setError(response.message || 'Registration failed');
+                setError(response.message || 'Failed to send OTP');
             }
         } catch (err) {
-            setError(err.response?.data?.message || 'Registration failed. Please try again.');
+            setError(err.response?.data?.message || 'Failed to send OTP. Please try again.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleVerifyAndRegister = async () => {
+        if (otp.length !== 6) {
+            setError('Please enter a valid 6-digit OTP');
+            return;
+        }
+
+        setLoading(true);
+        try {
+            const response = await register({
+                name: form.name,
+                email: form.email,
+                password: form.password,
+                otp,
+                otpToken
+            });
+
+            if (response.success) {
+                setShowOtpModal(false);
+                navigate('/login', { state: { message: 'Registration successful! Please login.' } });
+            } else {
+                setError(response.message || 'Verification failed');
+            }
+        } catch (err) {
+            setError(err.response?.data?.message || 'Verification failed. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleResendOtp = async () => {
+        setResending(true);
+        try {
+            const response = await sendOtp(form.email);
+            if (response.success) {
+                setOtpToken(response.otpToken);
+                // Reset OTP input
+                setOtp('');
+            }
+        } catch (err) {
+            console.error('Resend OTP failed:', err);
+        } finally {
+            setResending(false);
         }
     };
 
@@ -239,7 +298,7 @@ const Register = () => {
                         )}
                     </AnimatePresence>
 
-                    <form onSubmit={handleRegister}>
+                    <form onSubmit={handleSendOtp}>
                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
 
                             {/* Name */}
@@ -404,6 +463,128 @@ const Register = () => {
                     </form>
                 </motion.div>
             </Box>
+            {/* ─── OTP MODAL ─── */}
+            <Dialog 
+                open={showOtpModal} 
+                onClose={() => !loading && setShowOtpModal(false)}
+                PaperProps={{
+                    sx: {
+                        borderRadius: '24px',
+                        padding: '12px',
+                        maxWidth: '400px',
+                        width: '100%',
+                        bgcolor: 'background.paper',
+                        backgroundImage: 'none'
+                    }
+                }}
+            >
+                <DialogTitle sx={{ textAlign: 'center', pt: 4 }}>
+                    <Box sx={{ 
+                        width: 64, height: 64, borderRadius: '50%', 
+                        bgcolor: isDark ? 'rgba(99,102,241,0.2)' : '#f5f3ff', 
+                        color: theme.palette.primary.main,
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        margin: '0 auto 16px'
+                    }}>
+                        <ShieldIcon sx={{ fontSize: 32 }} />
+                    </Box>
+                    <Typography variant="h5" fontWeight={800} sx={{ color: 'text.primary' }}>
+                        Verify Your Email
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1, px: 2 }}>
+                        We've sent a 6-digit code to <br />
+                        <Box component="span" sx={{ fontWeight: 700, color: 'text.primary' }}>{form.email}</Box>
+                    </Typography>
+                </DialogTitle>
+                
+                <DialogContent>
+                    <Box sx={{ mt: 1 }}>
+                        <TextField
+                            fullWidth
+                            label="Enter 6-digit OTP"
+                            variant="outlined"
+                            value={otp}
+                            onChange={(e) => {
+                                const val = e.target.value.replace(/\D/g, '').slice(0, 6);
+                                setOtp(val);
+                            }}
+                            autoFocus
+                            inputProps={{ 
+                                style: { 
+                                    textAlign: 'center', 
+                                    fontSize: '24px', 
+                                    fontWeight: 800, 
+                                    letterSpacing: '8px',
+                                    color: theme.palette.text.primary
+                                } 
+                            }}
+                            sx={{
+                                '& .MuiOutlinedInput-root': {
+                                    borderRadius: '16px',
+                                    bgcolor: isDark ? 'rgba(255,255,255,0.05)' : '#f8fafc',
+                                    '& fieldset': { borderColor: theme.palette.divider },
+                                    '&.Mui-focused fieldset': { borderColor: theme.palette.primary.main },
+                                    '& input': {
+                                        caretColor: theme.palette.primary.main
+                                    }
+                                },
+                                '& .MuiInputLabel-root': {
+                                    color: 'text.secondary'
+                                }
+                            }}
+                        />
+                        
+                        {error && (
+                            <Typography color="error" variant="caption" sx={{ mt: 1, display: 'block', textAlign: 'center', fontWeight: 600 }}>
+                                {error}
+                            </Typography>
+                        )}
+                        
+                        <Box sx={{ mt: 3, textAlign: 'center' }}>
+                            <Typography variant="body2" color="text.secondary">
+                                Didn't receive the code?{' '}
+                                <Button 
+                                    size="small" 
+                                    onClick={handleResendOtp}
+                                    disabled={resending || loading}
+                                    sx={{ fontWeight: 700, textTransform: 'none', color: theme.palette.primary.main }}
+                                >
+                                    {resending ? 'Resending...' : 'Resend Code'}
+                                </Button>
+                            </Typography>
+                        </Box>
+                    </Box>
+                </DialogContent>
+                
+                <DialogActions sx={{ pb: 4, px: 3 }}>
+                    <Button 
+                        fullWidth 
+                        variant="contained"
+                        onClick={handleVerifyAndRegister}
+                        disabled={otp.length !== 6 || loading}
+                        sx={{
+                            py: 1.8,
+                            borderRadius: '16px',
+                            fontWeight: 800,
+                            fontSize: '1rem',
+                            textTransform: 'none',
+                            background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.secondary.main} 100%)`,
+                            boxShadow: isDark ? 'none' : '0 8px 20px -4px rgba(99,102,241,0.45)',
+                            '&:hover': {
+                                background: `linear-gradient(135deg, ${theme.palette.primary.dark} 0%, ${theme.palette.secondary.dark} 100%)`,
+                            },
+                            '&.Mui-disabled': {
+                                bgcolor: isDark ? 'rgba(255,255,255,0.1)' : '#e0e0e0',
+                                color: isDark ? 'rgba(255,255,255,0.3)' : '#9e9e9e',
+                                background: 'none'
+                            }
+                        }}
+                    >
+                        {loading ? <CircularProgress size={24} sx={{ color: 'white' }} /> : 'Verify & Create Account'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
         </Box>
     );
 };
