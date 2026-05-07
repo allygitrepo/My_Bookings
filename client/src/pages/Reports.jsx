@@ -27,6 +27,7 @@ import { getStaff } from '../api/staff.api';
 import { getCustomers } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { formatDate } from '../utils/date';
 import toast from 'react-hot-toast';
 import logoImg from '../assets/logo.png';
@@ -61,6 +62,7 @@ const SummaryCard = ({ title, value, icon, color, subtitle }) => (
 
 const Reports = () => {
     const { selectedBusinessId: contextBusinessId } = useBusiness();
+    const { usage } = useSubscription();
     const [bookings, setBookings] = useState([]);
     const [payments, setPayments] = useState([]);
     const [services, setServices] = useState([]);
@@ -101,12 +103,16 @@ const Reports = () => {
     }, []);
 
     useEffect(() => {
-        if (contextBusinessId) setFilterBusiness(contextBusinessId);
-    }, [contextBusinessId]);
+        if (contextBusinessId && contextBusinessId !== 'all') {
+            setFilterBusiness(contextBusinessId);
+        } else if (businesses.length === 1) {
+            setFilterBusiness(businesses[0].id);
+        }
+    }, [contextBusinessId, businesses]);
 
     // Derived Reporting Data
     const filteredBookings = bookings.filter(b => {
-        const matchesBusiness = filterBusiness === 'all' || b.business_id === filterBusiness;
+        const matchesBusiness = filterBusiness === 'all' || String(b.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
 
         const bDate = dayjs(b.booking_date);
@@ -118,21 +124,21 @@ const Reports = () => {
         const status = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
 
         const matchesStatus = filterStatus === 'All' || status === filterStatus;
-        const matchesService = filterService === 'All' || b.service_id === filterService;
+        const matchesService = filterService === 'All' || String(b.service_id) === String(filterService);
 
         return matchesDate && matchesStatus && matchesService;
     }).sort((a, b) => dayjs(a.booking_date).diff(dayjs(b.booking_date)));
 
     const filteredPayments = payments.filter(p => {
-        const matchesBusiness = filterBusiness === 'all' || p.business_id === filterBusiness;
+        const matchesBusiness = filterBusiness === 'all' || String(p.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
         const pDate = dayjs(p.created_at);
         return pDate.isAfter(startDate.subtract(1, 'day')) && pDate.isBefore(endDate.add(1, 'day'));
     }).sort((a, b) => dayjs(a.created_at).diff(dayjs(b.created_at)));
 
     const ledgerData = customers.map(customer => {
-        const customerBookings = filteredBookings.filter(b => b.customer_id === customer.id);
-        const customerPayments = payments.filter(p => p.booking_id && customerBookings.some(b => b.id === p.booking_id));
+        const customerBookings = filteredBookings.filter(b => String(b.customer_id) === String(customer.id));
+        const customerPayments = payments.filter(p => p.booking_id && customerBookings.some(b => String(b.id) === String(p.booking_id)));
 
         const totalDue = customerBookings.reduce((sum, b) => {
             const payment = payments.find(p => p.booking_id === b.id);
@@ -170,83 +176,176 @@ const Reports = () => {
         doc.setFillColor(99, 102, 241);
         doc.rect(0, 0, 210, 40, 'F');
 
-        // Add Logo (if possible)
+        // Load Business Logo
+        const apiBase = import.meta.env.VITE_API_BASE_URL.replace('/mybookings', '');
+        const logoUrl = business?.logo 
+            ? (business.logo.startsWith('http') ? business.logo : `${apiBase}${business.logo}`)
+            : '/logo.png';
+            
+        let logo64;
         try {
-            const logo64 = await toBase64('/logo.png');
-            doc.addImage(logo64, 'PNG', 15, 8, 24, 24);
+            logo64 = await toBase64(logoUrl);
+            doc.addImage(logo64, 'PNG', 15, 8, 25, 25);
         } catch (e) {
-            console.error('Logo add failed', e);
+            console.warn('Could not load logo for header', e);
         }
 
         // Add Business Info to Header
         doc.setTextColor(255, 255, 255);
-        doc.setFontSize(22);
-        doc.text('MyBookings Reports', 45, 20);
-        doc.setFontSize(10);
-        doc.text(`Business: ${business.business_name}`, 45, 28);
-        doc.text(`Period: ${startDate.format('DD/MM/YYYY')} - ${endDate.format('DD/MM/YYYY')}`, 45, 33);
-
-        // Add Report Title
-        doc.setTextColor(31, 41, 55);
-        doc.setFontSize(16);
         const reportTitle = reportType === 'bookings' ? 'Bookings Summary Report' :
             reportType === 'payments' ? 'Payments Transaction Report' :
                 'Customer Ledger Statement';
-        doc.text(reportTitle, 15, 55);
+        const recordCount = reportType === 'bookings' ? filteredBookings.length :
+            reportType === 'payments' ? filteredPayments.length :
+                ledgerData.length;
+
+        doc.setFontSize(16);
+        doc.text(business.business_name, 45, 15);
+        doc.setFontSize(11);
+        doc.text(reportTitle, 45, 21);
+        doc.setFontSize(9);
+        doc.text(`Period: ${startDate.format('DD/MM/YYYY')} - ${endDate.format('DD/MM/YYYY')}`, 45, 27);
+        doc.text(`Total Records: ${recordCount}`, 45, 32);
 
         // Table Generation based on Type
         let headers = [];
         let body = [];
+        const chargesPercent = usage?.portal_payment_charges || 0;
 
         if (reportType === 'bookings') {
-            headers = [['Date', 'Customer', 'Service', 'Staff', 'Status', 'Val.']];
-            body = filteredBookings.map(b => [
-                formatDate(b.booking_date),
-                customers.find(c => c.id === b.customer_id)?.name || 'Guest',
-                services.find(s => s.id === b.service_id)?.service_name || '—',
-                staff.find(s => s.id === b.staff_id)?.staff_name || '—',
-                b.status ? 'Conf.' : 'Canc.', // In PDF keep short
-                `rs.${services.find(s => s.id === b.service_id)?.price || 0}`
+            headers = [['Date', 'Customer', 'Service', 'Staff', 'Time', 'Status', 'Charges']];
+
+            body = filteredBookings.map(b => {
+                const serviceList = b.services && b.services.length > 0 
+                    ? b.services.map(s => s.service_name).join(', ')
+                    : (services.find(s => s.id === b.service_id)?.service_name || '—');
+                
+                const payment = payments.find(p => String(p.booking_id) === String(b.id));
+                const totalPrice = Number(payment?.amount || (b.services && b.services.length > 0
+                    ? b.services.reduce((sum, s) => sum + Number(s.price || 0), 0)
+                    : (services.find(s => s.id === b.service_id)?.price || 0)));
+
+                return [
+                    formatDate(b.booking_date),
+                    customers.find(c => c.id === b.customer_id)?.name || 'Guest',
+                    serviceList,
+                    staff.find(s => s.id === b.staff_id)?.staff_name || '—',
+                    `${b.start_time?.slice(0, 5)} - ${b.end_time?.slice(0, 5)}`,
+                    b.status ? 'Conf.' : 'Canc.',
+                    `rs.${totalPrice.toFixed(2)}`
+                ];
+            });
+
+            // Add Total Row (Only count for Bookings)
+            body.push([
+                { content: `Total Bookings: ${filteredBookings.length}`, colSpan: 7, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], halign: 'center' } }
             ]);
+
         } else if (reportType === 'payments') {
-            headers = [['Date', 'Customer', 'Txn ID', 'Method', 'Paid Amount', 'Status']];
+            headers = [['Date', 'Customer', 'Method', 'Paid Amt', 'Charges', 'Income', 'Status']];
+
+            let totalPaid = 0;
+            let totalCharges = 0;
+            let totalIncome = 0;
+
             body = filteredPayments.map(p => {
                 const booking = bookings.find(b => b.id === p.booking_id);
                 const customer = customers.find(c => c.id === booking?.customer_id);
+                const paidAmt = Number(p.paid_amount || 0);
+                const charge = paidAmt * (chargesPercent / 100);
+                const income = paidAmt - charge;
+
+                totalPaid += paidAmt;
+                totalCharges += charge;
+                totalIncome += income;
+
                 return [
                     dayjs(p.created_at).format('DD/MM/YYYY'),
                     customer?.name || '—',
-                    p.transaction_id || '—',
                     p.payment_method || '—',
-                    `rs.${p.paid_amount}`,
+                    `rs.${paidAmt.toFixed(2)}`,
+                    `rs.${charge.toFixed(2)}`,
+                    `rs.${income.toFixed(2)}`,
                     p.payment_status ? 'Paid' : 'Pend.'
                 ];
             });
+
+            // Add Total Row
+            body.push([
+                { content: `Total Transactions: ${filteredPayments.length}`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${totalPaid.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${totalCharges.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${totalIncome.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: '', styles: { fillColor: [240, 240, 240] } }
+            ]);
+
         } else {
             headers = [['Customer', 'Appts', 'Total Due', 'Paid', 'Pending']];
-            body = ledgerData.map(c => [
-                c.name,
-                c.bookingsCount,
-                `rs.${c.totalDue}`,
-                `rs.${c.totalPaid}`,
-                `rs.${c.balance}`
+
+            let totalAppts = 0;
+            let sumDue = 0;
+            let sumPaid = 0;
+            let sumPending = 0;
+
+            body = ledgerData.map(c => {
+                totalAppts += c.bookingsCount;
+                sumDue += c.totalDue;
+                sumPaid += c.totalPaid;
+                sumPending += c.balance;
+
+                return [
+                    c.name,
+                    c.bookingsCount,
+                    `rs.${c.totalDue.toFixed(2)}`,
+                    `rs.${c.totalPaid.toFixed(2)}`,
+                    `rs.${c.balance.toFixed(2)}`
+                ];
+            });
+
+            // Add Total Row
+            body.push([
+                { content: `Total Customers: ${ledgerData.length}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: totalAppts.toString(), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${sumDue.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${sumPaid.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `rs.${sumPending.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }
             ]);
         }
 
         autoTable(doc, {
-            startY: 65,
+            startY: 50,
             head: headers,
             body: body,
+            theme: 'grid',
             headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontStyle: 'bold' },
             alternateRowStyles: { fillColor: [249, 250, 251] },
             margin: { left: 15, right: 15 },
-            styles: { fontSize: 9, cellPadding: 4 }
+            styles: {
+                fontSize: 8,
+                cellPadding: 3,
+                lineColor: [0, 0, 0],
+                lineWidth: 0.1
+            },
+            columnStyles: {
+                0: { cellWidth: 'auto' }
+            }
         });
 
-        // Add Footer
+        // Add Footer & Watermark
         const pageCount = doc.internal.getNumberOfPages();
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
+
+            // Add Watermark (Platform Logo at low opacity)
+            try {
+                const platformLogo64 = await toBase64('/logo.png');
+                doc.setGState(new doc.GState({ opacity: 0.1 }));
+                doc.addImage(platformLogo64, 'PNG', 55, 100, 100, 100);
+                doc.setGState(new doc.GState({ opacity: 1 })); // Reset opacity
+            } catch (e) {
+                console.error('Watermark failed', e);
+            }
+
             doc.setFontSize(8);
             doc.setTextColor(156, 163, 175);
             doc.text(`Generated on ${dayjs().format('DD/MM/YYYY HH:mm')} | Page ${i} of ${pageCount}`, 15, 285);
@@ -379,9 +478,10 @@ const Reports = () => {
                                         <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Service</TableCell>
+                                        <TableCell sx={{ fontWeight: 700 }}>Staff</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Time</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Value</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Charges</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
@@ -403,12 +503,32 @@ const Reports = () => {
                                                     <Typography variant="body2" fontWeight={700}>{customers.find(c => c.id === b.customer_id)?.name || 'Guest'}</Typography>
                                                     <Typography variant="caption" color="text.secondary">{customers.find(c => c.id === b.customer_id)?.phone}</Typography>
                                                 </TableCell>
-                                                <TableCell sx={{ fontWeight: 500 }}>{service?.service_name}</TableCell>
-                                                <TableCell sx={{ fontWeight: 500 }}>{b.start_time?.slice(0, 5)}</TableCell>
+                                                <TableCell>
+                                                    <Typography variant="body2" fontWeight={700}>
+                                                        {b.services && b.services.length > 0 
+                                                            ? b.services.map(s => s.service_name).join(', ')
+                                                            : (services.find(s => s.id === b.service_id)?.service_name || '—')
+                                                        }
+                                                    </Typography>
+                                                    {b.services && b.services.length > 1 && (
+                                                        <Typography variant="caption" color="primary.main" fontWeight={800}>
+                                                            {b.services.length} services selected
+                                                        </Typography>
+                                                    )}
+                                                </TableCell>
+                                                <TableCell sx={{ fontWeight: 500 }}>{staff.find(s => s.id === b.staff_id)?.staff_name || '—'}</TableCell>
+                                                <TableCell sx={{ fontWeight: 500 }}>{b.start_time?.slice(0, 5)} - {b.end_time?.slice(0, 5)}</TableCell>
                                                 <TableCell>
                                                     <Chip label={statusLabel} size="small" variant="outlined" color={statusLabel === 'Completed' ? 'info' : statusLabel === 'Confirmed' ? 'success' : 'error'} sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                                                 </TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 800 }}>₹{service?.price || 0}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 800 }}>
+                                                    ₹{Number(
+                                                        payments.find(p => String(p.booking_id) === String(b.id))?.amount ||
+                                                        (b.services && b.services.length > 0 
+                                                            ? b.services.reduce((sum, s) => sum + Number(s.price || 0), 0)
+                                                            : (services.find(s => s.id === b.service_id)?.price || 0))
+                                                    ).toFixed(2)}
+                                                </TableCell>
                                             </TableRow>
                                         );
                                     })}
@@ -464,18 +584,25 @@ const Reports = () => {
                                         <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Transaction ID</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Method</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Paid Amount</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Paid</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Charges</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Income</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                                     </TableRow>
                                 </TableHead>
                                 <TableBody>
                                     {loading ? (
-                                        <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>Loading...</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3 }}>Loading...</TableCell></TableRow>
                                     ) : filteredPayments.length === 0 ? (
-                                        <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>No payments found in this period.</TableCell></TableRow>
+                                        <TableRow><TableCell colSpan={8} align="center" sx={{ py: 3 }}>No payments found in this period.</TableCell></TableRow>
                                     ) : filteredPayments.map((p) => {
                                         const booking = bookings.find(b => b.id === p.booking_id);
                                         const customer = customers.find(c => c.id === booking?.customer_id);
+                                        const chargesPercent = usage?.portal_payment_charges || 0;
+                                        const paidAmt = Number(p.paid_amount || 0);
+                                        const charge = paidAmt * (chargesPercent / 100);
+                                        const income = paidAmt - charge;
+
                                         return (
                                             <TableRow key={p.id} hover>
                                                 <TableCell sx={{ fontWeight: 500 }}>{dayjs(p.created_at).format('DD/MM/YYYY')}</TableCell>
@@ -485,7 +612,9 @@ const Reports = () => {
                                                 </TableCell>
                                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
                                                 <TableCell sx={{ fontWeight: 500 }}>{p.payment_method}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'success.main' }}>₹{p.paid_amount}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmt.toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>₹{charge.toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>₹{income.toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                                                 </TableCell>

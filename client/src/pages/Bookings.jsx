@@ -238,8 +238,8 @@ const Bookings = () => {
     const filteredBookings = [...bookings].sort((a, b) => {
         const dateA = a.booking_date || "";
         const dateB = b.booking_date || "";
-        if (dateA !== dateB) return dateA.localeCompare(dateB);
-        return (a.start_time || "").localeCompare(b.start_time || "");
+        if (dateA !== dateB) return dateB.localeCompare(dateA);
+        return (b.start_time || "").localeCompare(a.start_time || "");
     }).filter(b => {
         // Business Filter
         const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);

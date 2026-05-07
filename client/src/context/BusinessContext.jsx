@@ -46,11 +46,19 @@ export const BusinessProvider = ({ children }) => {
 
     // Reset selectedBusinessId if it's no longer valid for the current user
     useEffect(() => {
-        if (!loading && businesses.length > 0 && selectedBusinessId !== 'all') {
-            const exists = businesses.some(b => String(b.id) === String(selectedBusinessId));
-            if (!exists) {
-                console.log('BusinessContext: Resetting invalid selectedBusinessId to "all"');
-                setSelectedBusinessId('all');
+        if (!loading && businesses.length > 0) {
+            // Auto-select if there is only one business
+            if (businesses.length === 1) {
+                const singleId = String(businesses[0].id);
+                if (selectedBusinessId !== singleId) {
+                    setSelectedBusinessId(singleId);
+                }
+            } else if (selectedBusinessId !== 'all') {
+                const exists = businesses.some(b => String(b.id) === String(selectedBusinessId));
+                if (!exists) {
+                    console.log('BusinessContext: Resetting invalid selectedBusinessId to "all"');
+                    setSelectedBusinessId('all');
+                }
             }
         }
     }, [businesses, loading, selectedBusinessId]);

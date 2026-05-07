@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card, Tooltip
+    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card, Tooltip, Avatar, Button
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -13,8 +13,10 @@ import {
     LaptopMac as OnlineIcon,
     Map as MapIcon,
     Info as InfoIcon,
+    CloudUpload as UploadIcon,
 } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
+import axios from 'axios';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
@@ -88,8 +90,11 @@ const Businesses = () => {
             account_number: '',
             ifsc_code: '',
             bank_name: '',
+            logo: '',
         },
     });
+
+    const logoUrl = watch('logo');
 
     const hasMultipleLocations = watch('has_multiple_locations');
     const locationType = watch('location_type');
@@ -115,6 +120,7 @@ const Businesses = () => {
             account_number: biz.account_number || '',
             ifsc_code: biz.ifsc_code || '',
             bank_name: biz.bank_name || '',
+            logo: biz.logo || '',
         } : {
             business_name: '',
             business_type: '',
@@ -132,6 +138,7 @@ const Businesses = () => {
             account_number: '',
             ifsc_code: '',
             bank_name: '',
+            logo: '',
         });
         setOpen(true);
     };
@@ -453,6 +460,61 @@ const Businesses = () => {
                             )} />
                     </Box>
                 </FieldSection>
+
+                <Divider sx={{ my: 2.5 }} />
+
+                <FieldSection label="Business Logo">
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                        <Avatar
+                            src={logoUrl ? (logoUrl.startsWith('http') ? logoUrl : `${import.meta.env.VITE_API_BASE_URL.replace('/mybookings', '')}${logoUrl}`) : undefined}
+                            sx={{ width: 80, height: 80, borderRadius: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}
+                        >
+                            {!logoUrl && <BusinessIcon sx={{ fontSize: 40, color: 'text.disabled' }} />}
+                        </Avatar>
+                        <Box>
+                            <Button
+                                variant="outlined"
+                                component="label"
+                                startIcon={<UploadIcon />}
+                                size="small"
+                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
+                            >
+                                Upload Logo
+                                <input
+                                    type="file"
+                                    hidden
+                                    accept="image/*"
+                                    onChange={async (e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const formData = new FormData();
+                                            formData.append('logo', file);
+                                            try {
+                                                const token = JSON.parse(localStorage.getItem('currentUser'))?.token;
+                                                const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/upload/logo`, formData, {
+                                                    headers: { 
+                                                        'Content-Type': 'multipart/form-data',
+                                                        'Authorization': `Bearer ${token}`
+                                                    }
+                                                });
+                                                if (res.data.success) {
+                                                    reset({ ...watch(), logo: res.data.url });
+                                                    toast.success('Logo uploaded successfully');
+                                                }
+                                            } catch (err) {
+                                                toast.error('Failed to upload logo');
+                                            }
+                                        }
+                                    }}
+                                />
+                            </Button>
+                            <Typography variant="caption" display="block" color="text.secondary" sx={{ mt: 1 }}>
+                                Recommended: Square image (min 200x200px), Max 2MB.
+                            </Typography>
+                        </Box>
+                    </Box>
+                </FieldSection>
+
                 <Divider sx={{ my: 2.5 }} />
                 <FieldSection label="Contact Information">
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>

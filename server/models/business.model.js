@@ -13,6 +13,10 @@ const Business = sequelize.define(
             type: DataTypes.STRING,
             allowNull: false
         },
+        logo: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
         user_id: {
             type: DataTypes.BIGINT,
             allowNull: false

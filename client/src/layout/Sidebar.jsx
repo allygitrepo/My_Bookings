@@ -57,7 +57,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <Logo size={36} />
             </Box>
-            
+
             <Box sx={{ px: 2, mb: 2, display: { xs: 'block', md: 'none' } }}>
                 <Typography variant="overline" color="text.secondary" sx={{ fontWeight: 800, ml: 1, mb: 1, display: 'block' }}>
                     Select Business
@@ -66,10 +66,10 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                     <Select
                         value={selectedBusinessId}
                         onChange={(e) => setSelectedBusinessId(e.target.value)}
-                        sx={{ 
-                            borderRadius: 2, 
-                            bgcolor: 'action.hover', 
-                            fontWeight: 700, 
+                        sx={{
+                            borderRadius: 2,
+                            bgcolor: 'action.hover',
+                            fontWeight: 700,
                             fontSize: '0.85rem',
                             '& .MuiOutlinedInput-notchedOutline': { border: 'none' }
                         }}
@@ -88,7 +88,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                     // Feature-based filtering
                     if (item.text === 'Website Builder') return isFeatureAllowed('website');
                     if (item.text === 'API Keys') return isFeatureAllowed('api');
-                    
+
                     if (item.text === 'Locations') {
                         // Package-based filtering: Hide if max_locations is 1
                         if (usage?.limits?.locations === 1) return false;

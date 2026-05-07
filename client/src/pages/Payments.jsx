@@ -11,6 +11,7 @@ import { getBookings } from '../api/booking.api';
 import { getCustomers } from '../api/customer.api';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 
 const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error', Refunded: 'default' };
@@ -18,6 +19,7 @@ const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error'
 const Payments = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId } = useBusiness();
+    const { usage } = useSubscription();
     const [payments, setPayments] = useState([]);
     const [bookings, setBookings] = useState([]);
     const [customers, setCustomers] = useState([]);
@@ -72,6 +74,7 @@ const Payments = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Paid Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Income</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Transaction ID</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
@@ -81,12 +84,12 @@ const Payments = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={9} align="center" sx={{ py: 8 }}>
+                                <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
                                     <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredPayments.length === 0 ? (
-                            <TableRow><TableCell colSpan={9} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                            <TableRow><TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                 <PayIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
                                 <Typography variant="body2" color="text.secondary">
                                     {searchQuery ? 'No payments match your search.' : 'No payment records yet.'}
@@ -107,6 +110,9 @@ const Payments = () => {
                                 <TableCell sx={{ fontWeight: 800, color: 'success.main' }}>₹{p.paid_amount || p.amount}</TableCell>
                                 <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
                                     ₹{(Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(2)}
+                                </TableCell>
+                                <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>
+                                    ₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(2)}
                                 </TableCell>
                                 <TableCell>{p.payment_method}</TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_id || '—'}</TableCell>
@@ -158,11 +164,15 @@ const Payments = () => {
                             </Box>
 
                             <Grid container spacing={2} sx={{ mb: 2 }}>
-                                <Grid item xs={6}>
-                                    <Typography variant="caption" color="text.secondary" display="block">Paid Amount</Typography>
+                                <Grid item xs={4}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Paid</Typography>
                                     <Typography variant="body2" fontWeight={800} color="success.main">₹{p.paid_amount || p.amount}</Typography>
                                 </Grid>
-                                <Grid item xs={6} sx={{ textAlign: 'right' }}>
+                                <Grid item xs={4} sx={{ textAlign: 'center' }}>
+                                    <Typography variant="caption" color="text.secondary" display="block">Income</Typography>
+                                    <Typography variant="body2" fontWeight={800} color="primary.main">₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(0)}</Typography>
+                                </Grid>
+                                <Grid item xs={4} sx={{ textAlign: 'right' }}>
                                     <Typography variant="caption" color="text.secondary" display="block">Method</Typography>
                                     <Typography variant="body2" fontWeight={700}>{p.payment_method}</Typography>
                                 </Grid>
