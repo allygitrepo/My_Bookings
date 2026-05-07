@@ -3,6 +3,7 @@ const Booking = require("../models/booking.model");
 const { Op } = require("sequelize");
 const crypto = require("crypto");
 const razorpayService = require("../services/razorpay.service");
+const { emitToBusiness } = require("../services/socket.service");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
@@ -22,6 +23,9 @@ const paymentController = {
             }
             const row = await Payment.create(data);
             res.status(201).json({ success: true, message: "Payment created successfully", data: row });
+
+            // Emit Socket Event
+            emitToBusiness(row.business_id, "paymentUpdated", row);
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -106,6 +110,9 @@ const paymentController = {
             if (!row) return res.status(404).json({ success: false, message: "Payment not found" });
             await row.update(req.body);
             res.json({ success: true, message: "Payment updated successfully", data: row });
+
+            // Emit Socket Event
+            emitToBusiness(row.business_id, "paymentUpdated", row);
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

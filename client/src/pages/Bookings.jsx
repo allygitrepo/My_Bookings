@@ -4,7 +4,8 @@ import axiosInstance from '../api/axiosInstance';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
-    TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress
+    TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress,
+    Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -37,12 +38,22 @@ import { useBusiness } from '../context/BusinessContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { formatDate } from '../utils/date';
 import dayjs from 'dayjs';
+import { 
+    initiateSocketConnection, 
+    disconnectSocket, 
+    joinBusinessRoom, 
+    subscribeToBookings, 
+    unsubscribeFromBookings 
+} from '../services/socket';
 
 const statusColors = { Confirmed: 'success', Completed: 'info', Cancelled: 'error', Pending: 'warning' };
 const paymentColors = { Paid: 'success', Pending: 'warning', Refunded: 'default', Failed: 'error' };
 
 const CalendarView = ({ bookings, customers, services, staff }) => {
     const [currentDate, setCurrentDate] = React.useState(dayjs());
+    const [dayDetailOpen, setDayDetailOpen] = React.useState(false);
+    const [selectedDayBookings, setSelectedDayBookings] = React.useState([]);
+    const [selectedDateLabel, setSelectedDateLabel] = React.useState('');
 
     const startOfMonth = currentDate.startOf('month');
     const daysInMonth = currentDate.daysInMonth();
@@ -59,6 +70,16 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
         if (!day) return [];
         const dateStr = currentDate.date(day).format('YYYY-MM-DD');
         return bookings.filter(b => b.booking_date === dateStr);
+    };
+
+    const handleDayClick = (day) => {
+        if (!day) return;
+        const dayBookings = getBookingsByDay(day);
+        if (dayBookings.length > 0) {
+            setSelectedDayBookings(dayBookings);
+            setSelectedDateLabel(currentDate.date(day).format('DD MMMM YYYY'));
+            setDayDetailOpen(true);
+        }
     };
 
     return (
@@ -97,9 +118,12 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                             bgcolor: day ? 'background.paper' : 'transparent',
                             boxShadow: 'none',
                             opacity: day ? 1 : 1,
+                            cursor: day && dayBookings.length > 0 ? 'pointer' : 'default',
                             transition: 'all 0.2s',
                             '&:hover': day ? { bgcolor: 'action.hover', transform: 'translateY(-4px)', zIndex: 1, boxShadow: '0 8px 24px rgba(0,0,0,0.08)' } : {}
-                        }}>
+                        }}
+                        onClick={() => handleDayClick(day)}
+                        >
                             {day && (
                                 <>
                                     <Typography variant="body2" fontWeight={isToday ? 800 : 700} color={isToday ? 'primary.main' : 'text.primary'} mb={1.5}>
@@ -138,6 +162,66 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                     );
                 })}
             </Box>
+
+            {/* Day Detail Dialog */}
+            <Dialog 
+                open={dayDetailOpen} 
+                onClose={() => setDayDetailOpen(false)}
+                maxWidth="sm"
+                fullWidth
+                PaperProps={{
+                    sx: { borderRadius: '24px', p: 1 }
+                }}
+            >
+                <DialogTitle sx={{ fontWeight: 800, fontSize: '1.5rem', pb: 1 }}>
+                    Bookings for {selectedDateLabel}
+                </DialogTitle>
+                <DialogContent>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 1 }}>
+                        {selectedDayBookings.sort((a, b) => (a.start_time || '').localeCompare(b.start_time || '')).map((b) => {
+                            const customer = customers.find(c => c.id === b.customer_id);
+                            const staffMember = staff.find(s => s.id === b.staff_id);
+                            const isConfirmed = (b.status === true || b.status === 1);
+
+                            return (
+                                <Card key={b.id} sx={{ p: 2, border: '1px solid', borderColor: 'divider', boxShadow: 'none', borderRadius: '16px' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                                            <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 700 }}>
+                                                {customer?.name?.charAt(0)}
+                                            </Avatar>
+                                            <Box>
+                                                <Typography variant="subtitle1" fontWeight={800}>{customer?.name || 'Guest'}</Typography>
+                                                <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                                                    {b.start_time?.slice(0, 5)} - {b.end_time?.slice(0, 5)} • {staffMember?.staff_name || 'No Staff'}
+                                                </Typography>
+                                            </Box>
+                                        </Box>
+                                        <Chip 
+                                            label={isConfirmed ? 'Confirmed' : 'Cancelled'} 
+                                            size="small" 
+                                            color={isConfirmed ? 'success' : 'error'}
+                                            sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                                        />
+                                    </Box>
+                                    <Divider sx={{ my: 1.5, borderStyle: 'dashed' }} />
+                                    <Typography variant="body2" fontWeight={700} color="primary">
+                                        {b.services && b.services.length > 0 
+                                            ? b.services.map(s => s.service_name).join(', ')
+                                            : (services.find(s => s.id === b.service_id)?.service_name || 'Service')
+                                        }
+                                    </Typography>
+                                </Card>
+                            );
+                        })}
+                    </Box>
+                </DialogContent>
+                <DialogActions sx={{ p: 3 }}>
+                    <Button onClick={() => setDayDetailOpen(false)} variant="contained" fullWidth sx={{ borderRadius: '12px', py: 1.5, fontWeight: 700 }}>
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Paper>
     );
 };
@@ -224,13 +308,41 @@ const Bookings = () => {
     useEffect(() => {
         fetchData();
         if (typeof refreshUsage === 'function') refreshUsage();
+
+        const socket = initiateSocketConnection();
         
-        const interval = setInterval(() => {
-            fetchData();
-            if (typeof refreshUsage === 'function') refreshUsage();
-        }, 30000);
-        return () => clearInterval(interval);
+        subscribeToBookings(({ type, data }) => {
+            if (type === 'CREATED') {
+                setBookings(prev => {
+                    const exists = prev.find(b => b.id === data.id);
+                    if (exists) return prev;
+                    return [data, ...prev];
+                });
+                toast.success('New booking received!', { icon: '📅' });
+            } else if (type === 'UPDATED') {
+                setBookings(prev => prev.map(b => b.id === data.id ? { ...b, ...data } : b));
+            } else if (type === 'CANCELLED') {
+                setBookings(prev => prev.filter(b => b.id !== data.id));
+            } else if (type === 'PAYMENT_UPDATED') {
+                setPayments(prev => {
+                    const exists = prev.find(p => p.id === data.id);
+                    if (exists) return prev.map(p => p.id === data.id ? data : p);
+                    return [...prev, data];
+                });
+            }
+        });
+
+        return () => {
+            unsubscribeFromBookings();
+            disconnectSocket();
+        };
     }, []);
+
+    useEffect(() => {
+        if (selectedBusinessId && selectedBusinessId !== 'all') {
+            joinBusinessRoom(selectedBusinessId);
+        }
+    }, [selectedBusinessId]);
 
     // ... (rest of the filteredBookings logic) ...
 
@@ -672,6 +784,15 @@ const Bookings = () => {
                             setRowsPerPage(rpp);
                             localStorage.setItem('rowsPerPage', rpp);
                             setPage(0);
+                        }}
+                        sx={{
+                            '& .MuiTablePagination-toolbar': {
+                                justifyContent: 'flex-start',
+                                pl: { xs: 2, md: 0 }
+                            },
+                            '& .MuiTablePagination-spacer': {
+                                display: 'none'
+                            }
                         }}
                     />
                 </>

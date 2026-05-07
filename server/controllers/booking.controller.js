@@ -5,8 +5,8 @@ const Service = require("../models/service.model");
 const Staff = require("../models/staff.model");
 const Location = require("../models/location.model");
 const BookingService = require("../models/bookingService.model");
-const { syncBookingToGoogle } = require("../services/googleCalendar.service");
 const { Op } = require("sequelize");
+const { emitToBusiness } = require("../services/socket.service");
 
 const getBusinessId = (req) => {
     if (req.body?.business_id) return req.body.business_id;
@@ -83,6 +83,9 @@ const bookingController = {
             */
 
             res.status(201).json({ success: true, message: "Booking created successfully", data: row });
+
+            // Emit Socket Event
+            emitToBusiness(business_id, "bookingCreated", row);
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -179,6 +182,9 @@ const bookingController = {
 
             await row.update(safeBody);
             res.json({ success: true, message: "Booking updated successfully", data: row });
+
+            // Emit Socket Event
+            emitToBusiness(row.business_id, "bookingUpdated", row);
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -201,6 +207,9 @@ const bookingController = {
             
             await row.update({ status: false });
             res.json({ success: true, message: "Booking deleted successfully" });
+
+            // Emit Socket Event
+            emitToBusiness(row.business_id, "bookingCancelled", { id: row.id });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

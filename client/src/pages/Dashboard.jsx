@@ -22,6 +22,13 @@ import PageTransition from '../components/PageTransition';
 import { useBusiness } from '../context/BusinessContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { formatDate } from '../utils/date';
+import { 
+    initiateSocketConnection, 
+    disconnectSocket, 
+    joinBusinessRoom, 
+    subscribeToBookings, 
+    unsubscribeFromBookings 
+} from '../services/socket';
 
 const StatCard = ({ title, value, icon, color, subtitle }) => (
     <motion.div whileHover={{ y: -4 }} transition={{ duration: 0.2 }}>
@@ -109,7 +116,38 @@ const Dashboard = () => {
 
     React.useEffect(() => {
         fetchData();
+
+        const socket = initiateSocketConnection();
+        
+        subscribeToBookings(({ type, data }) => {
+            if (type === 'CREATED') {
+                setBookings(prev => {
+                    const exists = prev.find(b => b.id === data.id);
+                    if (exists) return prev;
+                    return [data, ...prev];
+                });
+            } else if (type === 'UPDATED') {
+                setBookings(prev => prev.map(b => b.id === data.id ? { ...b, ...data } : b));
+            } else if (type === 'PAYMENT_UPDATED') {
+                setPayments(prev => {
+                    const exists = prev.find(p => p.id === data.id);
+                    if (exists) return prev.map(p => p.id === data.id ? data : p);
+                    return [...prev, data];
+                });
+            }
+        });
+
+        return () => {
+            unsubscribeFromBookings();
+            disconnectSocket();
+        };
     }, []);
+
+    useEffect(() => {
+        if (selectedBusinessId && selectedBusinessId !== 'all') {
+            joinBusinessRoom(selectedBusinessId);
+        }
+    }, [selectedBusinessId]);
 
     const totalRevenue = filteredPayments
         .filter(p => p.payment_status === true || p.payment_status === 1)

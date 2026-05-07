@@ -40,10 +40,7 @@ const MainLayout = () => {
     };
 
     const showWidget = [
-        '/bookings',
-        '/api-keys',
-        '/widget-script',
-        '/website-builder'
+        '/bookings'
     ].some(path => location.pathname.startsWith(path));
 
     if (showSubscriptionModal) {
