@@ -28,6 +28,7 @@ import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
 import { validateEmail, validateMobile, validateName, blockEmoji } from '../utils/validators';
 import { formatDate, getDayName } from '../utils/date';
+import PhoneInput from '../components/ui/PhoneInput';
 
 const steps = ['Location', 'Services', 'Staff', 'Date & Time', 'Your Details', 'Payment'];
 
@@ -1049,16 +1050,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     }} />
                             </Grid>
                             <Grid item xs={12}>
-                                <TextField fullWidth label="Phone Number *" value={bookingData.customer.phone}
-                                    error={!!detailErrors.phone}
-                                    helperText={detailErrors.phone}
-                                    placeholder="e.g. 9876543210"
-                                    inputProps={{ maxLength: 10, inputMode: 'numeric' }}
-                                    onChange={e => {
-                                        const val = e.target.value.replace(/\D/g, '').slice(0, 10);
+                                <PhoneInput 
+                                    value={bookingData.customer.phone}
+                                    onChange={val => {
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
                                         if (detailErrors.phone) setDetailErrors(p => ({ ...p, phone: undefined }));
-                                    }} />
+                                    }}
+                                    label="Phone Number *"
+                                    error={!!detailErrors.phone}
+                                    helperText={detailErrors.phone}
+                                />
                             </Grid>
                         </Grid>
                         <Button fullWidth variant="contained" sx={{

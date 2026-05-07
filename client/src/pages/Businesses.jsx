@@ -28,6 +28,7 @@ import { encodeBusinessId } from '../utils/obfuscation';
 import toast from 'react-hot-toast';
 import { validateName, validateEmail, validatePhone, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import PhoneInput from '../components/ui/PhoneInput';
 
 const INDUSTRY_OPTIONS = [
     { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
@@ -464,7 +465,12 @@ const Businesses = () => {
                         <Controller name="phone" control={control}
                             rules={{ validate: validatePhone }}
                             render={({ field }) => (
-                                <TextField {...field} fullWidth label="Phone" placeholder="+91 79 26543210" error={!!errors.phone} helperText={errors.phone?.message} />
+                                <PhoneInput 
+                                    {...field} 
+                                    label="Phone Number" 
+                                    error={!!errors.phone} 
+                                    helperText={errors.phone?.message} 
+                                />
                             )} />
 
                         <Controller name="upi_id" control={control}

@@ -11,18 +11,20 @@ export const validateEmail = (value) => {
     return true;
 };
 
-// 2. Mobile Number Validation (STRICT 10 digits)
+// 2. Mobile Number Validation (International support)
 export const validateMobile = (value) => {
     if (!value) return true;
-    const regex = /^[0-9]{10}$/;
-    if (!regex.test(value)) return "Mobile number must be 10 digits";
+    // Allow + prefix followed by 6-15 digits
+    const regex = /^\+?[0-9]{6,15}$/;
+    if (!regex.test(value)) return "Please enter a valid mobile number";
     return true;
 };
 
 // 3. Phone Number Validation
 export const validatePhone = (value) => {
     if (!value) return true;
-    const regex = /^[0-9+\-\s()]{6,15}$/;
+    // Allow + prefix, spaces, dashes, and 6-15 digits
+    const regex = /^\+?[0-9+\-\s()]{6,15}$/;
     if (!regex.test(value)) return "Please enter a valid phone number";
     if (containsEmoji(value)) return "Emojis are not allowed";
     return true;

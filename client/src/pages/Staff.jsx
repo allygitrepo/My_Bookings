@@ -26,52 +26,13 @@ import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { validateName, validateMobile, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import { compressImage } from '../utils/imageHelper';
+import PhoneInput from '../components/ui/PhoneInput';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const PHOTO_SIZE_LIMIT = 500 * 1024; // 500 KB limit for base64
 
-const compressImage = (file, maxKB = 499) => {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.readAsDataURL(file);
-        reader.onload = (event) => {
-            const img = new Image();
-            img.src = event.target.result;
-            img.onload = () => {
-                const canvas = document.createElement('canvas');
-                let width = img.width;
-                let height = img.height;
 
-                // Max dimension 800px
-                const maxDim = 800;
-                if (width > height && width > maxDim) {
-                    height *= maxDim / width;
-                    width = maxDim;
-                } else if (height > maxDim) {
-                    width *= maxDim / height;
-                    height = maxDim;
-                }
-
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0, width, height);
-
-                let quality = 0.9;
-                let base64 = canvas.toDataURL('image/jpeg', quality);
-                
-                // Iteratively reduce quality if still over limit
-                while (base64.length * 0.75 > maxKB * 1024 && quality > 0.1) {
-                    quality -= 0.1;
-                    base64 = canvas.toDataURL('image/jpeg', quality);
-                }
-                resolve(base64);
-            };
-            img.onerror = reject;
-        };
-        reader.onerror = reject;
-    });
-};
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -110,12 +71,12 @@ const Staff = () => {
         const matchesSearch = s.staff_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.role?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             s.phone?.toLowerCase().includes(searchQuery.toLowerCase());
-        
+
         if (filterDays.length === 0) return matchesSearch;
-        
+
         const staffDays = availability.filter(a => a.staff_id === s.id).map(a => a.day_of_week.toLowerCase());
         const matchesDays = filterDays.some(d => staffDays.includes(d.toLowerCase()));
-        
+
         return matchesSearch && matchesDays;
     });
 
@@ -130,11 +91,11 @@ const Staff = () => {
             const [staffRes, bizRes, locRes, availRes] = await Promise.all([
                 getStaff(), getBusinesses(), getLocations(), getStaffAvailability()
             ]);
-            
-            console.log('Staff Page Data:', { 
-                staff: staffRes.data?.length, 
-                businesses: bizRes.data?.length, 
-                locations: locRes.data?.length 
+
+            console.log('Staff Page Data:', {
+                staff: staffRes.data?.length,
+                businesses: bizRes.data?.length,
+                locations: locRes.data?.length
             });
 
             if (staffRes.success) setStaffList(staffRes.data || []);
@@ -163,7 +124,7 @@ const Staff = () => {
         setEditId(s?.id || null);
         const sLocIds = s?.locations?.map(l => l.id) || [];
         const initialBizId = s?.business_id || (selectedBusinessId !== 'all' ? selectedBusinessId : businesses[0]?.id) || '';
-        
+
         reset(s
             ? { business_id: initialBizId, location_ids: sLocIds, staff_name: s.staff_name || '', role: s.role || '', phone: s.phone || '', slot_duration_minutes: s.slot_duration_minutes || '30', photo: s.photo || '' }
             : { business_id: initialBizId, location_ids: [], staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' }
@@ -178,10 +139,10 @@ const Staff = () => {
                 const dayMatch = DAYS.find(d => d.toLowerCase() === a.day_of_week.toLowerCase());
                 if (dayMatch) {
                     if (!sched[dayMatch]) sched[dayMatch] = [];
-                    sched[dayMatch].push({ 
+                    sched[dayMatch].push({
                         start_time: a.start_time.slice(0, 5), // 'HH:mm'
-                        end_time: a.end_time.slice(0, 5), 
-                        location_id: a.location_id 
+                        end_time: a.end_time.slice(0, 5),
+                        location_id: a.location_id
                     });
                 }
             });
@@ -261,7 +222,7 @@ const Staff = () => {
 
     const checkOverlap = (s1, s2) => {
         if (!s1.start_time || !s1.end_time || !s2.start_time || !s2.end_time) return false;
-        
+
         const getIntervals = (s) => {
             if (s.start_time < s.end_time) return [[s.start_time, s.end_time]];
             // Wrap-around shift: e.g., 21:00 to 05:00
@@ -271,7 +232,7 @@ const Staff = () => {
         const i1 = getIntervals(s1);
         const i2 = getIntervals(s2);
 
-        return i1.some(([s1s, s1e]) => 
+        return i1.some(([s1s, s1e]) =>
             i2.some(([s2s, s2e]) => s1s < s2e && s1e > s2s)
         );
     };
@@ -280,7 +241,7 @@ const Staff = () => {
         if (isSubmitting) return;
         // Final check for any clashes before submitting
         const clashingDays = [];
-        
+
         DAYS.forEach(day => {
             const daySlots = schedule[day] || [];
             const hasClash = daySlots.some((slot, i) => daySlots.some((other, j) => i !== j && checkOverlap(slot, other)));
@@ -382,7 +343,7 @@ const Staff = () => {
 
     return (
         <PageTransition>
-            <PageHeader 
+            <PageHeader
                 title={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                         Staff Members
@@ -393,9 +354,9 @@ const Staff = () => {
                         )}
                     </Box>
                 }
-                subtitle="Manage your team and their weekly availability schedule." 
-                onAddClick={() => handleOpen()} 
-                buttonText="Add Staff" 
+                subtitle="Manage your team and their weekly availability schedule."
+                onAddClick={() => handleOpen()}
+                buttonText="Add Staff"
                 disabled={isSuspended || !canAdd('staff')}
                 extraActions={
                     <Autocomplete
@@ -479,7 +440,7 @@ const Staff = () => {
                                     <TableCell sx={{ fontWeight: 500 }}>{biz?.business_name || '—'}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', gap: 0.5, flexWrap: 'wrap' }}>
-                                            {s.locations?.length > 0 
+                                            {s.locations?.length > 0
                                                 ? s.locations.map(l => (
                                                     <Chip key={l.id} label={l.location_name} size="small" variant="outlined" sx={{ fontSize: '0.7rem', height: 20, fontWeight: 600, borderRadius: 1 }} />
                                                 ))
@@ -537,7 +498,7 @@ const Staff = () => {
                                     <IconButton onClick={() => handleDelete(s.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
-                            
+
                             <Grid container spacing={2} sx={{ mb: 2 }}>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Phone</Typography>
@@ -604,12 +565,12 @@ const Staff = () => {
                                     )}
                                 />
                             )} />
-                        
+
                         <Controller name="location_ids" control={control} rules={{ required: 'Select at least one location' }}
                             render={({ field }) => {
                                 const businessId = watch('business_id');
                                 const filteredLocations = locations.filter(l => !businessId || String(l.business_id) === String(businessId));
-                                
+
                                 return (
                                     <Autocomplete
                                         multiple
@@ -652,22 +613,23 @@ const Staff = () => {
                                     onChange={(e) => field.onChange(e.target.value)}
                                 />
                             )} />
-                        
+
                         <Controller name="role" control={control}
                             rules={{ validate: blockEmoji }}
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Role" placeholder="e.g. Doctor" error={!!errors.role} helperText={errors.role?.message} />
                             )} />
-                        
+
                         <Controller name="phone" control={control}
                             rules={{
                                 validate: validateMobile
                             }}
                             render={({ field }) => (
-                                <TextField {...field} fullWidth label="Phone" placeholder="9876543210"
-                                    error={!!errors.phone} helperText={errors.phone?.message}
-                                    inputProps={{ maxLength: 10, inputMode: 'numeric' }}
-                                    onChange={(e) => field.onChange(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                                <PhoneInput
+                                    {...field}
+                                    label="Phone Number"
+                                    error={!!errors.phone}
+                                    helperText={errors.phone?.message}
                                 />
                             )} />
                     </Box>
@@ -741,14 +703,14 @@ const Staff = () => {
                     </Typography>
                     {DAYS.map(day => {
                         const daySlots = schedule[day] || [];
-                        const hasClash = daySlots.some((slot, i) => 
+                        const hasClash = daySlots.some((slot, i) =>
                             daySlots.some((other, j) => i !== j && checkOverlap(slot, other))
                         );
 
                         return (
-                            <Box key={day} sx={{ 
-                                mb: 2, p: 1.5, borderRadius: 2, 
-                                border: '1px solid', 
+                            <Box key={day} sx={{
+                                mb: 2, p: 1.5, borderRadius: 2,
+                                border: '1px solid',
                                 borderColor: hasClash ? 'error.light' : (!!schedule[day] ? 'primary.light' : 'divider'),
                                 bgcolor: hasClash ? 'error.50' : (!!schedule[day] ? 'primary.50' : 'transparent'),
                                 transition: 'all 0.2s'
@@ -783,10 +745,10 @@ const Staff = () => {
                                             const errKey = `${day}-${idx}`;
                                             const slotErr = slotErrors[errKey];
                                             const isClashing = daySlots.some((other, j) => idx !== j && checkOverlap(slot, other));
-                                            
+
                                             return (
-                                                <Grid container spacing={1} sx={{ 
-                                                    alignItems: 'center', p: 1, 
+                                                <Grid container spacing={1} sx={{
+                                                    alignItems: 'center', p: 1,
                                                     borderRadius: 1.5, bgcolor: 'rgba(255,255,255,0.03)', border: '1px solid',
                                                     borderColor: (slotErr || isClashing) ? 'error.light' : 'divider',
                                                     boxShadow: '0 1px 3px rgba(0,0,0,0.05)',
@@ -814,16 +776,16 @@ const Staff = () => {
                                                             label="From"
                                                             value={dayjs(slot.start_time, 'HH:mm')}
                                                             onChange={(val) => updateSlot(day, idx, 'start_time', val ? val.format('HH:mm') : '')}
-                                                            slotProps={{ 
-                                                                textField: { 
-                                                                    size: 'small', 
+                                                            slotProps={{
+                                                                textField: {
+                                                                    size: 'small',
                                                                     fullWidth: true,
                                                                     error: !!slotErr || isClashing,
-                                                                    sx: { 
+                                                                    sx: {
                                                                         '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' },
                                                                         '& .MuiInputLabel-root': { fontSize: '0.8rem' }
                                                                     }
-                                                                } 
+                                                                }
                                                             }}
                                                         />
                                                     </Grid>
@@ -833,28 +795,28 @@ const Staff = () => {
                                                             label="To"
                                                             value={dayjs(slot.end_time, 'HH:mm')}
                                                             onChange={(val) => updateSlot(day, idx, 'end_time', val ? val.format('HH:mm') : '')}
-                                                            slotProps={{ 
-                                                                textField: { 
-                                                                    size: 'small', 
+                                                            slotProps={{
+                                                                textField: {
+                                                                    size: 'small',
                                                                     fullWidth: true,
                                                                     error: !!slotErr || isClashing,
-                                                                    sx: { 
+                                                                    sx: {
                                                                         '& .MuiInputBase-root': { height: 36, fontSize: '0.8rem' },
                                                                         '& .MuiInputLabel-root': { fontSize: '0.8rem' }
                                                                     }
-                                                                } 
+                                                                }
                                                             }}
                                                         />
                                                     </Grid>
 
                                                     <Grid item xs={1} sx={{ display: 'flex', justifyContent: 'center' }}>
-                                                        <IconButton 
-                                                            size="small" 
-                                                            sx={{ 
-                                                                color: 'error.main', 
+                                                        <IconButton
+                                                            size="small"
+                                                            sx={{
+                                                                color: 'error.main',
                                                                 width: 36, height: 36,
                                                                 '&:hover': { bgcolor: 'error.lighter' }
-                                                            }} 
+                                                            }}
                                                             onClick={() => removeSlot(day, idx)}
                                                         >
                                                             <DeleteIcon fontSize="inherit" sx={{ fontSize: '1.2rem' }} />
