@@ -498,6 +498,9 @@ const Services = () => {
                                 </Box>
                             </Grid>
                         </Grid>
+                        <Typography variant="caption" color="error.main" sx={{ mt: 1, display: 'block', fontStyle: 'italic', fontWeight: 600 }}>
+                            Note: Platform charges will be deduct as per the amount transaction via portal
+                        </Typography>
                     </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
