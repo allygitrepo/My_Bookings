@@ -318,6 +318,16 @@ const Bookings = () => {
                     if (exists) return prev;
                     return [data, ...prev];
                 });
+                
+                // Add new customer if included
+                if (data.customer) {
+                    setCustomers(prev => {
+                        const exists = prev.find(c => c.id === data.customer.id);
+                        if (exists) return prev;
+                        return [...prev, data.customer];
+                    });
+                }
+                
                 toast.success('New booking received!', { icon: '📅' });
             } else if (type === 'UPDATED') {
                 setBookings(prev => prev.map(b => b.id === data.id ? { ...b, ...data } : b));

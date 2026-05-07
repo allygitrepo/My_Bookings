@@ -82,10 +82,18 @@ const bookingController = {
             }
             */
 
-            res.status(201).json({ success: true, message: "Booking created successfully", data: row });
+            // Fetch full booking details for socket emission (including customer and services)
+            const fullBooking = await Booking.findByPk(row.id, {
+                include: [
+                    { model: Customer, as: 'customer' },
+                    { model: Service, as: 'services', through: { attributes: [] } }
+                ]
+            });
 
-            // Emit Socket Event
-            emitToBusiness(business_id, "bookingCreated", row);
+            res.status(201).json({ success: true, message: "Booking created successfully", data: fullBooking || row });
+
+            // Emit Socket Event with full details
+            emitToBusiness(business_id, "bookingCreated", fullBooking || row);
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

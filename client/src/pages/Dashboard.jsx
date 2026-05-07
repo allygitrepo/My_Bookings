@@ -126,6 +126,15 @@ const Dashboard = () => {
                     if (exists) return prev;
                     return [data, ...prev];
                 });
+
+                // Update customer state if customer details are included
+                if (data.customer) {
+                    setCustomers(prev => {
+                        const exists = prev.find(c => c.id === data.customer.id);
+                        if (exists) return prev;
+                        return [...prev, data.customer];
+                    });
+                }
             } else if (type === 'UPDATED') {
                 setBookings(prev => prev.map(b => b.id === data.id ? { ...b, ...data } : b));
             } else if (type === 'PAYMENT_UPDATED') {
