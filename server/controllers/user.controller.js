@@ -91,6 +91,11 @@ const userController = {
                 status: true
             });
 
+            // Send Welcome Email
+            const trialExpiry = new Date();
+            trialExpiry.setDate(trialExpiry.getDate() + 30);
+            await emailService.sendWelcomeEmail(email, name, "Free Trial", trialExpiry);
+
             res.status(201).json({
                 success: true,
                 message: "User registered successfully",

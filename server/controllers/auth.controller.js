@@ -3,6 +3,7 @@ const Business = require("../models/business.model");
 const jwt = require("jsonwebtoken");
 const { verifyGoogleToken } = require("../services/googleAuth.service");
 const { Op } = require('sequelize');
+const emailService = require("../utils/emailService");
 
 /**
  * Helper: issue a JWT token with current business_id for a user
@@ -59,6 +60,12 @@ const authController = {
                     password: 'google-auth-no-password', // Placeholder password
                     status: true
                 });
+
+                // Send Welcome Email for new Google signups
+                // Using 30 days as a default trial/reference expiry
+                const trialExpiry = new Date();
+                trialExpiry.setDate(trialExpiry.getDate() + 30);
+                await emailService.sendWelcomeEmail(email, name, "Free Trial", trialExpiry);
             } else {
                 // Update existing user if they haven't been linked to google yet
                 if (!user.google_id) {

@@ -65,7 +65,7 @@ const getWelcomeTemplate = (userName, packageName, expiryDate, features = []) =>
                         <!-- Footer -->
                         <tr>
                             <td style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb;">
-                                <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">Questions? Email us at <a href="mailto:support@mybookings.allysoft.in" style="color:#4f46e5;text-decoration:none;">support@mybookings.allysoft.in</a></p>
+                                
                                 <p style="color:#d1d5db;font-size:11px;margin:0;">&copy; ${new Date().getFullYear()} MyBookings by Allysoft Solutions. All rights reserved.</p>
                             </td>
                         </tr>
