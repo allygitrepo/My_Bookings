@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    Box, Grid, Paper, Typography, TextField, Button, MenuItem,
+    Box, Paper, Typography, TextField, Button, MenuItem,
     Switch, FormControlLabel, Divider, CircularProgress, IconButton,
     ToggleButton, ToggleButtonGroup, Card, CardActionArea, CardMedia, CardContent,
     Tooltip, Avatar,
@@ -186,9 +186,9 @@ const WebsiteGenerator = () => {
                     subtitle="Design and launch your professional booking website in seconds."
                 />
 
-                <Grid container spacing={3}>
+                <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
                     {/* Left Panel: Configuration Sidebar */}
-                    <Grid item xs={12} lg={4}>
+                    <Box sx={{ flex: '0 0 340px', minWidth: 0, width: { xs: '100%' } }}>
                         <Paper
                             elevation={0}
                             sx={{
@@ -253,8 +253,8 @@ const WebsiteGenerator = () => {
                                                 Link: {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
                                             </Typography>
                                             <Tooltip title="Visit Website">
-                                                <IconButton 
-                                                    size="small" 
+                                                <IconButton
+                                                    size="small"
                                                     sx={{ p: 0.2 }}
                                                     onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
                                                 >
@@ -271,9 +271,9 @@ const WebsiteGenerator = () => {
                                 <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                     3. Choose Site Mode
                                 </Typography>
-                                <Grid container spacing={1.5} sx={{ mt: 0.5 }}>
-                                    <Grid item xs={6}>
-                                        <Button 
+                                <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5 }}>
+                                    <Box sx={{ flex: 1 }}>
+                                        <Button
                                             fullWidth
                                             variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
                                             onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
@@ -281,11 +281,11 @@ const WebsiteGenerator = () => {
                                         >
                                             Website
                                         </Button>
-                                    </Grid>
-                                    <Grid item xs={6}>
+                                    </Box>
+                                    <Box sx={{ flex: 1 }}>
                                         <Tooltip title={!businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations ? "" : "Portfolios are for solo providers only."}>
                                             <span style={{ display: 'block', width: '100%' }}>
-                                                <Button 
+                                                <Button
                                                     fullWidth
                                                     disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
                                                     variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
@@ -296,8 +296,8 @@ const WebsiteGenerator = () => {
                                                 </Button>
                                             </span>
                                         </Tooltip>
-                                    </Grid>
-                                </Grid>
+                                    </Box>
+                                </Box>
                             </Box>
 
                             <Box>
@@ -337,7 +337,7 @@ const WebsiteGenerator = () => {
                                                 onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
                                                 sx={{
                                                     cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                    opacity: isSuspended ? 0.6 : 1,                                                    borderRadius: '16px',
+                                                    opacity: isSuspended ? 0.6 : 1, borderRadius: '16px',
                                                     position: 'relative',
                                                     transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
                                                     border: '2.5px solid',
@@ -399,127 +399,126 @@ const WebsiteGenerator = () => {
                                 </Box>
                             </Box>
                         </Paper>
-                    </Grid>
+                    </Box>
 
                     {/* Right Panel: Full-Width Preview */}
-                    <Grid item xs={12} lg={8}>
-                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                            <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
-                                    <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
-                                        Live Preview
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        <Box sx={{ 
-                                            px: 1, py: 0.3, borderRadius: 1.5, 
-                                            bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2', 
-                                            color: settings.website_enabled ? '#166534' : '#991b1b', 
-                                            fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase', 
-                                            letterSpacing: 0.5, border: '1px solid', 
-                                            borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca'
-                                        }}>
-                                            {settings.website_enabled ? 'Live' : 'Draft'}
-                                        </Box>
-                                        {settings.website_enabled && (
-                                            <Typography 
-                                                variant="caption" 
-                                                sx={{ 
-                                                    color: 'primary.light', 
-                                                    fontWeight: 700, 
-                                                    cursor: 'pointer',
-                                                    '&:hover': { textDecoration: 'underline' }
-                                                }}
-                                                onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
-                                            >
-                                                {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
-                                            </Typography>
-                                        )}
-                                        <Switch
-                                            size="small"
-                                            checked={settings.website_enabled}
-                                            disabled={isSuspended}
-                                            onChange={async (e) => {
-                                                if (isSuspended) return;
-                                                const newEnabled = e.target.checked;
-                                                setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
-                                                
-                                                setSaving(true);
-                                                try {
-                                                    const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
-                                                    if (response.success) {
-                                                        toast.success(newEnabled ? 'Website Published!' : 'Website Moved to Draft');
-                                                        setBusinesses(prev => prev.map(b =>
-                                                            String(b.id) === String(selectedBusinessId) ? { ...b, ...settings, website_enabled: newEnabled } : b
-                                                        ));
-                                                    }
-                                                } catch (error) {
-                                                    toast.error('Auto-save failed.');
-                                                } finally {
-                                                    setSaving(false);
-                                                }
-                                            }}
-                                        />
+                    <Box sx={{ flex: '1 1 500px', minWidth: 0 }}>                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
+                                <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
+                                    Live Preview
+                                </Typography>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{
+                                        px: 1, py: 0.3, borderRadius: 1.5,
+                                        bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2',
+                                        color: settings.website_enabled ? '#166534' : '#991b1b',
+                                        fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase',
+                                        letterSpacing: 0.5, border: '1px solid',
+                                        borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca'
+                                    }}>
+                                        {settings.website_enabled ? 'Live' : 'Draft'}
                                     </Box>
-                                </Box>
+                                    {settings.website_enabled && (
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: 'primary.light',
+                                                fontWeight: 700,
+                                                cursor: 'pointer',
+                                                '&:hover': { textDecoration: 'underline' }
+                                            }}
+                                            onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                        >
+                                            {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                        </Typography>
+                                    )}
+                                    <Switch
+                                        size="small"
+                                        checked={settings.website_enabled}
+                                        disabled={isSuspended}
+                                        onChange={async (e) => {
+                                            if (isSuspended) return;
+                                            const newEnabled = e.target.checked;
+                                            setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
 
-                                <ToggleButtonGroup
-                                    value={viewMode}
-                                    exclusive
-                                    onChange={(e, v) => v && setViewMode(v)}
-                                    size="small"
-                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
-                                >
-                                    <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
-                                        <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
-                                    </ToggleButton>
-                                    <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
-                                        <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
-                                    </ToggleButton>
-                                </ToggleButtonGroup>
+                                            setSaving(true);
+                                            try {
+                                                const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
+                                                if (response.success) {
+                                                    toast.success(newEnabled ? 'Website Published!' : 'Website Moved to Draft');
+                                                    setBusinesses(prev => prev.map(b =>
+                                                        String(b.id) === String(selectedBusinessId) ? { ...b, ...settings, website_enabled: newEnabled } : b
+                                                    ));
+                                                }
+                                            } catch (error) {
+                                                toast.error('Auto-save failed.');
+                                            } finally {
+                                                setSaving(false);
+                                            }
+                                        }}
+                                    />
+                                </Box>
                             </Box>
 
-                            <Paper
-                                elevation={0}
+                            <ToggleButtonGroup
+                                value={viewMode}
+                                exclusive
+                                onChange={(e, v) => v && setViewMode(v)}
+                                size="small"
+                                sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
+                            >
+                                <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
+                                </ToggleButton>
+                                <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
+                                </ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
+
+                        <Paper
+                            elevation={0}
+                            sx={{
+                                flexGrow: 1,
+                                borderRadius: 6,
+                                overflow: 'hidden',
+                                border: '1px solid',
+                                borderColor: 'divider',
+                                position: 'relative',
+                                bgcolor: 'transparent',
+                                minHeight: '80vh',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08)'
+                            }}
+                        >
+                            <Box
                                 sx={{
-                                    flexGrow: 1,
-                                    borderRadius: 6,
-                                    overflow: 'hidden',
-                                    border: '1px solid',
-                                    borderColor: 'divider',
-                                    position: 'relative',
-                                    bgcolor: 'transparent',
-                                    minHeight: '80vh',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08)'
+                                    width: viewMode === 'mobile' ? 375 : '100%',
+                                    height: '100%',
+                                    bgcolor: 'white',
+                                    overflowY: 'auto',
+                                    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: viewMode === 'mobile' ? '0 0 64px rgba(0,0,0,0.15)' : 'none',
+                                    '&::-webkit-scrollbar': { width: 6 },
+                                    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 10 }
                                 }}
                             >
-                                <Box
-                                    sx={{
-                                        width: viewMode === 'mobile' ? 375 : '100%',
-                                        height: '100%',
-                                        bgcolor: 'white',
-                                        overflowY: 'auto',
-                                        transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                        boxShadow: viewMode === 'mobile' ? '0 0 64px rgba(0,0,0,0.15)' : 'none',
-                                        '&::-webkit-scrollbar': { width: 6 },
-                                        '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 10 }
-                                    }}
-                                >
-                                    {previewLoading ? (
-                                        <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
-                                            <CircularProgress size={32} thickness={5} />
-                                            <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Updating Preview...</Typography>
-                                        </Box>
-                                    ) : (
-                                        renderTemplatePreview()
-                                    )}
-                                </Box>
-                            </Paper>
-                        </Box>
-                    </Grid>
-                </Grid>
+                                {previewLoading ? (
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                                        <CircularProgress size={32} thickness={5} />
+                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Updating Preview...</Typography>
+                                    </Box>
+                                ) : (
+                                    renderTemplatePreview()
+                                )}
+                            </Box>
+                        </Paper>
+                    </Box>
+                    </Box>
+                </Box>
             </Box>
         </PageTransition>
     );

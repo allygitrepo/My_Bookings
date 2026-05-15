@@ -64,7 +64,7 @@ const AdminPayments = () => {
 
     const totalRevenue = filteredPayments.reduce((sum, p) => {
         if (p.razorpay_payment_id === 'MANUAL_ASSIGN' || p.status !== 'active') return sum;
-        return sum + parseFloat(p.amount || 0);
+        return sum + parseFloat(p.platform_fees || 0);
     }, 0);
 
     const generatePDF = () => {
@@ -86,16 +86,16 @@ const AdminPayments = () => {
         doc.text(dateRange, 15, 34);
         
         doc.setFontSize(14);
-        doc.text(`Total Revenue: Rs. ${totalRevenue.toLocaleString()}`, 140, 25);
+        doc.text(`Platform Revenue: Rs. ${totalRevenue.toLocaleString()}`, 140, 25);
 
-        const headers = [['Sr.', 'Date', 'Customer', 'Plan', 'Order ID', 'Amount', 'Status']];
+        const headers = [['Sr.', 'Date', 'Customer', 'Plan', 'Paid', 'Admin Cut', 'Status']];
         const body = filteredPayments.map((p, index) => [
             index + 1,
             dayjs(p.created_at).format('DD/MM/YYYY'),
             p.user?.name || '—',
             p.package?.name || '—',
-            p.razorpay_order_id || 'MANUAL',
-            p.razorpay_payment_id === 'MANUAL_ASSIGN' ? 'Free' : `Rs. ${parseFloat(p.amount).toLocaleString()}`,
+            p.razorpay_payment_id === 'MANUAL_ASSIGN' ? 'Free' : `Rs. ${parseFloat(p.paid_amount || p.amount).toLocaleString()}`,
+            p.razorpay_payment_id === 'MANUAL_ASSIGN' ? '0' : `Rs. ${parseFloat(p.platform_fees || 0).toLocaleString()}`,
             p.status.toUpperCase()
         ]);
 
@@ -164,7 +164,7 @@ const AdminPayments = () => {
 
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                         <Box sx={{ textAlign: 'right' }}>
-                            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: 'block', mb: -0.5 }}>TOTAL REVENUE</Typography>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ display: 'block', mb: -0.5 }}>PLATFORM REVENUE</Typography>
                             <Typography variant="h5" fontWeight={900} color="primary.main">₹{totalRevenue.toLocaleString()}</Typography>
                         </Box>
                         
@@ -189,7 +189,8 @@ const AdminPayments = () => {
                                 <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Plan</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Order ID</TableCell>
-                                <TableCell sx={{ fontWeight: 700 }}>Amount</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Paid</TableCell>
+                                <TableCell sx={{ fontWeight: 700 }}>Admin Cut</TableCell>
                                 <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                             </TableRow>
                         </TableHead>
@@ -235,11 +236,14 @@ const AdminPayments = () => {
                                         )}
                                     </TableCell>
                                     <TableCell>
-                                        {payment.razorpay_payment_id === 'MANUAL_ASSIGN' ? (
-                                            <Typography variant="body2" fontWeight={800} color="text.secondary">Free Grant</Typography>
-                                        ) : (
-                                            <Typography variant="body2" fontWeight={800} color="primary.main">₹{parseFloat(payment.amount).toLocaleString()}</Typography>
-                                        )}
+                                        <Typography variant="body2" fontWeight={800}>
+                                            {payment.razorpay_payment_id === 'MANUAL_ASSIGN' ? 'Free' : `₹${parseFloat(payment.paid_amount || payment.amount).toLocaleString()}`}
+                                        </Typography>
+                                    </TableCell>
+                                    <TableCell>
+                                        <Typography variant="body2" fontWeight={800} color="primary.main">
+                                            {payment.razorpay_payment_id === 'MANUAL_ASSIGN' ? '—' : `₹${parseFloat(payment.platform_fees || 0).toLocaleString()}`}
+                                        </Typography>
                                     </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>

@@ -39,7 +39,7 @@ const Payments = () => {
             p.paid_amount?.toString().includes(searchQuery) ||
             p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase());
-    }).sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const fetchData = async () => {
         setLoading(true);
@@ -74,6 +74,7 @@ const Payments = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Paid Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Platform Fee</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Income</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Transaction ID</TableCell>
@@ -111,8 +112,11 @@ const Payments = () => {
                                 <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
                                     ₹{(Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(2)}
                                 </TableCell>
+                                <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
+                                    ₹{Number(p.platform_fees || 0).toFixed(2)}
+                                </TableCell>
                                 <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>
-                                    ₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(2)}
+                                    ₹{Number(p.final_amount || 0).toFixed(2)}
                                 </TableCell>
                                 <TableCell>{p.payment_method}</TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_id || '—'}</TableCell>
