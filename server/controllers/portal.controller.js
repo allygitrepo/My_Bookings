@@ -14,7 +14,7 @@ const portalController = {
 
             const bookingRevenue = (payments || [])
                 .filter(p => p.payment_status === true || p.payment_status === 1)
-                .reduce((sum, p) => sum + parseFloat(p.paid_amount || 0), 0);
+                .reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
 
             const subscriptionRevenue = (subscriptions || [])
                 .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
@@ -251,7 +251,7 @@ const portalController = {
                 const payments = await Payment.findAll({
                     attributes: [
                         [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
-                        [sequelize.fn('SUM', sequelize.col('paid_amount')), 'amount']
+                        [sequelize.fn('SUM', sequelize.col('platform_fees')), 'amount']
                     ],
                     where: {
                         ...whereCondition,

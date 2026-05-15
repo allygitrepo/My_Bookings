@@ -7,6 +7,7 @@ const { emitToBusiness } = require("../services/socket.service");
 const Business = require("../models/business.model");
 const User = require("../models/user.model");
 const Package = require("../models/package.model");
+const whatsappService = require("../services/whatsapp.service");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
@@ -214,6 +215,9 @@ const paymentController = {
             // Update booking status
             await booking.update({ payment_status: true });
 
+            // Trigger WhatsApp Notifications
+            whatsappService.sendBookingNotification(booking_id);
+
             res.json({ 
                 success: true, 
                 message: "Payment verified and recorded successfully", 
@@ -292,6 +296,9 @@ const paymentController = {
                                 payment_status: true
                             });
                             await booking.update({ payment_status: true });
+
+                            // Trigger WhatsApp Notifications
+                            whatsappService.sendBookingNotification(bookingId);
                         } else {
                         }
                     }

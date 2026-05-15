@@ -18,8 +18,10 @@ import {
     Security as RestrictionIcon,
     Percent as PercentIcon,
     Terminal as ApiIcon,
-    Language as WebIcon
+    Language as WebIcon,
+    WhatsApp as WhatsAppIcon
 } from '@mui/icons-material';
+
 import axiosInstance from '../../api/axiosInstance';
 import PageTransition from '../../components/PageTransition';
 import toast from 'react-hot-toast';
@@ -53,6 +55,7 @@ const PortalPackages = () => {
         max_bookings: 100,
         allow_api: false,
         allow_website_builder: false,
+        allow_whatsapp: false,
         is_one_time: false
     });
 
@@ -87,6 +90,7 @@ const PortalPackages = () => {
             max_bookings: pkg.max_bookings,
             allow_api: pkg.allow_api,
             allow_website_builder: pkg.allow_website_builder,
+            allow_whatsapp: pkg.allow_whatsapp,
             is_one_time: pkg.is_one_time
         });
         setEditingId(pkg.id);
@@ -171,6 +175,7 @@ const PortalPackages = () => {
             max_bookings: 100,
             allow_api: false,
             allow_website_builder: false,
+            allow_whatsapp: false,
             is_one_time: false
         });
         setEditingId(null);
@@ -279,6 +284,11 @@ const PortalPackages = () => {
                                                 <FormControlLabel sx={{ width: '100%', m: 0 }} control={<Switch checked={formData.allow_website_builder} onChange={(e) => setFormData({ ...formData, allow_website_builder: e.target.checked })} />} label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>Website Builder</Typography><Typography variant="caption" color="text.secondary">Access to premium public website customization</Typography></Box>} />
                                             </Paper>
                                         </Box>
+                                        <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', height: '100%' }}>
+                                                <FormControlLabel sx={{ width: '100%', m: 0 }} control={<Switch checked={formData.allow_whatsapp} onChange={(e) => setFormData({ ...formData, allow_whatsapp: e.target.checked })} />} label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>WhatsApp Notifications</Typography><Typography variant="caption" color="text.secondary">Automated WhatsApp alerts via WA-Mitra</Typography></Box>} />
+                                            </Paper>
+                                        </Box>
                                     </Box>
                                 </Box>
 
@@ -347,6 +357,7 @@ const PortalPackages = () => {
                                                     <Typography variant="caption" display="block">Staff: {pkg.max_staff === -1 ? 'Unlimited' : pkg.max_staff}</Typography>
                                                     <Typography variant="caption" display="block">Services: {pkg.max_services === -1 ? 'Unlimited' : pkg.max_services}</Typography>
                                                     <Typography variant="caption" display="block">Bookings: {pkg.max_bookings === -1 ? 'Unlimited' : pkg.max_bookings}</Typography>
+                                                    <Typography variant="caption" display="block">WhatsApp Enabled: {pkg.allow_whatsapp ? 'Yes' : 'No'}</Typography>
                                                 </Box>
                                                 <Divider sx={{ my: 1, opacity: 0.1 }} />
                                                 <Typography variant="caption" display="block" sx={{ fontWeight: 700, color: pkg.is_one_time ? 'warning.light' : 'success.light' }}>One-Time Only: {pkg.is_one_time ? 'Yes' : 'No'}</Typography>
@@ -361,6 +372,11 @@ const PortalPackages = () => {
                                             {pkg.allow_website_builder && (
                                                 <Tooltip title="Website Builder Enabled">
                                                     <Chip icon={<WebIcon sx={{ fontSize: '0.8rem !important' }} />} label="Web Builder" size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20, fontWeight: 700 }} />
+                                                </Tooltip>
+                                            )}
+                                            {pkg.allow_whatsapp && (
+                                                <Tooltip title="WhatsApp Notifications Enabled">
+                                                    <Chip icon={<WhatsAppIcon sx={{ fontSize: '0.8rem !important', color: '#25D366' }} />} label="WhatsApp" size="small" variant="outlined" sx={{ fontSize: '0.65rem', height: 20, fontWeight: 700, borderColor: '#25D36630' }} />
                                                 </Tooltip>
                                             )}
                                             {pkg.is_one_time && (

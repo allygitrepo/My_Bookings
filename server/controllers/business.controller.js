@@ -3,6 +3,8 @@ const Business = require("../models/business.model");
 const User = require("../models/user.model");
 const Location = require("../models/location.model");
 const slugify = require("../uttils/slugify");
+const whatsappService = require("../services/whatsapp.service");
+
 
 // Helper to ensure slug uniqueness
 const generateUniqueSlug = async (name, excludeId = null) => {
@@ -109,7 +111,7 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ 
+            const row = await Business.findOne({
                 where: whereClause,
                 include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
@@ -204,7 +206,7 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ 
+            const row = await Business.findOne({
                 where: whereClause,
                 include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
@@ -266,7 +268,86 @@ const businessController = {
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    initiateWhatsApp: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+            // Check if package allows WhatsApp
+            const canUse = await whatsappService.canUseWhatsApp(id);
+            if (!canUse) return res.status(403).json({ success: false, message: "Your current package does not support WhatsApp notifications." });
+
+            // Ignore old manual keys (starting with Mybookings_) to trigger a fresh server-generated handshake
+            let keyToPass = business.whatsapp_instance_key;
+            if (keyToPass && keyToPass.startsWith('Mybookings_')) {
+                keyToPass = null;
+            }
+
+            const data = await whatsappService.initiateInstance(keyToPass, business.business_name);
+            
+            // Save instanceKey if it's new (Step 1 returned it)
+            if (data.success && data.instanceKey && data.instanceKey !== business.whatsapp_instance_key) {
+                await business.update({ whatsapp_instance_key: data.instanceKey });
+            }
+
+            // If status is connected, update DB
+            if (data.status === 'connected') {
+                await business.update({ whatsapp_connected: true });
+            } else {
+                await business.update({ whatsapp_connected: false });
+            }
+
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getWhatsAppStatus: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business || !business.whatsapp_instance_key) {
+                return res.json({ success: false, status: 'disconnected', message: "WhatsApp not linked" });
+            }
+
+            const data = await whatsappService.getInstanceStatus(business.whatsapp_instance_key);
+
+            // Sync DB status
+            if (data.success) {
+                const isConnected = data.status === 'connected' || data.status === 'ready';
+                if (isConnected !== business.whatsapp_connected) {
+                    await business.update({ whatsapp_connected: isConnected });
+                }
+            }
+
+            res.json(data);
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+    
+    disconnectWhatsApp: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+            // Clear the key from DB
+            await business.update({ 
+                whatsapp_instance_key: null, 
+                whatsapp_connected: false 
+            });
+
+            res.json({ success: true, message: "WhatsApp disconnected successfully." });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
+
 
 module.exports = businessController;

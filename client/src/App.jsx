@@ -30,6 +30,8 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
+import WhatsApp from './pages/WhatsApp';
+
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -118,6 +120,8 @@ function App() {
                         <Route path="/website-builder" element={<WebsiteGenerator />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/whatsapp" element={<WhatsApp />} />
+
                     </Route>
 
                     {/* Portal Admin Routes */}

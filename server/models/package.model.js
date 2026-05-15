@@ -68,6 +68,10 @@ const Package = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false
         },
+        allow_whatsapp: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
         is_one_time: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,

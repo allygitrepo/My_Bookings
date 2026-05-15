@@ -114,6 +114,14 @@ const Business = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: true
         },
+        whatsapp_instance_key: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        whatsapp_connected: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
         suspended_reason: {
             type: DataTypes.TEXT,
             allowNull: true
