@@ -5,6 +5,7 @@ import {
     Building2, MapPin, Users, Bell, Calendar,
     Plug, Globe, CreditCard, Check, X,
     Sparkles, Zap, Gem, Crown, ArrowRight, ShieldCheck, Percent,
+    MessageSquare
 } from 'lucide-react';
 import { getActivePackages } from '../../api/package.api';
 
@@ -50,6 +51,7 @@ const PlanCard = ({ pkg, recommended, accent, index }) => {
         { Icon: CreditCard, label: 'Payment Integration', enabled: true },
         { Icon: Plug, label: 'API Access', enabled: pkg.allow_api },
         { Icon: Globe, label: 'Website Builder', enabled: pkg.allow_website_builder },
+        { Icon: MessageSquare, label: 'WhatsApp Notifications', enabled: pkg.allow_whatsapp },
     ];
 
     return (

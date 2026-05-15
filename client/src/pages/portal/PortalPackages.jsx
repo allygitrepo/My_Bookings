@@ -286,7 +286,11 @@ const PortalPackages = () => {
                                         </Box>
                                         <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
                                             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', height: '100%' }}>
-                                                <FormControlLabel sx={{ width: '100%', m: 0 }} control={<Switch checked={formData.allow_whatsapp} onChange={(e) => setFormData({ ...formData, allow_whatsapp: e.target.checked })} />} label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>WhatsApp Notifications</Typography><Typography variant="caption" color="text.secondary">Automated WhatsApp alerts via WA-Mitra</Typography></Box>} />
+                                                <FormControlLabel 
+                                                    sx={{ width: '100%', m: 0 }} 
+                                                    control={<Switch checked={formData.allow_whatsapp} onChange={(e) => setFormData({ ...formData, allow_whatsapp: e.target.checked })} />} 
+                                                    label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>Auto Messaging (WhatsApp)</Typography><Typography variant="caption" color="text.secondary">Automated WhatsApp alerts via WA-Mitra</Typography></Box>} 
+                                                />
                                             </Paper>
                                         </Box>
                                     </Box>
