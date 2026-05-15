@@ -3,7 +3,7 @@ const Business = require('../models/business.model');
 const Package = require('../models/package.model');
 const UserSubscription = require('../models/userSubscription.model');
 
-const BASE_URL = 'http://localhost:3005/wa-mitra/api/v1';
+const BASE_URL = 'https://silverapi.allysoftsolutions.com/wa-mitra/api/v1';
 const MASTER_TOKEN = process.env.WA_MITRA_MASTER_TOKEN;
 
 // Import models
@@ -86,6 +86,22 @@ const whatsappService = {
         } catch (error) {
             console.error('[WhatsAppService] Status check error:', error.response?.data || error.message);
             return { success: false, status: 'disconnected', error: error.message };
+        }
+    },
+    /**
+     * Delete an instance from the gateway
+     */
+    deleteInstance: async (instanceKey) => {
+        try {
+            const response = await axios.delete(
+                `${BASE_URL}/instance/delete?instanceKey=${instanceKey}`,
+                whatsappService.getConfig()
+            );
+            return response.data;
+        } catch (error) {
+            console.error('[WhatsAppService] Deletion error:', error.response?.data || error.message);
+            // We still want to allow disconnecting in our DB even if API call fails
+            return { success: false, error: error.message };
         }
     },
 

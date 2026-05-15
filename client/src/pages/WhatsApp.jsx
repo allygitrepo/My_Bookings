@@ -34,9 +34,28 @@ const WhatsApp = () => {
     const [countdown, setCountdown] = useState(0);
     const [error, setError] = useState(null);
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
+    const [profileData, setProfileData] = useState(null);
 
     // Filter businesses based on selectedBusinessId
     const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId));
+
+    const updateProfileData = useCallback((data) => {
+        if (data.status === 'connected') {
+            let profileImg = data.profileImage || '';
+            // Add base64 prefix if missing and it looks like base64
+            if (profileImg && !profileImg.startsWith('data:')) {
+                profileImg = `data:image/png;base64,${profileImg}`;
+            }
+
+            const newProfile = {
+                name: data.name || data.pushname || '',
+                phone: data.phone || data.phonenumber || '',
+                profileImage: profileImg
+            };
+            setProfileData(newProfile);
+            localStorage.setItem(`wa_profile_${selectedBusinessId}`, JSON.stringify(newProfile));
+        }
+    }, [selectedBusinessId]);
 
     const fetchStatus = useCallback(async () => {
         if (!selectedBusinessId || selectedBusinessId === 'all') return;
@@ -45,14 +64,28 @@ const WhatsApp = () => {
             const res = await axiosInstance.get(`/business/whatsapp/status/${selectedBusinessId}`);
             if (res.data.success) {
                 setStatus(res.data.status);
+                if (res.data.status === 'connected') {
+                    updateProfileData(res.data);
+                }
             }
         } catch (err) {
             console.error('Failed to fetch status:', err);
         }
-    }, [selectedBusinessId]);
+    }, [selectedBusinessId, updateProfileData]);
 
     useEffect(() => {
         if (selectedBusinessId && selectedBusinessId !== 'all') {
+            // Load from localStorage first
+            const saved = localStorage.getItem(`wa_profile_${selectedBusinessId}`);
+            if (saved) {
+                try {
+                    setProfileData(JSON.parse(saved));
+                } catch (e) {
+                    console.error('Error parsing profile data', e);
+                }
+            } else {
+                setProfileData(null);
+            }
             fetchStatus();
         }
     }, [selectedBusinessId, fetchStatus]);
@@ -81,6 +114,7 @@ const WhatsApp = () => {
                         setStatus('connected');
                         setQrCode(null);
                         setCountdown(0);
+                        updateProfileData(res.data);
                         toast.success('WhatsApp Connected Successfully!');
                         clearInterval(interval);
                     }
@@ -92,7 +126,7 @@ const WhatsApp = () => {
         return () => {
             if (interval) clearInterval(interval);
         };
-    }, [qrCode, status, selectedBusinessId]);
+    }, [qrCode, status, selectedBusinessId, updateProfileData]);
 
     const handleLink = async () => {
         if (!selectedBusinessId || selectedBusinessId === 'all') {
@@ -107,6 +141,7 @@ const WhatsApp = () => {
             if (res.data.success) {
                 if (res.data.status === 'connected') {
                     setStatus('connected');
+                    updateProfileData(res.data);
                     toast.success('WhatsApp is already connected!');
                 } else if (res.data.qr) {
                     setQrCode(res.data.qr);
@@ -130,6 +165,8 @@ const WhatsApp = () => {
             if (res.data.success) {
                 setStatus('disconnected');
                 setQrCode(null);
+                setProfileData(null);
+                localStorage.removeItem(`wa_profile_${selectedBusinessId}`);
                 toast.success('WhatsApp Disconnected!');
             }
         } catch (err) {
@@ -278,15 +315,34 @@ const WhatsApp = () => {
                                                             top: 0, left: 0, right: 0, bottom: 0,
                                                             borderRadius: '50%',
                                                             border: '2px solid #25D366',
-                                                            animation: 'pulse-animation 2s infinite'
+                                                            animation: 'pulse-animation 2s infinite',
+                                                            zIndex: 0
                                                         }} />
-                                                        <Avatar sx={{ bgcolor: '#25D366', width: 64, height: 64, boxShadow: '0 0 20px rgba(37, 211, 102, 0.4)' }}>
-                                                            <VerifiedIcon sx={{ fontSize: 32 }} />
+                                                        <Avatar 
+                                                            src={profileData?.profileImage}
+                                                            sx={{ 
+                                                                bgcolor: '#25D366', 
+                                                                width: 80, 
+                                                                height: 80, 
+                                                                boxShadow: '0 0 20px rgba(37, 211, 102, 0.4)',
+                                                                border: '3px solid #25D366',
+                                                                position: 'relative',
+                                                                zIndex: 1
+                                                            }}
+                                                        >
+                                                            {!profileData?.profileImage && <VerifiedIcon sx={{ fontSize: 40 }} />}
                                                         </Avatar>
                                                     </Box>
-                                                    <Typography variant="h6" fontWeight={800} gutterBottom>Enterprise Account Linked</Typography>
+                                                    <Typography variant="h6" fontWeight={800} gutterBottom>
+                                                        {profileData?.name || 'Enterprise Account Linked'}
+                                                    </Typography>
+                                                    {profileData?.phone && (
+                                                        <Typography variant="subtitle1" color="primary.main" fontWeight={700} sx={{ mb: 1 }}>
+                                                            +{profileData.phone}
+                                                        </Typography>
+                                                    )}
                                                     <Typography variant="body2" color="text.secondary">
-                                                        Automated business notifications are now actively broadcasting from your number.
+                                                        Automated business notifications are now actively broadcasting from this number.
                                                     </Typography>
                                                 </Box>
 

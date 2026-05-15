@@ -287,7 +287,7 @@ const businessController = {
             }
 
             const data = await whatsappService.initiateInstance(keyToPass, business.business_name);
-            
+
             // Save instanceKey if it's new (Step 1 returned it)
             if (data.success && data.instanceKey && data.instanceKey !== business.whatsapp_instance_key) {
                 await business.update({ whatsapp_instance_key: data.instanceKey });
@@ -300,7 +300,13 @@ const businessController = {
                 await business.update({ whatsapp_connected: false });
             }
 
-            res.json(data);
+            // Explicitly pass through profile data if available
+            res.json({
+                ...data,
+                profileImage: data.profileImage || data.profile_picture || null,
+                name: data.name || data.pushname || null,
+                phone: data.phone || data.phonenumber || null
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -318,28 +324,44 @@ const businessController = {
 
             // Sync DB status
             if (data.success) {
-                const isConnected = data.status === 'connected' || data.status === 'ready';
+                const isConnected = data.status === 'connected';
                 if (isConnected !== business.whatsapp_connected) {
                     await business.update({ whatsapp_connected: isConnected });
                 }
             }
 
-            res.json(data);
+            // Explicitly pass through profile data if available
+            res.json({
+                ...data,
+                profileImage: data.profileImage || data.profile_picture || null,
+                name: data.name || data.pushname || null,
+                phone: data.phone || data.phonenumber || null
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
     },
-    
+
     disconnectWhatsApp: async (req, res) => {
         try {
             const { id } = req.params;
             const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
             if (!business) return res.status(404).json({ success: false, message: "Business not found" });
 
+            // Delete from gateway if key exists
+            if (business.whatsapp_instance_key) {
+                try {
+                    await whatsappService.deleteInstance(business.whatsapp_instance_key);
+                } catch (apiError) {
+                    console.error('[WhatsApp] Gateway deletion failed:', apiError.message);
+                    // Continue to clear local DB even if gateway call fails
+                }
+            }
+
             // Clear the key from DB
-            await business.update({ 
-                whatsapp_instance_key: null, 
-                whatsapp_connected: false 
+            await business.update({
+                whatsapp_instance_key: null,
+                whatsapp_connected: false
             });
 
             res.json({ success: true, message: "WhatsApp disconnected successfully." });
