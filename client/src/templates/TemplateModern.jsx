@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import {
-    Container, Box, Typography, Grid, Card,
+    Container, Box, Typography, Card,
     CardContent, IconButton, Stack, Divider
 } from '@mui/material';
 import {
@@ -120,7 +120,7 @@ const TemplateModern = ({ data }) => {
     }, [business.api_key, data.hideScript]);
 
     return (
-        <Box sx={{ bgcolor: '#080b12', minHeight: '100vh', color: '#fff', fontFamily: "'Jost', sans-serif", overflowX: 'hidden' }}>
+        <Box sx={{ position: 'relative', bgcolor: '#080b12', minHeight: '100vh', color: '#fff', fontFamily: "'Jost', sans-serif", overflowX: 'hidden' }}>
             <FontImport />
 
             {/* ══ NAVBAR ══════════════════════════════════════════════════════ */}
@@ -131,7 +131,7 @@ const TemplateModern = ({ data }) => {
                     borderBottom: navSolid ? `1px solid ${BORDER}` : '1px solid transparent',
                 }}
                 transition={{ duration: 0.35 }}
-                style={{ position: 'fixed', top: 0, left: 0, right: 0, zIndex: 300, padding: '20px 0' }}
+                style={{ position: data.isPreview ? 'absolute' : 'fixed', top: 0, left: 0, right: 0, zIndex: 300, padding: '20px 0' }}
             >
                 <Container maxWidth="lg">
                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
@@ -141,7 +141,7 @@ const TemplateModern = ({ data }) => {
                                 fontSize: '1.5rem', fontWeight: 600,
                                 letterSpacing: '1px', color: '#fff',
                             }}>
-                                {business.business_named}
+                                {business.business_name}
                             </Typography>
                         </motion.div>
 
@@ -162,17 +162,19 @@ const TemplateModern = ({ data }) => {
             </motion.nav>
 
             {/* ══ HERO ════════════════════════════════════════════════════════ */}
-            <Box ref={heroRef} sx={{ position: 'relative', height: '100vh', overflow: 'hidden', display: 'flex', alignItems: 'center' }}>
+            <Box ref={heroRef} sx={{ position: 'relative', height: '100vh', overflow: 'hidden', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
                 {/* Parallax BG */}
-                <motion.div
-                    style={{ y: heroBgY, position: 'absolute', inset: '-10% 0', zIndex: 0 }}
+                <Box
+                    component={motion.div}
+                    style={{ y: heroBgY }}
+                    sx={{ position: 'absolute', inset: '-10% 0', zIndex: 0 }}
                 >
                     <Box sx={{
                         width: '100%', height: '120%',
                         background: `linear-gradient(to bottom, rgba(8,11,18,.3) 0%, rgba(8,11,18,.85) 70%, #080b12 100%), url("https://images.unsplash.com/photo-1560066984-138dadb4c035?q=80&w=2074&auto=format&fit=crop")`,
                         backgroundSize: 'cover', backgroundPosition: 'center',
                     }} />
-                </motion.div>
+                </Box>
 
                 {/* Gold accent lines */}
                 <Box sx={{ position: 'absolute', top: 0, left: 0, right: 0, height: 2, background: `linear-gradient(90deg, transparent, ${ACCENT}, transparent)`, opacity: .5, zIndex: 2 }} />
@@ -195,7 +197,7 @@ const TemplateModern = ({ data }) => {
                             <motion.div initial={{ opacity: 0, y: 24 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.9, ease: EASE, delay: 0.3 }}>
                                 <Typography sx={{
                                     fontFamily: "'Cormorant Garamond', serif",
-                                    fontSize: { xs: '4rem', md: '6.5rem' },
+                                    fontSize: 'clamp(2.2rem, 10cqw, 6.5rem)',
                                     fontWeight: 300, lineHeight: .92,
                                     letterSpacing: '-1px', color: '#fff', mb: 1,
                                 }}>
@@ -203,9 +205,7 @@ const TemplateModern = ({ data }) => {
                                 </Typography>
 
                             </motion.div>
-                            <div>
-                                <div></div>
-                            </div>
+
                             <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.7, ease: EASE, delay: 0.5 }}>
                                 <Typography sx={{ fontSize: '1.05rem', color: 'rgba(255,255,255,.55)', mb: 7, fontWeight: 300, lineHeight: 1.8, maxWidth: 520, letterSpacing: '.2px' }}>
                                     {business.description || "An uncompromising dedication to excellence — where craft meets luxury and every detail is curated for your distinction."}
@@ -253,18 +253,29 @@ const TemplateModern = ({ data }) => {
             {/* ══ STATS BAND ══════════════════════════════════════════════════ */}
             <Box sx={{ borderTop: `1px solid ${BORDER}`, borderBottom: `1px solid ${BORDER}`, py: 5, bgcolor: SURFACE }}>
                 <Container maxWidth="lg">
-                    <Grid container>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr 1fr', md: 'repeat(4, 1fr)' },
+                        gap: 0
+                    }}>
                         {[
                             { value: 2400, suffix: '+', label: 'Clients Served' },
                             { value: 5, suffix: ' Yrs', label: 'Of Excellence' },
                             { value: 98, suffix: '%', label: 'Satisfaction Rate' },
                             { value: 12, suffix: '+', label: 'Expert Services' },
                         ].map((s, i) => (
-                            <Grid item xs={6} md={3} key={s.label}>
+                            <Box key={s.label}>
                                 <Reveal delay={0.08 * i}>
                                     <Box sx={{
                                         textAlign: 'center', py: 2,
-                                        borderRight: i < 3 ? `1px solid ${BORDER}` : 'none',
+                                        borderRight: {
+                                            xs: i % 2 === 0 ? `1px solid ${BORDER}` : 'none',
+                                            md: i < 3 ? `1px solid ${BORDER}` : 'none'
+                                        },
+                                        borderBottom: {
+                                            xs: i < 2 ? `1px solid ${BORDER}` : 'none',
+                                            md: 'none'
+                                        }
                                     }}>
                                         <Typography sx={{
                                             fontFamily: "'Cormorant Garamond', serif",
@@ -278,9 +289,9 @@ const TemplateModern = ({ data }) => {
                                         </Typography>
                                     </Box>
                                 </Reveal>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 
@@ -303,9 +314,13 @@ const TemplateModern = ({ data }) => {
                         </Box>
                     </Reveal>
 
-                    <Grid container spacing={2}>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(4, 1fr)' },
+                        gap: 2
+                    }}>
                         {svcs.map((svc, idx) => (
-                            <Grid item xs={12} sm={6} md={3} key={svc.id}>
+                            <Box key={svc.id}>
                                 <Reveal delay={0.07 * idx} scale={0.97}>
                                     <motion.div
                                         className="mybookings-trigger"
@@ -373,9 +388,9 @@ const TemplateModern = ({ data }) => {
                                         </Box>
                                     </motion.div>
                                 </Reveal>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 
@@ -420,9 +435,14 @@ const TemplateModern = ({ data }) => {
                     </Reveal>
 
                     {/* Location cards */}
-                    <Grid container spacing={2} sx={{ mb: 4 }}>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
+                        gap: 2,
+                        mb: 4
+                    }}>
                         {locs.map((loc, idx) => (
-                            <Grid item xs={12} sm={6} md={4} key={loc.id}>
+                            <Box key={loc.id}>
                                 <Reveal delay={0.08 * idx}>
                                     <motion.div whileHover={{ y: -6 }} transition={SPRING}>
                                         <Box sx={{
@@ -447,16 +467,20 @@ const TemplateModern = ({ data }) => {
                                         </Box>
                                     </motion.div>
                                 </Reveal>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
 
                     {/* Contact + Hours + Social — full width */}
                     <Reveal delay={0.1}>
                         <Box sx={{ background: SURFACE, border: `1px solid ${BORDER}`, p: { xs: 4, md: 6 } }}>
-                            <Grid container spacing={6} id="contact">
+                            <Box sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                                gap: 6
+                            }} id="contact">
                                 {/* Phone & Email */}
-                                <Grid item xs={12} md={4}>
+                                <Box>
                                     <Typography sx={{ fontSize: '.65rem', letterSpacing: '2.5px', textTransform: 'uppercase', color: ACCENT, mb: 3, fontWeight: 600 }}>
                                         Get in Touch
                                     </Typography>
@@ -474,10 +498,10 @@ const TemplateModern = ({ data }) => {
                                             </Box>
                                         </Box>
                                     ))}
-                                </Grid>
+                                </Box>
 
                                 {/* Hours */}
-                                <Grid item xs={12} md={4}>
+                                <Box>
                                     <Typography sx={{ fontSize: '.65rem', letterSpacing: '2.5px', textTransform: 'uppercase', color: ACCENT, mb: 3, fontWeight: 600 }}>
                                         Business Hours
                                     </Typography>
@@ -493,10 +517,10 @@ const TemplateModern = ({ data }) => {
                                             </Typography>
                                         </Box>
                                     ))}
-                                </Grid>
+                                </Box>
 
                                 {/* Social + CTA */}
-                                <Grid item xs={12} md={4}>
+                                <Box>
                                     <Typography sx={{ fontSize: '.65rem', letterSpacing: '2.5px', textTransform: 'uppercase', color: ACCENT, mb: 3, fontWeight: 600 }}>
                                         Follow Us
                                     </Typography>
@@ -529,8 +553,8 @@ const TemplateModern = ({ data }) => {
                                     >
                                         Reserve a Session
                                     </motion.button>
-                                </Grid>
-                            </Grid>
+                                </Box>
+                            </Box>
                         </Box>
                     </Reveal>
                 </Container>

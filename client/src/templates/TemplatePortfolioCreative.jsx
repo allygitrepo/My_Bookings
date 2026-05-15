@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Box, Container, Typography, Grid, Button, Stack,
+    Box, Container, Typography, Button, Stack,
     useTheme, Chip, IconButton
 } from '@mui/material';
 import {
@@ -47,7 +47,7 @@ const TemplatePortfolioCreative = ({ data }) => {
     };
 
     return (
-        <Box sx={{ bgcolor: '#fafafa', color: '#111', minHeight: '100vh', overflow: 'hidden', fontFamily: "'Clash Display', 'Inter', sans-serif" }}>
+        <Box sx={{ position: 'relative', bgcolor: '#fafafa', color: '#111', minHeight: '100vh', overflow: 'hidden', fontFamily: "'Clash Display', 'Inter', sans-serif" }}>
 
             {/* Nav */}
             <Box component={motion.nav} initial={{ y: -50, opacity: 0 }} animate={{ y: 0, opacity: 1 }} transition={{ delay: 0.2, duration: 0.8 }}
@@ -59,8 +59,15 @@ const TemplatePortfolioCreative = ({ data }) => {
             </Box>
 
             {/* Split Hero Section */}
-            <Grid container sx={{ minHeight: '100vh', pt: { xs: 12, md: 0 } }}>
-                <Grid item xs={12} md={6} sx={{ position: 'relative', display: 'flex', alignItems: 'center', p: { xs: 4, md: 6 }, zIndex: 2 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', minHeight: '100vh', pt: { xs: 12, md: 0 } }}>
+                <Box sx={{ 
+                    flex: { xs: '1 1 100%', md: '1 1 50%' }, 
+                    position: 'relative', 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    p: { xs: 4, md: 6 }, 
+                    zIndex: 2 
+                }}>
 
                     {/* Decorative blobs */}
                     <Box component={motion.div} animate={{ rotate: 360, scale: [1, 1.1, 1] }} transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
@@ -78,7 +85,7 @@ const TemplatePortfolioCreative = ({ data }) => {
 
                             <motion.div style={{ y: y1, opacity: opacity1 }}>
                                 <Typography variant="h1" sx={{
-                                    fontSize: { xs: '3rem', md: '4.5rem', lg: '5.5rem' },
+                                    fontSize: 'clamp(2.5rem, 15cqw, 5.5rem)',
                                     fontWeight: 900,
                                     lineHeight: 0.9,
                                     letterSpacing: '-0.04em',
@@ -89,81 +96,71 @@ const TemplatePortfolioCreative = ({ data }) => {
                                 </Typography>
                             </motion.div>
 
-                            <Grid container spacing={4} alignItems="center">
-                                <Grid item xs={12} sm={7}>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
+                                <Box sx={{ flex: { xs: '1 1 100%', sm: '1 1 300px' } }}>
                                     <Typography variant="body1" sx={{ fontSize: '1.25rem', lineHeight: 1.7, color: '#555', fontWeight: 500 }}>
                                         {bio}
                                     </Typography>
-                                </Grid>
-                                <Grid
-                                    item
-                                    xs={12}
-                                    sm={5}
-                                    sx={{
-                                        display: 'flex',
-                                        gap: 2,
-                                        alignItems: 'center'
-                                    }}
-                                >                                    <Button
-                                    variant="contained"
-                                    sx={{
-                                        background: '#111',
-                                        color: 'white',
-                                        borderRadius: '14px',
-                                        px: 4,
-                                        py: 1.8,
-                                        fontWeight: 700,
-                                        fontSize: '0.95rem',
-                                        textTransform: 'none',
-                                        boxShadow: '0 15px 40px rgba(0,0,0,0.15)',
-                                        '&:hover': {
-                                            background: '#000',
-                                            transform: 'translateY(-2px)'
-                                        }
-                                    }}
-                                    onClick={() => document.getElementById('work-section').scrollIntoView({ behavior: 'smooth' })}
-                                >
+                                </Box>
+                                <Box sx={{
+                                    flex: { xs: '1 1 100%', sm: '0 1 auto' },
+                                    display: 'flex',
+                                    gap: 2,
+                                    alignItems: 'center'
+                                }}>
+                                    <Button
+                                        variant="contained"
+                                        sx={{
+                                            background: '#111',
+                                            color: 'white',
+                                            borderRadius: '14px',
+                                            px: 4,
+                                            py: 1.8,
+                                            fontWeight: 700,
+                                            fontSize: '0.95rem',
+                                            textTransform: 'none',
+                                            boxShadow: '0 15px 40px rgba(0,0,0,0.15)',
+                                            '&:hover': {
+                                                background: '#000',
+                                                transform: 'translateY(-2px)'
+                                            }
+                                        }}
+                                        onClick={() => document.getElementById('work-section').scrollIntoView({ behavior: 'smooth' })}
+                                    >
                                         Explore
                                     </Button>
-
-                                </Grid>
-                            </Grid>
+                                </Box>
+                            </Box>
                         </motion.div>
                     </Box>
-                </Grid>
+                </Box>
 
-                <Grid
-                    item
-                    xs={12}
-                    md={5}
-                    sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'flex-start',
-                        pl: { md: 0 },
-                        ml: { md: 45 },   // move left
-                        p: { xs: 4, md: 6 },
-                        transition: 'all .4s ease',
-                        '&:hover': {
-                            transform: 'translateY(-6px)'
-                        }
-                    }}
-                >
+                <Box sx={{
+                    flex: { xs: '1 1 100%', md: '0 1 40%' },
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: { xs: 'center', md: 'flex-start' },
+                    p: { xs: 4, md: 6 },
+                    transition: 'all .4s ease',
+                    '&:hover': {
+                        transform: 'translateY(-6px)'
+                    }
+                }}>
                     {business.owner?.profile_picture && (
                         <Box
                             component="img"
                             src={business.owner.profile_picture}
                             sx={{
-                                width: { xs: 200, md: 320, lg: 380 },
-                                height: { xs: 200, md: 320, lg: 380 },
+                                width: { xs: 240, md: 320, lg: 380 },
+                                height: { xs: 240, md: 320, lg: 380 },
                                 objectFit: 'cover',
                                 borderRadius: '50%',
                                 boxShadow: '0 30px 70px rgba(0,0,0,0.15)',
                             }}
                         />
                     )}
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
 
             {/* Featured Services */}
             <Box id="work-section" sx={{ py: { xs: 10, md: 20 }, bgcolor: '#111', color: 'white', borderTopRightRadius: { xs: 0, md: '80px' }, mt: -5, position: 'relative', zIndex: 10 }}>
@@ -177,9 +174,13 @@ const TemplatePortfolioCreative = ({ data }) => {
                         <Typography sx={{ fontWeight: 600, color: '#888', letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.875rem' }}>* SCROLL TO EXPLORE</Typography>
                     </Stack>
 
-                    <Grid container spacing={4}>
+                    <Box sx={{ 
+                        display: 'grid', 
+                        gridTemplateColumns: { xs: '1fr', md: 'repeat(3, 1fr)' },
+                        gap: 4 
+                    }}>
                         {services.map((service, index) => (
-                            <Grid item xs={12} md={4} key={service.id}>
+                            <Box key={service.id}>
                                 <motion.div
                                     initial={{ opacity: 0, y: 50 }}
                                     whileInView={{ opacity: 1, y: 0 }}
@@ -224,9 +225,9 @@ const TemplatePortfolioCreative = ({ data }) => {
                                         </Box>
                                     </Box>
                                 </motion.div>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 
@@ -235,16 +236,21 @@ const TemplatePortfolioCreative = ({ data }) => {
                 <Box sx={{ position: 'absolute', top: -100, right: -100, width: 300, height: 300, background: '#FF6B6B', filter: 'blur(150px)', opacity: 0.2 }} />
 
                 <Container maxWidth="lg">
-                    <Grid container spacing={8} alignItems="center">
-                        <Grid item xs={12} md={8}>
+                    <Box sx={{ 
+                        display: 'flex', 
+                        flexWrap: 'wrap', 
+                        gap: 8, 
+                        alignItems: 'center' 
+                    }}>
+                        <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 0' } }}>
                             <Typography variant="h2" sx={{ fontWeight: 900, mb: 3, letterSpacing: -2, fontSize: { xs: '3rem', md: '5rem' } }}>
                                 Ready to <span style={{ color: '#4ECDC4' }}>launch?</span>
                             </Typography>
                             <Typography sx={{ color: '#888', fontSize: '1.25rem', fontWeight: 500 }}>
                                 Based in {locations?.[0]?.city || business.city || 'your city'}. Partnering with visionaries worldwide.
                             </Typography>
-                        </Grid>
-                        <Grid item xs={12} md={4} sx={{ textAlign: { md: 'right' } }}>
+                        </Box>
+                        <Box sx={{ flex: { xs: '1 1 100%', md: '0 1 auto' }, textAlign: { md: 'right' } }}>
                             <Button
                                 variant="outlined"
                                 sx={{ borderRadius: 50, borderColor: 'rgba(255,255,255,0.2)', color: 'white', px: 4, py: 2, mb: 4, '&:hover': { borderColor: 'white', bgcolor: 'rgba(255,255,255,0.1)' } }}
@@ -255,8 +261,8 @@ const TemplatePortfolioCreative = ({ data }) => {
                                 © {new Date().getFullYear()} {displayName}. All rights reserved.<br />
                                 <span style={{ opacity: 0.5 }}>Made possible by MyBookings.</span>
                             </Typography>
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
                 </Container>
             </Box>
         </Box>

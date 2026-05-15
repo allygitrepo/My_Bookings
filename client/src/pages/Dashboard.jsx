@@ -160,7 +160,14 @@ const Dashboard = () => {
 
     const totalRevenue = filteredPayments
         .filter(p => p.payment_status === true || p.payment_status === 1)
-        .reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
+        .reduce((sum, p) => sum + Number(p.final_amount || p.paid_amount || 0), 0);
+
+    const totalPlatformFees = filteredPayments
+        .filter(p => p.payment_status === true || p.payment_status === 1)
+        .reduce((sum, p) => sum + Number(p.platform_fees || 0), 0);
+
+    const currentUser = JSON.parse(localStorage.getItem('currentUser'));
+    const isPortalAdmin = currentUser?.role === 'PORTAL_ADMIN';
 
     const recentBookings = [...filteredDashboardBookings].sort((a, b) => {
         const dateA = a.booking_date || "";
@@ -233,13 +240,24 @@ const Dashboard = () => {
                 </Box>
                 <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
                     <StatCard
-                        title="Total Revenue"
+                        title={isPortalAdmin ? "Net Revenue" : "Total Revenue"}
                         value={loading ? '...' : `₹${totalRevenue.toLocaleString()}`}
                         icon={<RevenueIcon sx={{ fontSize: 26 }} />}
                         color="#f59e0b"
-                        subtitle="Total earnings"
+                        subtitle={isPortalAdmin ? "After platform fees" : "Total earnings"}
                     />
                 </Box>
+                {isPortalAdmin && (
+                    <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+                        <StatCard
+                            title="Platform Fees"
+                            value={loading ? '...' : `₹${totalPlatformFees.toLocaleString()}`}
+                            icon={<TrendIcon sx={{ fontSize: 26 }} />}
+                            color="#ec4899"
+                            subtitle="Portal earnings"
+                        />
+                    </Box>
+                )}
             </Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2.5 }}>
                 <TrendIcon sx={{ color: 'primary.main' }} />

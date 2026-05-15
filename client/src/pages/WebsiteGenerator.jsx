@@ -3,7 +3,7 @@ import {
     Box, Paper, Typography, TextField, Button, MenuItem,
     Switch, FormControlLabel, Divider, CircularProgress, IconButton,
     ToggleButton, ToggleButtonGroup, Card, CardActionArea, CardMedia, CardContent,
-    Tooltip, Avatar,
+    Tooltip, Avatar, ThemeProvider, createTheme
 } from '@mui/material';
 import {
     Language as WebsiteIcon,
@@ -156,7 +156,9 @@ const WebsiteGenerator = () => {
         const displayData = {
             ...previewData,
             business: { ...previewData.business, ...settings },
-            hideScript: true
+            hideScript: true,
+            isPreview: true,
+            viewMode: viewMode
         };
 
         switch (settings.selected_template) {
@@ -388,121 +390,158 @@ const WebsiteGenerator = () => {
                     </Box>
 
                     {/* Bottom Panel: Full-Width Preview */}
-                    <Box sx={{ width: '100%' }}>                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
-                                <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
-                                    Live Preview
-                                </Typography>
-                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                    <Box sx={{
-                                        px: 1, py: 0.3, borderRadius: 1.5,
-                                        bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2',
-                                        color: settings.website_enabled ? '#166534' : '#991b1b',
-                                        fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase',
-                                        letterSpacing: 0.5, border: '1px solid',
-                                        borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca'
-                                    }}>
-                                        {settings.website_enabled ? 'Live' : 'Draft'}
-                                    </Box>
-                                    {settings.website_enabled && (
-                                        <Typography
-                                            variant="caption"
-                                            sx={{
-                                                color: 'primary.light',
-                                                fontWeight: 700,
-                                                cursor: 'pointer',
-                                                '&:hover': { textDecoration: 'underline' }
-                                            }}
-                                            onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
-                                        >
-                                            {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
-                                        </Typography>
-                                    )}
-                                    <Switch
-                                        size="small"
-                                        checked={settings.website_enabled}
-                                        disabled={isSuspended}
-                                        onChange={async (e) => {
-                                            if (isSuspended) return;
-                                            const newEnabled = e.target.checked;
-                                            setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
+                    <Box sx={{ width: '100%' }}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
+                                    <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
+                                        Live Preview
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box sx={{
+                                            px: 1, py: 0.3, borderRadius: 1.5,
+                                            bgcolor: settings.website_enabled ? '#dcfce7' : '#fee2e2',
+                                            color: settings.website_enabled ? '#166534' : '#991b1b',
+                                            fontSize: '0.65rem', fontWeight: 900, textTransform: 'uppercase',
+                                            letterSpacing: 0.5, border: '1px solid',
+                                            borderColor: settings.website_enabled ? '#bbf7d0' : '#fecaca'
+                                        }}>
+                                            {settings.website_enabled ? 'Live' : 'Draft'}
+                                        </Box>
+                                        <Switch
+                                            size="small"
+                                            checked={settings.website_enabled}
+                                            disabled={isSuspended}
+                                            onChange={async (e) => {
+                                                if (isSuspended) return;
+                                                const newEnabled = e.target.checked;
+                                                setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
 
-                                            setSaving(true);
-                                            try {
-                                                const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
-                                                if (response.success) {
-                                                    toast.success(newEnabled ? 'Website Published!' : 'Website Moved to Draft');
-                                                    setBusinesses(prev => prev.map(b =>
-                                                        String(b.id) === String(selectedBusinessId) ? { ...b, ...settings, website_enabled: newEnabled } : b
-                                                    ));
+                                                setSaving(true);
+                                                try {
+                                                    const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
+                                                    if (response.success) {
+                                                        toast.success(newEnabled ? 'Website Published!' : 'Website Moved to Draft');
+                                                        setBusinesses(prev => prev.map(b =>
+                                                            String(b.id) === String(selectedBusinessId) ? { ...b, ...settings, website_enabled: newEnabled } : b
+                                                        ));
+                                                    }
+                                                } catch (error) {
+                                                    toast.error('Auto-save failed.');
+                                                } finally {
+                                                    setSaving(false);
                                                 }
-                                            } catch (error) {
-                                                toast.error('Auto-save failed.');
-                                            } finally {
-                                                setSaving(false);
-                                            }
-                                        }}
-                                    />
+                                            }}
+                                        />
+                                    </Box>
                                 </Box>
+
+                                <ToggleButtonGroup
+                                    value={viewMode}
+                                    exclusive
+                                    onChange={(e, v) => v && setViewMode(v)}
+                                    size="small"
+                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
+                                >
+                                    <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
+                                    </ToggleButton>
+                                    <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                        <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
+                                    </ToggleButton>
+                                </ToggleButtonGroup>
                             </Box>
 
-                            <ToggleButtonGroup
-                                value={viewMode}
-                                exclusive
-                                onChange={(e, v) => v && setViewMode(v)}
-                                size="small"
-                                sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
-                            >
-                                <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
-                                    <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
-                                </ToggleButton>
-                                <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
-                                    <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
-                                </ToggleButton>
-                            </ToggleButtonGroup>
-                        </Box>
-
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                flexGrow: 1,
-                                borderRadius: 6,
-                                overflow: 'hidden',
-                                border: '1px solid',
-                                borderColor: 'divider',
-                                position: 'relative',
-                                bgcolor: 'transparent',
-                                minHeight: '80vh',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.08)'
-                            }}
-                        >
+                            {/* Mockup Container */}
                             <Box
                                 sx={{
-                                    width: viewMode === 'mobile' ? 375 : '100%',
-                                    height: '100%',
-                                    bgcolor: 'white',
-                                    overflowY: 'auto',
-                                    transition: 'width 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: viewMode === 'mobile' ? '0 0 64px rgba(0,0,0,0.15)' : 'none',
-                                    '&::-webkit-scrollbar': { width: 6 },
-                                    '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(0,0,0,0.1)', borderRadius: 10 }
+                                    width: '100%',
+                                    bgcolor: 'transparent',
+                                    minHeight: '95vh',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    p: { xs: 0, md: 2 },
+                                    overflow: 'hidden',
+                                    transition: 'all 0.5s ease',
                                 }}
                             >
-                                {previewLoading ? (
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
-                                        <CircularProgress size={32} thickness={5} />
-                                        <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Updating Preview...</Typography>
+                                {/* Device Wrapper */}
+                                <Box sx={{
+                                    position: 'relative',
+                                    width: viewMode === 'mobile' ? 375 + 24 : '100%',
+                                    maxWidth: viewMode === 'mobile' ? 399 : 1200,
+                                    height: viewMode === 'mobile' ? 780 : '75vh',
+                                    bgcolor: '#1a1d21', // Frame color
+                                    borderRadius: viewMode === 'mobile' ? '54px' : '16px 16px 8px 8px',
+                                    p: viewMode === 'mobile' ? '54px 12px 18px 12px' : '40px 0px 0px 0px', // Mockup bezels
+                                    boxShadow: '0 40px 100px -20px rgba(0,0,0,0.3)',
+                                    border: '1px solid rgba(255,255,255,0.1)',
+                                    transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                }}>
+                                    {/* Mobile Decorations */}
+                                    {viewMode === 'mobile' && (
+                                        <>
+                                            <Box sx={{ position: 'absolute', top: 24, left: '50%', transform: 'translateX(-50%)', width: 60, height: 6, bgcolor: '#2a2e33', borderRadius: 10 }} />
+                                            <Box sx={{ position: 'absolute', top: 22, left: '62%', width: 6, height: 6, bgcolor: '#2a2e33', borderRadius: '50%' }} />
+                                        </>
+                                    )}
+
+                                    {/* Desktop Decorations */}
+                                    {viewMode === 'desktop' && (
+                                        <Box sx={{ position: 'absolute', top: 16, left: 20, display: 'flex', gap: 1 }}>
+                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FF5F56' }} />
+                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FFBD2E' }} />
+                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#27C93F' }} />
+                                        </Box>
+                                    )}
+
+                                    {/* Inner Screen */}
+                                    <Box
+                                        sx={{
+                                            flexGrow: 1,
+                                            position: 'relative',
+                                            bgcolor: 'transparent',
+                                            borderRadius: viewMode === 'mobile' ? '36px' : '0 0 4px 4px',
+                                            overflowY: 'auto',
+                                            overflowX: 'hidden',
+                                            containerType: 'inline-size',
+                                            '&::-webkit-scrollbar': { width: 4 },
+                                            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
+                                            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 10 }
+                                        }}
+                                    >
+                                        {previewLoading ? (
+                                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                                                <CircularProgress size={32} thickness={5} />
+                                                <Typography variant="body2" sx={{ fontWeight: 600, color: 'text.secondary' }}>Updating Preview...</Typography>
+                                            </Box>
+                                        ) : (
+                                            <ThemeProvider theme={createTheme({
+                                                breakpoints: {
+                                                    values: {
+                                                        xs: 0,
+                                                        sm: viewMode === 'mobile' ? 10000 : 600,
+                                                        md: viewMode === 'mobile' ? 10001 : 900,
+                                                        lg: viewMode === 'mobile' ? 10002 : 1200,
+                                                        xl: viewMode === 'mobile' ? 10003 : 1536,
+                                                    }
+                                                }
+                                            })}>
+                                                {renderTemplatePreview()}
+                                            </ThemeProvider>
+                                        )}
                                     </Box>
-                                ) : (
-                                    renderTemplatePreview()
-                                )}
+
+                                    {/* Desktop Base Mockup */}
+                                    {viewMode === 'desktop' && (
+                                        <Box sx={{ height: 4, bgcolor: '#111', width: '40%', mx: 'auto', borderRadius: '0 0 10px 100px', opacity: 0.5 }} />
+                                    )}
+                                </Box>
                             </Box>
-                        </Paper>
-                    </Box>
+                        </Box>
                     </Box>
                 </Box>
             </Box>

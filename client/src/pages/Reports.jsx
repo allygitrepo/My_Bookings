@@ -598,10 +598,9 @@ const Reports = () => {
                                     ) : filteredPayments.map((p) => {
                                         const booking = bookings.find(b => b.id === p.booking_id);
                                         const customer = customers.find(c => c.id === booking?.customer_id);
-                                        const chargesPercent = usage?.portal_payment_charges || 0;
                                         const paidAmt = Number(p.paid_amount || 0);
-                                        const charge = paidAmt * (chargesPercent / 100);
-                                        const income = paidAmt - charge;
+                                        const charge = Number(p.platform_fees || 0);
+                                        const income = Number(p.final_amount || 0);
 
                                         return (
                                             <TableRow key={p.id} hover>

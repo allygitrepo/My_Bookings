@@ -13,6 +13,7 @@ import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
+import { formatDate } from '../utils/date';
 
 const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error', Refunded: 'default' };
 
@@ -128,7 +129,7 @@ const Payments = () => {
                                         variant="outlined"
                                     />
                                 </TableCell>
-                                <TableCell>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</TableCell>
+                                 <TableCell>{formatDate(p.created_at)}</TableCell>
                             </TableRow>
                         );})}
                     </TableBody>
@@ -155,7 +156,7 @@ const Payments = () => {
                                 <Box>
                                     <Typography variant="subtitle2" fontWeight={800}>{customer?.name || '—'}</Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                                         {formatDate(p.created_at)}
                                     </Typography>
                                 </Box>
                                 <Chip 
@@ -174,7 +175,7 @@ const Payments = () => {
                                 </Grid>
                                 <Grid item xs={4} sx={{ textAlign: 'center' }}>
                                     <Typography variant="caption" color="text.secondary" display="block">Income</Typography>
-                                    <Typography variant="body2" fontWeight={800} color="primary.main">₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(0)}</Typography>
+                                     <Typography variant="body2" fontWeight={800} color="primary.main">₹{Number(p.final_amount || 0).toFixed(0)}</Typography>
                                 </Grid>
                                 <Grid item xs={4} sx={{ textAlign: 'right' }}>
                                     <Typography variant="caption" color="text.secondary" display="block">Method</Typography>

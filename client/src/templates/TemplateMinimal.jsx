@@ -98,6 +98,7 @@ const TemplateMinimal = ({ data }) => {
     return (
         <Box
             sx={{
+                position: 'relative',
                 bgcolor: '#fff',
                 minHeight: '100vh',
                 py: { xs: 7, md: 10 },
@@ -141,7 +142,7 @@ const TemplateMinimal = ({ data }) => {
                             variant="h1"
                             sx={{
                                 fontFamily: "'DM Sans', sans-serif",
-                                fontSize: { xs: '2.6rem', md: '4rem' },
+                                fontSize: 'clamp(2.2rem, 12cqw, 4rem)',
                                 fontWeight: 900,
                                 letterSpacing: '-2.5px',
                                 lineHeight: 1,
