@@ -1,0 +1,92 @@
+.dashboard-root {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.stat-card-root {
+    padding: 24px;
+    height: 100%;
+    flex: 1;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: rgba(255, 255, 255, 0.03);
+    backdrop-filter: blur(10px);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+    transition: all 0.3s ease;
+}
+
+.stat-card-icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.analytics-card-root {
+    padding: 0;
+    height: 100%;
+    width: 100%;
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    background-color: rgba(30, 41, 59, 0.4);
+    backdrop-filter: blur(10px);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 16px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+}
+
+.chart-container {
+    flex-grow: 1;
+    min-height: 350px;
+    width: 100%;
+    padding: 0 16px 16px 16px;
+    position: relative;
+}
+
+.chart-header-root {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.chart-controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.date-picker-custom .MuiInputBase-root {
+    background-color: rgba(0, 0, 0, 0.2);
+    border-radius: 10px;
+    height: 40px;
+}
+
+.date-picker-custom .MuiOutlinedInput-notchedOutline {
+    border-color: rgba(255, 255, 255, 0.1);
+}
+
+.custom-toggle-group {
+    background-color: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 12px !important;
+}
+
+.custom-toggle-button {
+    border: none !important;
+    border-radius: 8px !important;
+    margin: 2px !important;
+    padding: 4px 12px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+}
+
+.custom-toggle-button.Mui-selected {
+    background-color: rgba(255, 255, 255, 0.1) !important;
+    color: #fff !important;
+}

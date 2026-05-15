@@ -47,10 +47,10 @@ const CreateAdmin = () => {
                 </Typography>
             </Box>
 
-            <Grid container spacing={4}>
-                <Grid item xs={12} md={7}>
+            <Box sx={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
+                <Box sx={{ flex: '1 1 400px', minWidth: 0 }}>
                     <Card sx={{ p: { xs: 3, md: 5 }, borderRadius: '20px', border: '1px solid rgba(255,255,255,0.08)' }}>
-                        <form onSubmit={handleSubmit}>
+                        <form onSubmit={handleSubmit} autoComplete="off">
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3.5 }}>
                                 <Box>
                                     <Typography variant="body2" fontWeight={700} sx={{ mb: 1, ml: 0.5, color: 'text.secondary' }}>Full Name</Typography>
@@ -61,6 +61,7 @@ const CreateAdmin = () => {
                                         value={form.name}
                                         onChange={handleChange}
                                         required
+                                        autoComplete="off"
                                         InputProps={{
                                             startAdornment: <InputAdornment position="start"><UserIcon fontSize="small" sx={{ color: 'primary.main' }} /></InputAdornment>,
                                         }}
@@ -77,6 +78,7 @@ const CreateAdmin = () => {
                                         value={form.email}
                                         onChange={handleChange}
                                         required
+                                        autoComplete="off"
                                         InputProps={{
                                             startAdornment: <InputAdornment position="start"><EmailIcon fontSize="small" sx={{ color: 'primary.main' }} /></InputAdornment>,
                                         }}
@@ -93,6 +95,7 @@ const CreateAdmin = () => {
                                         value={form.password}
                                         onChange={handleChange}
                                         required
+                                        autoComplete="new-password"
                                         InputProps={{
                                             startAdornment: <InputAdornment position="start"><LockIcon fontSize="small" sx={{ color: 'primary.main' }} /></InputAdornment>,
                                             endAdornment: (
@@ -133,9 +136,9 @@ const CreateAdmin = () => {
                             </Box>
                         </form>
                     </Card>
-                </Grid>
+                </Box>
 
-                <Grid item xs={12} md={5}>
+                <Box sx={{ flex: '1 1 300px', minWidth: 0 }}>
                     <Card sx={{ 
                         p: 4, 
                         borderRadius: '20px', 
@@ -203,8 +206,8 @@ const CreateAdmin = () => {
                             </Typography>
                         </Alert>
                     </Card>
-                </Grid>
-            </Grid>
+                </Box>
+            </Box>
         </PageTransition>
     );
 };

@@ -16,5 +16,6 @@ router.get("/payments", portalController.getPayments);
 router.put("/users/:id/manage", portalController.manageUser);
 router.post("/create-admin", portalController.createAdmin);
 router.put("/business/:id/manage", portalController.manageBusiness);
+router.get("/analytics", portalController.getAnalytics);
 
 module.exports = router;

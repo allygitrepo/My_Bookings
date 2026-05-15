@@ -101,7 +101,7 @@ const PortalUsers = () => {
 
     const confirmAssignment = async () => {
         if (!assignData.packageId) return toast.error('Please select a package');
-        
+
         setProcessing(true);
         try {
             const response = await axiosInstance.post('/packages/assign', {
@@ -187,22 +187,28 @@ const PortalUsers = () => {
                         <Tab label="Portal Admins" sx={{ fontWeight: 700, textTransform: 'none' }} />
                     </Tabs>
                 </Box>
-                <TextField
-                    size="small"
-                    placeholder="Search users..."
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    InputProps={{
-                        startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
-                    }}
-                    sx={{ width: { xs: '100%', md: 300 }, mb: 1, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
-                />
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1 }}>
+                    <TextField
+                        size="small"
+                        placeholder="Search users..."
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start"><SearchIcon fontSize="small" /></InputAdornment>,
+                        }}
+                        sx={{ width: { xs: '100%', md: 300 }, '& .MuiOutlinedInput-root': { borderRadius: 2 } }}
+                    />
+                    <Typography variant="caption" fontWeight={700} color="primary" sx={{ mr: 1 }}>
+                        {filteredUsers.length} Users
+                    </Typography>
+                </Box>
             </Box>
 
             <TableContainer component={Paper} sx={{ overflow: 'hidden', mb: 4 }}>
                 <Table>
                     <TableHead >
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 700, width: 60 }}>Sr. No</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>User</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Role</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Registered</TableCell>
@@ -214,18 +220,21 @@ const PortalUsers = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 10 }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 10 }}>
                                     <CircularProgress size={30} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredUsers.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={4} align="center" sx={{ py: 10, color: 'text.secondary' }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 10, color: 'text.secondary' }}>
                                     No users found matching your search.
                                 </TableCell>
                             </TableRow>
-                        ) : filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((user) => (
+                        ) : filteredUsers.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((user, index) => (
                             <TableRow key={user.id} hover>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                    {page * rowsPerPage + index + 1}
+                                </TableCell>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 700 }}>
@@ -251,17 +260,17 @@ const PortalUsers = () => {
                                     {user.package_id ? (
                                         <Box>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 0.5 }}>
-                                                <Chip 
-                                                    label={user.package?.name || 'Standard Plan'} 
-                                                    size="small" variant="outlined" color="primary" 
-                                                    sx={{ fontWeight: 700, borderRadius: 1.5 }} 
+                                                <Chip
+                                                    label={user.package?.name || 'Standard Plan'}
+                                                    size="small" variant="outlined" color="primary"
+                                                    sx={{ fontWeight: 700, borderRadius: 1.5 }}
                                                 />
                                                 {user.subscriptions?.[0]?.razorpay_payment_id === 'MANUAL_ASSIGN' && (
-                                                    <Chip 
-                                                        label="Manual" 
-                                                        size="small" 
+                                                    <Chip
+                                                        label="Manual"
+                                                        size="small"
                                                         color="secondary"
-                                                        sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.6rem', height: 20 }} 
+                                                        sx={{ fontWeight: 800, borderRadius: 1.5, fontSize: '0.6rem', height: 20 }}
                                                     />
                                                 )}
                                             </Box>
@@ -298,9 +307,9 @@ const PortalUsers = () => {
                                 <TableCell align="right">
                                     {user.role !== 'PORTAL_ADMIN' && (
                                         <Tooltip title="Assign Package">
-                                            <IconButton 
-                                                onClick={() => handleOpenAssign(user)} 
-                                                size="small" 
+                                            <IconButton
+                                                onClick={() => handleOpenAssign(user)}
+                                                size="small"
                                                 sx={{ bgcolor: 'primary.50', color: 'primary.main' }}
                                             >
                                                 <PackageIcon fontSize="small" />
@@ -361,7 +370,7 @@ const PortalUsers = () => {
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
                         Assign a subscription tier to **{selectedUser?.name}**. This will override their current restrictions.
                     </Typography>
-                    
+
                     <FormControl fullWidth>
                         <InputLabel>Select Package</InputLabel>
                         <Select

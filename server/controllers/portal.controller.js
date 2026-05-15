@@ -199,6 +199,86 @@ const portalController = {
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    getAnalytics: async (req, res) => {
+        try {
+            const { type, startDate, endDate } = req.query;
+            const { sequelize } = require("../config/db");
+            const { Op } = require("sequelize");
+
+            let whereCondition = {};
+            if (startDate && endDate) {
+                // Ensure dates cover the full day
+                whereCondition.created_at = {
+                    [Op.between]: [
+                        new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+                        new Date(new Date(endDate).setHours(23, 59, 59, 999))
+                    ]
+                };
+            }
+
+            if (type === 'interaction') {
+                const users = await User.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+                    ],
+                    where: { ...whereCondition, role: 'OWNER' },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                const bookings = await Booking.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('bookings.created_at')), 'date'],
+                        [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('business.user_id'))), 'count']
+                    ],
+                    include: [{
+                        model: Business,
+                        attributes: [],
+                        required: true
+                    }],
+                    where: {
+                        'created_at': whereCondition.created_at || { [Op.ne]: null }
+                    },
+                    group: [sequelize.fn('DATE', sequelize.col('bookings.created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('bookings.created_at')), 'ASC']]
+                });
+
+                return res.json({ success: true, data: { users, bookings } });
+            } else if (type === 'revenue') {
+                const payments = await Payment.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('SUM', sequelize.col('paid_amount')), 'amount']
+                    ],
+                    where: {
+                        ...whereCondition,
+                        [Op.or]: [{ payment_status: true }, { payment_status: 1 }]
+                    },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                const subscriptions = await UserSubscription.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('SUM', sequelize.col('amount')), 'amount']
+                    ],
+                    where: { ...whereCondition, status: 'active' },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                return res.json({ success: true, data: { payments, subscriptions } });
+            }
+
+            res.status(400).json({ success: false, message: "Invalid analytics type" });
+        } catch (error) {
+            console.error('Portal Analytics Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
 

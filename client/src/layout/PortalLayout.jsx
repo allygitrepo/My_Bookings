@@ -3,6 +3,7 @@ import { Box, useTheme, useMediaQuery, AppBar, Toolbar, IconButton, Typography }
 import { Menu as MenuIcon } from '@mui/icons-material';
 import { Outlet } from 'react-router-dom';
 import PortalSidebar from './PortalSidebar';
+import './PortalLayout.css';
 
 const DRAWER_WIDTH = 260;
 
@@ -14,16 +15,20 @@ const PortalLayout = () => {
     const handleDrawerToggle = () => setMobileOpen(!mobileOpen);
 
     return (
-        <Box sx={{ display: 'flex', minHeight: '100vh', bgcolor: 'transparent' }}>
+        <Box className="portal-layout-root">
             <PortalSidebar
                 variant={isMobile ? 'temporary' : 'permanent'}
                 open={isMobile ? mobileOpen : true}
                 onClose={handleDrawerToggle}
             />
 
-            <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', width: { md: `calc(100% - ${DRAWER_WIDTH}px)` } }}>
+            <Box
+                component="main"
+                className="portal-main-content"
+                sx={{ p: { xs: 2, md: 4 } }}
+            >
                 {isMobile && (
-                    <AppBar position="sticky" color="inherit" elevation={0} sx={{ borderBottom: '1px solid', borderColor: 'divider' }}>
+                    <AppBar position="sticky" elevation={0} className="portal-appbar">
                         <Toolbar>
                             <IconButton color="inherit" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2 }}>
                                 <MenuIcon />
@@ -33,7 +38,7 @@ const PortalLayout = () => {
                     </AppBar>
                 )}
 
-                <Box component="main" sx={{ flexGrow: 1, p: { xs: 2, md: 4 } }}>
+                <Box className="portal-outlet-wrapper">
                     <Outlet />
                 </Box>
             </Box>

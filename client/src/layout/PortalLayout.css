@@ -1,0 +1,26 @@
+.portal-layout-root {
+    display: flex;
+    min-height: 100vh;
+    width: 100%;
+    background-color: transparent;
+    overflow: hidden;
+}
+
+.portal-main-content {
+    flex-grow: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    width: 100%;
+    max-width: 100%;
+}
+
+.portal-appbar {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background-color: inherit;
+}
+
+.portal-outlet-wrapper {
+    flex-grow: 1;
+    width: 100%;
+}

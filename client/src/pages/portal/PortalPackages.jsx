@@ -424,6 +424,7 @@ const PortalPackages = () => {
                 <Table>
                     <TableHead>
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 700, width: 60 }}>Sr. No</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Package Details</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Pricing</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Restrictions</TableCell>
@@ -440,12 +441,15 @@ const PortalPackages = () => {
                             </TableRow>
                         ) : packages.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={5} align="center" sx={{ py: 10, color: 'text.secondary' }}>
+                                <TableCell colSpan={6} align="center" sx={{ py: 10, color: 'text.secondary' }}>
                                     No packages created yet.
                                 </TableCell>
                             </TableRow>
-                        ) : packages.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((pkg) => (
+                        ) : packages.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((pkg, index) => (
                             <TableRow key={pkg.id} hover>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                    {page * rowsPerPage + index + 1}
+                                </TableCell>
                                 <TableCell>
                                     <Typography variant="body2" fontWeight={800}>{pkg.name}</Typography>
                                 </TableCell>
