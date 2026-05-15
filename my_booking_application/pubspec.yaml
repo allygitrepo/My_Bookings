@@ -1,0 +1,77 @@
+name: my_booking_application
+description: "A new Flutter project."
+publish_to: 'none' 
+
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.0
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  cupertino_icons: ^1.0.8
+  dio: ^5.9.2
+  get: ^4.7.3
+  get_storage: ^2.1.1
+  intl: ^0.20.2
+  flutter_launcher_icons: ^0.14.4
+  image_picker: ^1.2.2
+  path_provider: ^2.1.5
+
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+  package_rename: ^1.10.1
+
+flutter:
+
+  uses-material-design: true
+
+  assets:
+    - assets/animation_files/
+    - assets/images/
+    - assets/icons/
+
+  fonts:
+    - family: arimo
+      fonts: 
+        - asset: assets/fonts/Arimo-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Arimo-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/Arimo-Medium.ttf
+          weight: 500  
+        - asset: assets/fonts/Arimo-SemiBold.ttf
+          weight: 600  
+        - asset: assets/fonts/Arimo-Medium.ttf
+          weight: 100    
+    - family: roboto_slab
+      fonts:
+        - asset: assets/fonts/RobotoSlab-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/RobotoSlab-Bold.ttf
+          weight: 700
+        - asset: assets/fonts/RobotoSlab-Medium.ttf
+          weight: 500  
+        - asset: assets/fonts/RobotoSlab-SemiBold.ttf
+          weight: 600  
+        - asset: assets/fonts/RobotoSlab-Light.ttf
+          weight: 100      
+
+flutter_launcher_icons:
+  android: true
+  iOS: true
+  image_path: "assets/icons/application_logo.png"
+
+package_rename_config:
+  android:
+    app_name: "My Bookings"
+    package_name: "com.allysoftsolutions.mybookings"
+
+
