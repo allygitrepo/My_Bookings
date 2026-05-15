@@ -140,6 +140,8 @@ const PricingSection = () => {
             .finally(() => setLoading(false));
     }, []);
 
+    if (!loading && (error || packages.length === 0)) return null;
+
     return (
         <section id="pricing" style={{ padding: '100px 24px', background: 'linear-gradient(180deg, #0f172a 0%, #1a0e2e 60%, #0f172a 100%)', position: 'relative', overflow: 'hidden' }}>
             <div style={{ position: 'absolute', top: '20%', left: '50%', transform: 'translateX(-50%)', width: 800, height: 600, borderRadius: '50%', background: 'radial-gradient(circle, rgba(139,92,246,0.07) 0%, transparent 65%)', pointerEvents: 'none' }} />
@@ -167,11 +169,6 @@ const PricingSection = () => {
                     </div>
                 )}
 
-                {error && !loading && (
-                    <div style={{ textAlign: 'center', padding: '40px', color: 'rgba(255,255,255,0.5)', background: 'rgba(255,255,255,0.03)', borderRadius: 16, border: '1px solid rgba(255,255,255,0.07)' }}>
-                        <p>{error}</p>
-                    </div>
-                )}
 
                 {!loading && !error && (
                     <div style={{
@@ -188,11 +185,6 @@ const PricingSection = () => {
                     </div>
                 )}
 
-                {!loading && !error && packages.length === 0 && (
-                    <div style={{ textAlign: 'center', padding: '60px', color: 'rgba(255,255,255,0.4)' }}>
-                        <p>No active plans available right now. Check back soon!</p>
-                    </div>
-                )}
 
             </div>
         </section>
