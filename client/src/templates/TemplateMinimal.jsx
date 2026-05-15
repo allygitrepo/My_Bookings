@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import {
-    Container, Box, Typography, Button, Grid,
+    Container, Box, Typography, Button,
     List, ListItem, ListItemText, Divider, Paper,
     Modal, TextField, MenuItem, Select, FormControl, InputLabel
 } from '@mui/material';
@@ -215,10 +215,11 @@ const TemplateMinimal = ({ data }) => {
                 </Reveal>
 
                 {/* ── MAIN GRID ── */}
-                <Grid container spacing={5} alignItems="flex-start">
+                <Box sx={{ display: 'flex', gap: 5, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+
 
                     {/* LEFT – Services */}
-                    <Grid item xs={12} md={7}>
+                    <Box sx={{ flex: '1 1 320px', minWidth: 0 }}>
                         <Reveal variant={fadeRight} delay={0}>
                             <Typography sx={{ fontSize: '.7rem', fontWeight: 700, letterSpacing: '2.5px', textTransform: 'uppercase', color: '#bbb', mb: 3 }}>
                                 Featured Services
@@ -276,10 +277,10 @@ const TemplateMinimal = ({ data }) => {
                                 </Reveal>
                             ))}
                         </List>
-                    </Grid>
+                    </Box>
 
                     {/* RIGHT – Info Card */}
-                    <Grid item xs={12} md={5}>
+                    <Box sx={{ flex: '0 1 280px', minWidth: 0, width: '100%' }}>
                         <Reveal variant={fadeLeft} delay={0.15}>
                             <Paper
                                 elevation={0}
@@ -354,8 +355,8 @@ const TemplateMinimal = ({ data }) => {
                                 ))}
                             </Paper>
                         </Reveal>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
 
                 {/* ── FOOTER ── */}
                 <Reveal delay={0.1}>

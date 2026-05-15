@@ -186,111 +186,108 @@ const WebsiteGenerator = () => {
                     subtitle="Design and launch your professional booking website in seconds."
                 />
 
-                <Box sx={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-                    {/* Left Panel: Configuration Sidebar */}
-                    <Box sx={{ flex: '0 0 340px', minWidth: 0, width: { xs: '100%' } }}>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                    {/* Top Panel: Configuration Settings */}
+                    <Box sx={{ width: '100%' }}>
                         <Paper
                             elevation={0}
                             sx={{
-                                p: { xs: 2, sm: 3 },
-                                borderRadius: '16px',
-                                border: '1px solid',
+                                p: { xs: 2.5, sm: 4 },
+                                borderRadius: '24px',
+                                border: '1.5px solid',
                                 borderColor: 'divider',
-                                height: 'fit-content',
-                                position: { xs: 'static', lg: 'sticky' },
-                                top: 24,
                                 display: 'flex',
                                 flexDirection: 'column',
-                                gap: 3.5,
+                                gap: 4,
                                 bgcolor: 'background.paper',
-                                mb: { xs: 2, lg: 0 }
+                                boxShadow: '0 4px 20px rgba(0,0,0,0.03)'
                             }}
                         >
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    1. Select Business
-                                </Typography>
-                                <TextField
-                                    select
-                                    fullWidth
-                                    size="small"
-                                    value={selectedBusinessId}
-                                    onChange={handleBusinessChange}
-                                    variant="outlined"
-                                    sx={{ mt: 1 }}
-                                >
-                                    {businesses.map(biz => (
-                                        <MenuItem key={biz.id} value={biz.id}>
-                                            {biz.business_name}
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-                            </Box>
+                            <Box sx={{
+                                display: 'grid',
+                                gridTemplateColumns: { xs: '1fr', md: '1fr 1fr', lg: '1fr 1fr 1fr' },
+                                gap: 4
+                            }}>
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        1. Select Business
+                                    </Typography>
+                                    <TextField
+                                        select
+                                        fullWidth
+                                        size="small"
+                                        value={selectedBusinessId}
+                                        onChange={handleBusinessChange}
+                                        variant="outlined"
+                                        sx={{ mt: 1 }}
+                                    >
+                                        {businesses.map(biz => (
+                                            <MenuItem key={biz.id} value={biz.id}>
+                                                {biz.business_name}
+                                            </MenuItem>
+                                        ))}
+                                    </TextField>
+                                </Box>
 
-                            <Divider />
+                                {/* <Box>
+                                    <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        2. Website Identity
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        size="small"
+                                        label="Website Username (Slug)"
+                                        value={settings.slug}
+                                        placeholder="e.g. shiv-clinic"
+                                        onChange={(e) => {
+                                            const val = e.target.value;
+                                            if (blockEmoji(val) === true) {
+                                                setSettings({ ...settings, slug: val });
+                                            } else {
+                                                toast.error('Emojis are not allowed');
+                                            }
+                                        }}
+                                        helperText={selectedBusinessId ? (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
+                                                <Typography variant="caption" color="text.secondary">
+                                                    Link: {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                                </Typography>
+                                                <Tooltip title="Visit Website">
+                                                    <IconButton
+                                                        size="small"
+                                                        sx={{ p: 0.2 }}
+                                                        onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                    >
+                                                        <OpenIcon sx={{ fontSize: '0.8rem' }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                            </Box>
+                                        ) : 'Select a business to get a live link'}
+                                        sx={{ mt: 1 }}
+                                    />
+                                </Box> */}
 
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    2. Website Identity
-                                </Typography>
-                                <TextField
-                                    fullWidth
-                                    size="small"
-                                    label="Website Username (Slug)"
-                                    value={settings.slug}
-                                    placeholder="e.g. shiv-clinic"
-                                    onChange={(e) => {
-                                        const val = e.target.value;
-                                        if (blockEmoji(val) === true) {
-                                            setSettings({ ...settings, slug: val });
-                                        } else {
-                                            toast.error('Emojis are not allowed');
-                                        }
-                                    }}
-                                    helperText={selectedBusinessId ? (
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mt: 0.5 }}>
-                                            <Typography variant="caption" color="text.secondary">
-                                                Link: {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
-                                            </Typography>
-                                            <Tooltip title="Visit Website">
-                                                <IconButton
-                                                    size="small"
-                                                    sx={{ p: 0.2 }}
-                                                    onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
-                                                >
-                                                    <OpenIcon sx={{ fontSize: '0.8rem' }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    ) : 'Select a business to get a live link'}
-                                    sx={{ mt: 1 }}
-                                />
-                            </Box>
-
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    3. Choose Site Mode
-                                </Typography>
-                                <Box sx={{ display: 'flex', gap: 1.5, mt: 0.5 }}>
-                                    <Box sx={{ flex: 1 }}>
+                                <Box>
+                                    <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        2. Choose Site Mode
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
                                         <Button
                                             fullWidth
                                             variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
                                             onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
-                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800 }}
+                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
                                         >
                                             Website
                                         </Button>
-                                    </Box>
-                                    <Box sx={{ flex: 1 }}>
                                         <Tooltip title={!businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations ? "" : "Portfolios are for solo providers only."}>
-                                            <span style={{ display: 'block', width: '100%' }}>
+                                            <span style={{ flex: 1 }}>
                                                 <Button
                                                     fullWidth
                                                     disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
                                                     variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
                                                     onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: 'portfolio1' })}
-                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, height: '100%' }}
+                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1, height: '100%' }}
                                                 >
                                                     Portfolio
                                                 </Button>
@@ -298,111 +295,100 @@ const WebsiteGenerator = () => {
                                         </Tooltip>
                                     </Box>
                                 </Box>
-                            </Box>
 
-                            <Box>
-                                <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                                    4. Professional Bio
-                                </Typography>
-                                <TextField
-                                    fullWidth
-                                    multiline
-                                    rows={3}
-                                    size="small"
-                                    placeholder={settings.website_type === 'portfolio' ? "Describe your expertise and what you offer..." : "Summary of your business for the homepage..."}
-                                    value={settings.description}
-                                    onChange={(e) => setSettings({ ...settings, description: e.target.value })}
-                                    sx={{ mt: 1 }}
-                                />
-                            </Box>
+                                <Box sx={{ gridColumn: { lg: 'span 2' } }}>
+                                    <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        3. Professional Bio
+                                    </Typography>
+                                    <TextField
+                                        fullWidth
+                                        multiline
+                                        rows={2}
+                                        size="small"
+                                        placeholder={settings.website_type === 'portfolio' ? "Describe your expertise and what you offer..." : "Summary of your business for the homepage..."}
+                                        value={settings.description}
+                                        onChange={(e) => setSettings({ ...settings, description: e.target.value })}
+                                        sx={{ mt: 1 }}
+                                    />
+                                </Box>
 
-                            <Box>
-                                <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'text.secondary', mb: 1.5 }}>
-                                    5. Choose Template
-                                </Typography>
-                                <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                                    {(settings.website_type === 'portfolio' ? [
-                                        { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
-                                        { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
-                                        { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
-                                    ] : [
-                                        { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
-                                        { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
-                                        { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
-                                    ]).map((tmpl) => {
-                                        const isSelected = settings.selected_template === tmpl.id;
-                                        return (
-                                            <Box
-                                                key={tmpl.id}
-                                                onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
-                                                sx={{
-                                                    cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                    opacity: isSuspended ? 0.6 : 1, borderRadius: '16px',
-                                                    position: 'relative',
-                                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                    border: '2.5px solid',
-                                                    borderColor: isSelected ? 'primary.main' : 'transparent',
-                                                    bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
-                                                    p: 0.5,
-                                                    '&:hover': {
-                                                        transform: 'translateY(-2px)',
-                                                        borderColor: isSelected ? 'primary.main' : 'divider',
-                                                    }
-                                                }}
-                                            >
-                                                <Box sx={{
-                                                    borderRadius: 2,
-                                                    overflow: 'hidden',
-                                                    aspectRatio: '1/1',
-                                                    boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
-                                                }}>
-                                                    <CardMedia
-                                                        component="img"
-                                                        image={tmpl.img}
-                                                        sx={{
-                                                            width: '100%',
-                                                            height: '100%',
-                                                            objectFit: 'cover',
-                                                            objectPosition: 'top',
-                                                            filter: isSelected ? 'none' : 'grayscale(20%)',
-                                                            opacity: isSelected ? 1 : 0.7,
-                                                            transition: 'all 0.3s'
-                                                        }}
-                                                    />
-                                                </Box>
-                                                <Typography sx={{
-                                                    fontSize: '0.6rem',
-                                                    fontWeight: 800,
-                                                    textAlign: 'center',
-                                                    mt: 1,
-                                                    color: isSelected ? 'primary.main' : 'text.secondary',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.5px'
-                                                }}>
-                                                    {tmpl.name}
-                                                </Typography>
-                                                {isSelected && (
+                                <Box sx={{ gridColumn: { lg: 'span 1' } }}>
+                                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'text.secondary', mb: 1.5 }}>
+                                        5. Choose Template
+                                    </Typography>
+                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
+                                        {(settings.website_type === 'portfolio' ? [
+                                            { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
+                                            { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
+                                            { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
+                                        ] : [
+                                            { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
+                                            { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
+                                            { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
+                                        ]).map((tmpl) => {
+                                            const isSelected = settings.selected_template === tmpl.id;
+                                            return (
+                                                <Box
+                                                    key={tmpl.id}
+                                                    onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
+                                                    sx={{
+                                                        cursor: isSuspended ? 'not-allowed' : 'pointer',
+                                                        opacity: isSuspended ? 0.6 : 1, borderRadius: '12px',
+                                                        position: 'relative',
+                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                        border: '2.5px solid',
+                                                        borderColor: isSelected ? 'primary.main' : 'transparent',
+                                                        bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
+                                                        p: 0.5,
+                                                        '&:hover': {
+                                                            transform: 'translateY(-2px)',
+                                                            borderColor: isSelected ? 'primary.main' : 'divider',
+                                                        }
+                                                    }}
+                                                >
                                                     <Box sx={{
-                                                        position: 'absolute', top: -4, right: -4,
-                                                        bgcolor: 'primary.main', color: 'white',
-                                                        borderRadius: '50%', width: 16, height: 16,
-                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                        boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                        zIndex: 2
+                                                        borderRadius: 1.5,
+                                                        overflow: 'hidden',
+                                                        aspectRatio: '1/1',
+                                                        boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
                                                     }}>
-                                                        <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
+                                                        <CardMedia
+                                                            component="img"
+                                                            image={tmpl.img}
+                                                            sx={{
+                                                                width: '100%',
+                                                                height: '100%',
+                                                                objectFit: 'cover',
+                                                                objectPosition: 'top',
+                                                                filter: isSelected ? 'none' : 'grayscale(20%)',
+                                                                opacity: isSelected ? 1 : 0.7,
+                                                                transition: 'all 0.3s'
+                                                            }}
+                                                        />
                                                     </Box>
-                                                )}
-                                            </Box>
-                                        );
-                                    })}
+                                                    {isSelected && (
+                                                        <Box sx={{
+                                                            position: 'absolute', top: -4, right: -4,
+                                                            bgcolor: 'primary.main', color: 'white',
+                                                            borderRadius: '50%', width: 16, height: 16,
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                            zIndex: 2
+                                                        }}>
+                                                            <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
+                                                        </Box>
+                                                    )}
+                                                </Box>
+                                            );
+                                        })}
+                                    </Box>
                                 </Box>
                             </Box>
                         </Paper>
                     </Box>
 
-                    {/* Right Panel: Full-Width Preview */}
-                    <Box sx={{ flex: '1 1 500px', minWidth: 0 }}>                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    {/* Bottom Panel: Full-Width Preview */}
+                    <Box sx={{ width: '100%' }}>                        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
                         <Box sx={{ mb: 2, display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, width: { xs: '100%', sm: 'auto' }, justifyContent: 'space-between' }}>
                                 <Typography sx={{ fontSize: '1.25rem', fontWeight: 950, color: 'text.primary' }}>
