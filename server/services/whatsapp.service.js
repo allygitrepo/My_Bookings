@@ -85,7 +85,12 @@ const whatsappService = {
             return response.data;
         } catch (error) {
             console.error('[WhatsAppService] Status check error:', error.response?.data || error.message);
-            return { success: false, status: 'disconnected', error: error.message };
+            return { 
+                success: false, 
+                status: 'disconnected', 
+                error: error.message,
+                message: error.response?.data?.message || error.message
+            };
         }
     },
     /**
@@ -189,20 +194,28 @@ const whatsappService = {
                 const staffName = fullBooking.staff?.staff_name || "our staff";
 
                 // Message to Customer
-                const customerMsg = `Hello *${fullBooking.customer.name}*! 👋\n\nYour booking at *${bizName}* is confirmed! ✅\n\n🛠 *Service:* ${svcNames}\n📅 *Date:* ${dateStr}\n🕒 *Time:* ${timeRange}\n👤 *Staff:* ${staffName}\n💰 *Payment:* ₹${amount}\n\nThank you for choosing us!`;
+                if (fullBooking.business?.whatsapp_send_customer !== false) {
+                    const customerMsg = `Hello *${fullBooking.customer.name}*! 👋\n\nYour booking at *${bizName}* is confirmed! ✅\n\n🛠 *Service:* ${svcNames}\n📅 *Date:* ${dateStr}\n🕒 *Time:* ${timeRange}\n👤 *Staff:* ${staffName}\n💰 *Payment:* ₹${amount}\n\nThank you for choosing us!`;
 
-                const cleanPhone = fullBooking.customer.phone.replace(/\D/g, '');
-                whatsappService.sendTextMessage(fullBooking.business_id, cleanPhone, customerMsg)
-                    .then(res => console.log(`[WhatsApp] Customer notified:`, res?.success))
-                    .catch(err => console.error(`[WhatsApp] Customer notification failed:`, err.message));
+                    const cleanPhone = fullBooking.customer.phone.replace(/\D/g, '');
+                    whatsappService.sendTextMessage(fullBooking.business_id, cleanPhone, customerMsg)
+                        .then(res => console.log(`[WhatsApp] Customer notified:`, res?.success))
+                        .catch(err => console.error(`[WhatsApp] Customer notification failed:`, err.message));
+                } else {
+                    console.log(`[WhatsApp] Skipping customer notification: Disabled for business ${fullBooking.business_id}`);
+                }
 
                 // Message to Staff
                 if (fullBooking.staff?.phone) {
-                    const staffMsg = `Hi *${staffName}*! 📢\n\nYou have a new confirmed booking!\n\n👤 *Customer:* ${fullBooking.customer.name}\n🛠 *Service:* ${svcNames}\n📅 *Date:* ${dateStr}\n🕒 *Time:* ${timeRange}\n💰 *Amount:* ₹${amount}\n\nCheck your dashboard for details.`;
-                    const cleanStaffPhone = fullBooking.staff.phone.replace(/\D/g, '');
-                    whatsappService.sendTextMessage(fullBooking.business_id, cleanStaffPhone, staffMsg)
-                        .then(res => console.log(`[WhatsApp] Staff notified:`, res?.success))
-                        .catch(err => console.error(`[WhatsApp] Staff notification failed:`, err.message));
+                    if (fullBooking.business?.whatsapp_send_staff !== false) {
+                        const staffMsg = `Hi *${staffName}*! 📢\n\nYou have a new confirmed booking!\n\n👤 *Customer:* ${fullBooking.customer.name}\n🛠 *Service:* ${svcNames}\n📅 *Date:* ${dateStr}\n🕒 *Time:* ${timeRange}\n💰 *Amount:* ₹${amount}\n\nCheck your dashboard for details.`;
+                        const cleanStaffPhone = fullBooking.staff.phone.replace(/\D/g, '');
+                        whatsappService.sendTextMessage(fullBooking.business_id, cleanStaffPhone, staffMsg)
+                            .then(res => console.log(`[WhatsApp] Staff notified:`, res?.success))
+                            .catch(err => console.error(`[WhatsApp] Staff notification failed:`, err.message));
+                    } else {
+                        console.log(`[WhatsApp] Skipping staff notification: Disabled for business ${fullBooking.business_id}`);
+                    }
                 }
             }
         } catch (error) {

@@ -286,7 +286,28 @@ const businessController = {
                 keyToPass = null;
             }
 
-            const data = await whatsappService.initiateInstance(keyToPass, business.business_name);
+            let data;
+            try {
+                data = await whatsappService.initiateInstance(keyToPass, business.business_name);
+                
+                // Trigger catch if gateway returned success=false with "Instance not found"
+                if (data && data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found'))) {
+                    throw new Error('Instance not found');
+                }
+            } catch (initError) {
+                const errorMsg = initError.response?.data?.message || initError.message;
+                const isNotFound = errorMsg === 'Instance not found' || errorMsg?.includes('not found') || errorMsg?.includes('Instance not found');
+                
+                if (isNotFound && keyToPass) {
+                    console.log(`[WhatsApp] Instance ${keyToPass} not found on gateway. Purging key and requesting a new one...`);
+                    // Update model state
+                    await business.update({ whatsapp_instance_key: null });
+                    // Request a new fresh instance
+                    data = await whatsappService.initiateInstance(null, business.business_name);
+                } else {
+                    throw initError;
+                }
+            }
 
             // Save instanceKey if it's new (Step 1 returned it)
             if (data.success && data.instanceKey && data.instanceKey !== business.whatsapp_instance_key) {
@@ -305,7 +326,9 @@ const businessController = {
                 ...data,
                 profileImage: data.profileImage || data.profile_picture || null,
                 name: data.name || data.pushname || null,
-                phone: data.phone || data.phonenumber || null
+                phone: data.phone || data.phonenumber || null,
+                whatsapp_send_staff: business.whatsapp_send_staff,
+                whatsapp_send_customer: business.whatsapp_send_customer
             });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -315,12 +338,41 @@ const businessController = {
     getWhatsAppStatus: async (req, res) => {
         try {
             const { id } = req.params;
+            const { force } = req.query; // Check if the client requested a forced remote check
+
             const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
             if (!business || !business.whatsapp_instance_key) {
                 return res.json({ success: false, status: 'disconnected', message: "WhatsApp not linked" });
             }
 
+            // If NOT forced, respond instantly using our fast cached database values!
+            if (force !== 'true') {
+                return res.json({
+                    success: true,
+                    status: business.whatsapp_connected ? 'connected' : 'disconnected',
+                    whatsapp_send_staff: business.whatsapp_send_staff,
+                    whatsapp_send_customer: business.whatsapp_send_customer,
+                    isCached: true
+                });
+            }
+
             const data = await whatsappService.getInstanceStatus(business.whatsapp_instance_key);
+
+            // Handle recovery if the gateway reports the instance does not exist
+            if (data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found') || data.message?.includes('not found'))) {
+                console.log(`[WhatsApp] Status reports Instance not found for key ${business.whatsapp_instance_key}. Purging obsolete key...`);
+                await business.update({
+                    whatsapp_instance_key: null,
+                    whatsapp_connected: false
+                });
+                return res.json({ 
+                    success: false, 
+                    status: 'disconnected', 
+                    message: "Instance not found. Wiped key.",
+                    whatsapp_send_staff: business.whatsapp_send_staff,
+                    whatsapp_send_customer: business.whatsapp_send_customer
+                });
+            }
 
             // Sync DB status
             if (data.success) {
@@ -335,7 +387,9 @@ const businessController = {
                 ...data,
                 profileImage: data.profileImage || data.profile_picture || null,
                 name: data.name || data.pushname || null,
-                phone: data.phone || data.phonenumber || null
+                phone: data.phone || data.phonenumber || null,
+                whatsapp_send_staff: business.whatsapp_send_staff,
+                whatsapp_send_customer: business.whatsapp_send_customer
             });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
