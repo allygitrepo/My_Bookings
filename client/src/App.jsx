@@ -137,6 +137,8 @@ function App() {
                         <Route path="/portal/templates" element={<PortalTemplates />} />
                     </Route>
 
+                  <Route path="/:id/admin" element={<PublicBusinessWebsite subPath="admin" />} />
+                  <Route path="/:id/*" element={<PublicBusinessWebsite />} />
                   <Route path="/:id" element={<PublicBusinessWebsite />} />
                   <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

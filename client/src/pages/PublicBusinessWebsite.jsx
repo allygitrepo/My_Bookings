@@ -12,7 +12,7 @@ import BookingWidget from '../widgets/BookingWidget';
 import PageTransition from '../components/PageTransition';
 import { decodeBusinessId } from '../utils/obfuscation';
 
-const PublicBusinessWebsite = () => {
+const PublicBusinessWebsite = ({ subPath }) => {
     // ... existing state ...
     const { id } = useParams();
     const navigate = useNavigate();
@@ -108,9 +108,13 @@ const PublicBusinessWebsite = () => {
 
         const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
         if (!standardTemplates.includes(template)) {
+            const apacheBase = import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080';
+            const templatePath = subPath
+                ? `${apacheBase}/${template}_biz_${businessData.business.id}/${subPath}/`
+                : `${apacheBase}/${template}_biz_${businessData.business.id}/`;
             return (
                 <iframe
-                    src={`${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${template}_biz_${businessData.business.id}/`}
+                    src={templatePath}
                     style={{
                         width: '100%',
                         height: '100vh',
@@ -118,7 +122,7 @@ const PublicBusinessWebsite = () => {
                         background: '#ffffff',
                         display: 'block'
                     }}
-                    title="Business Website"
+                    title={subPath ? 'Template Admin' : 'Business Website'}
                 />
             );
         }
