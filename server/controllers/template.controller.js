@@ -6,6 +6,16 @@ const TemplateProject = require("../models/templateProject.model");
 const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
 const BASE_HTDOCS_DIR = "C:\\xampp\\htdocs";
 
+const getApiBaseUrl = () =>
+    (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
+
+const resolveTemplateIconUrl = (iconPath) => {
+    if (!iconPath) return null;
+    if (iconPath.startsWith("http://") || iconPath.startsWith("https://")) return iconPath;
+    const path = iconPath.startsWith("/") ? iconPath : `/${iconPath}`;
+    return `${getApiBaseUrl()}${path}`;
+};
+
 // Helper to copy directory recursively
 const copyFolderRecursiveSync = (source, target) => {
     if (!fs.existsSync(target)) {
@@ -417,7 +427,7 @@ const templateController = {
                 displayName: t.displayName,
                 category: t.category,
                 type: t.type || 'website',
-                icon: t.icon ? `${process.env.APACHE_BASE_URL || "http://localhost:8080"}${t.icon}` : null,
+                icon: resolveTemplateIconUrl(t.icon),
                 isCustom: true,
                 isActive: t.isActive
             }));
@@ -436,10 +446,14 @@ const templateController = {
     portalGetTemplates: async (req, res) => {
         try {
             const templates = await TemplateProject.findAll();
+            const formatted = templates.map((t) => {
+                const row = t.toJSON ? t.toJSON() : t;
+                return { ...row, icon: resolveTemplateIconUrl(row.icon) };
+            });
             res.json({
                 success: true,
                 message: "All templates fetched successfully",
-                data: templates
+                data: formatted
             });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

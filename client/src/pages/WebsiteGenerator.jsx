@@ -27,6 +27,7 @@ import TemplatePortfolioCreative from '../templates/TemplatePortfolioCreative';
 import { encodeBusinessId } from '../utils/obfuscation';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import { blockEmoji } from '../utils/validators';
+import { getTemplateIconUrl } from '../utils/templateIcon';
 import toast from 'react-hot-toast';
 
 const WebsiteGenerator = () => {
@@ -36,6 +37,7 @@ const WebsiteGenerator = () => {
     const [saving, setSaving] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
     const [customTemplates, setCustomTemplates] = useState([]);
+    const [failedTemplateIcons, setFailedTemplateIcons] = useState({});
 
     // Website Settings State
     const [settings, setSettings] = useState({
@@ -114,6 +116,10 @@ const WebsiteGenerator = () => {
         fetchBusinesses();
         fetchCustomTemplates();
     }, []);
+
+    useEffect(() => {
+        setFailedTemplateIcons({});
+    }, [customTemplates]);
 
     useEffect(() => {
         if (selectedBusinessId && businesses.length > 0) {
@@ -420,7 +426,7 @@ const WebsiteGenerator = () => {
                                             .map(c => ({
                                                 id: c.id,
                                                 name: c.displayName,
-                                                img: `${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${c.templateId || c.id}/favicon.ico`,
+                                                img: getTemplateIconUrl(c),
                                                 isCustom: true,
                                                 category: c.category,
                                                 templateId: c.templateId || c.id,
@@ -479,19 +485,39 @@ const WebsiteGenerator = () => {
                                                         alignItems: 'center',
                                                         justifyContent: 'center',
                                                     }}>
-                                                        <CardMedia
-                                                            component="img"
-                                                            image={tmpl.img}
-                                                            sx={{
-                                                                width: tmpl.isCustom ? '60%' : '100%',
-                                                                height: tmpl.isCustom ? '60%' : '100%',
-                                                                objectFit: tmpl.isCustom ? 'contain' : 'cover',
-                                                                objectPosition: 'top',
-                                                                filter: isSelected ? 'none' : 'grayscale(15%)',
-                                                                opacity: isSelected ? 1 : 0.75,
-                                                                transition: 'all 0.3s'
-                                                            }}
-                                                        />
+                                                        {tmpl.isCustom && (failedTemplateIcons[tmpl.id] || !tmpl.img) ? (
+                                                            <Avatar
+                                                                sx={{
+                                                                    width: '60%',
+                                                                    height: '60%',
+                                                                    bgcolor: 'rgba(99,102,241,0.2)',
+                                                                    color: 'primary.main',
+                                                                    fontWeight: 800,
+                                                                    fontSize: '1.5rem',
+                                                                }}
+                                                            >
+                                                                {tmpl.name?.charAt(0)?.toUpperCase() || 'T'}
+                                                            </Avatar>
+                                                        ) : (
+                                                            <CardMedia
+                                                                component="img"
+                                                                image={tmpl.img}
+                                                                onError={() => {
+                                                                    if (tmpl.isCustom) {
+                                                                        setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
+                                                                    }
+                                                                }}
+                                                                sx={{
+                                                                    width: tmpl.isCustom ? '60%' : '100%',
+                                                                    height: tmpl.isCustom ? '60%' : '100%',
+                                                                    objectFit: tmpl.isCustom ? 'contain' : 'cover',
+                                                                    objectPosition: 'top',
+                                                                    filter: isSelected ? 'none' : 'grayscale(15%)',
+                                                                    opacity: isSelected ? 1 : 0.75,
+                                                                    transition: 'all 0.3s'
+                                                                }}
+                                                            />
+                                                        )}
                                                     </Box>
 
                                                     {/* Template Name Label Below Thumbnail */}

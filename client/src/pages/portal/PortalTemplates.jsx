@@ -44,6 +44,7 @@ import {
 import axiosInstance from "../../api/axiosInstance";
 import PageTransition from "../../components/PageTransition";
 import toast from "react-hot-toast";
+import { getTemplateIconUrl } from "../../utils/templateIcon";
 
 const INDUSTRY_OPTIONS = [
     { label: "Healthcare / Hospital", value: "Healthcare / Hospital", icon: "🏥" },
@@ -419,7 +420,7 @@ const PortalTemplates = () => {
                                         {/* Header row: Avatar + Name + Slug */}
                                         <Box display="flex" alignItems="center" gap={2} mb={2}>
                                             <Avatar
-                                                src={`${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${t.templateId || t.id}/favicon.ico`}
+                                                src={getTemplateIconUrl(t) || undefined}
                                                 sx={{
                                                     width: 52,
                                                     height: 52,
