@@ -17,6 +17,8 @@ import {
     DialogActions,
     TextField,
     MenuItem,
+    Select,
+    InputLabel,
     Card,
     CardContent,
     CardActions,
@@ -264,18 +266,13 @@ const PortalTemplates = () => {
             <Box sx={{ p: 4, minHeight: "100vh" }}>
                 {/* Header Section */}
                 <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
-                    <Box display="flex" alignItems="center" gap={2}>
-                        <Avatar sx={{ bgcolor: "primary.main", width: 56, height: 56 }}>
-                            <TemplatesIcon fontSize="large" />
-                        </Avatar>
-                        <Box>
-                            <Typography variant="h4" fontWeight={800} color="text.primary" id="templates-title">
-                                Custom ZIP Templates
-                            </Typography>
-                            <Typography variant="subtitle2" color="text.secondary">
-                                Deploy self-contained HTML/PHP templates to XAMPP Apache for isolated multi-tenant booking sites.
-                            </Typography>
-                        </Box>
+                    <Box>
+                        <Typography variant="h4" fontWeight={800} color="text.primary" id="templates-title">
+                            Custom ZIP Templates
+                        </Typography>
+                        <Typography variant="subtitle2" color="text.secondary">
+                            Deploy self-contained HTML/PHP templates to XAMPP Apache for isolated multi-tenant booking sites.
+                        </Typography>
                     </Box>
                     <Button
                         id="btn-deploy-template"
@@ -301,51 +298,65 @@ const PortalTemplates = () => {
 
                 <Divider sx={{ mb: 4, borderColor: "rgba(255, 255, 255, 0.08)" }} />
 
-                {/* Categories Tabs Filter */}
-                <Paper
-                    sx={{
-                        background: "rgba(30, 41, 59, 0.4)",
-                        backdropFilter: "blur(12px)",
-                        border: "1px solid rgba(255, 255, 255, 0.05)",
-                        borderRadius: "16px",
-                        mb: 4,
-                        p: 1
-                    }}
-                >
-                    <Tabs
-                        value={currentTab}
-                        onChange={handleTabChange}
-                        variant="scrollable"
-                        scrollButtons="auto"
-                        sx={{
-                            "& .MuiTabs-indicator": {
-                                backgroundColor: "primary.main",
-                                height: "3px",
-                                borderRadius: "4px"
-                            },
-                            "& .MuiTab-root": {
-                                color: "text.secondary",
+                {/* Categories Dropdown Filter with Counts */}
+                <Box display="flex" alignItems="center" gap={2} mb={4} flexWrap="wrap">
+                    <FormControl size="small" sx={{ minWidth: 300 }}>
+                        <InputLabel id="category-filter-label" sx={{ fontWeight: 700 }}>Filter by Category</InputLabel>
+                        <Select
+                            labelId="category-filter-label"
+                            id="category-filter-select"
+                            value={currentTab}
+                            label="Filter by Category"
+                            onChange={(e) => setCurrentTab(e.target.value)}
+                            sx={{
+                                borderRadius: '12px',
                                 fontWeight: 600,
-                                fontSize: "0.9rem",
-                                minWidth: 100,
-                                textTransform: "none",
-                                "&.Mui-selected": {
-                                    color: "primary.main"
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'rgba(255,255,255,0.12)'
                                 }
-                            }
-                        }}
-                    >
-                        <Tab label="📁 All Categories" value="All" id="tab-all" />
-                        {INDUSTRY_OPTIONS.map((opt) => (
-                            <Tab
-                                key={opt.value}
-                                label={`${opt.icon} ${opt.label}`}
-                                value={opt.value}
-                                id={`tab-${opt.value.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}
-                            />
-                        ))}
-                    </Tabs>
-                </Paper>
+                            }}
+                        >
+                            <MenuItem value="All">
+                                <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
+                                    <Box display="flex" alignItems="center" gap={1}>
+                                        <span>📁</span>
+                                        <Typography fontWeight={600}>All Categories</Typography>
+                                    </Box>
+                                    <Chip
+                                        label={templates.length}
+                                        size="small"
+                                        sx={{ bgcolor: 'primary.main', color: '#fff', fontWeight: 800, height: 20, fontSize: '0.7rem' }}
+                                    />
+                                </Box>
+                            </MenuItem>
+                            {INDUSTRY_OPTIONS.map((opt) => {
+                                const count = templates.filter(t => t.category === opt.value).length;
+                                if (count === 0) return null;
+                                return (
+                                    <MenuItem key={opt.value} value={opt.value}>
+                                        <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
+                                            <Box display="flex" alignItems="center" gap={1}>
+                                                <span>{opt.icon}</span>
+                                                <Typography fontWeight={600}>{opt.label}</Typography>
+                                            </Box>
+                                            <Chip
+                                                label={count}
+                                                size="small"
+                                                sx={{ bgcolor: 'rgba(16,185,129,0.15)', color: '#34D399', fontWeight: 800, height: 20, fontSize: '0.7rem', border: '1px solid rgba(16,185,129,0.2)' }}
+                                            />
+                                        </Box>
+                                    </MenuItem>
+                                );
+                            })}
+                        </Select>
+                    </FormControl>
+                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
+                        Showing{' '}
+                        <strong style={{ color: '#fff' }}>{filteredTemplates.length}</strong>
+                        {' '}template{filteredTemplates.length !== 1 ? 's' : ''}
+                        {currentTab !== 'All' ? ` in "${currentTab}"` : ' across all categories'}
+                    </Typography>
+                </Box>
 
                 {/* Templates Grid catalog */}
                 {loading ? (

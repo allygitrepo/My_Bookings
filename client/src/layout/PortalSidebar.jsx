@@ -28,11 +28,11 @@ const PortalSidebar = ({ open, onClose, variant }) => {
     const menuItems = [
         { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/portal/dashboard' },
         { text: 'Businesses', icon: <BusinessIcon />, path: '/portal/businesses' },
-        { text: 'Templates', icon: <TemplatesIcon />, path: '/portal/templates' },
         { text: 'Packages', icon: <PackageIcon />, path: '/portal/packages' },
         { text: 'Payments', icon: <PaymentsIcon />, path: '/portal/payments' },
         { text: 'Users', icon: <PeopleIcon />, path: '/portal/users' },
         { text: 'Create Admin', icon: <AdminIcon />, path: '/portal/create-admin' },
+        { text: 'Templates', icon: <TemplatesIcon />, path: '/portal/templates' },
     ];
 
     const handleLogout = () => {
