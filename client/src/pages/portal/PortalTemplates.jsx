@@ -389,39 +389,83 @@ const PortalTemplates = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {filteredTemplates.map((t) => (
-                            <Grid item xs={12} sm={6} md={4} lg={3} key={t.id}>
+                            <Grid item xs={12} sm={6} md={4} lg={4} key={t.id}>
                                 <Card
                                     id={`template-card-${t.id}`}
                                     sx={{
-                                        background: "rgba(30, 41, 59, 0.45)",
-                                        backdropFilter: "blur(12px)",
-                                        border: "1px solid rgba(255, 255, 255, 0.06)",
-                                        borderRadius: "20px",
+                                        background: "rgba(15, 23, 42, 0.7)",
+                                        backdropFilter: "blur(16px)",
+                                        border: "1px solid rgba(255, 255, 255, 0.07)",
+                                        borderRadius: "16px",
                                         height: "100%",
                                         display: "flex",
                                         flexDirection: "column",
-                                        transition: "transform 0.3s ease, box-shadow 0.3s ease",
+                                        overflow: "hidden",
+                                        transition: "all 0.25s ease",
                                         "&:hover": {
-                                            transform: "translateY(-6px)",
-                                            boxShadow: "0 12px 30px rgba(0, 0, 0, 0.4)",
-                                            border: "1px solid rgba(16, 185, 129, 0.25)"
+                                            transform: "translateY(-4px)",
+                                            boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
+                                            border: "1px solid rgba(99, 102, 241, 0.3)",
                                         }
                                     }}
                                 >
-                                    <CardContent sx={{ flexGrow: 1, p: 2.5, pb: 1.5 }}>
-                                        {/* Top Meta info */}
-                                        <Box display="flex" flexWrap="wrap" gap={0.75} alignItems="center" mb={2}>
+                                    {/* Color accent top bar */}
+                                    <Box sx={{
+                                        height: "4px",
+                                        background: "linear-gradient(90deg, #6366F1 0%, #10B981 100%)",
+                                    }} />
+
+                                    <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
+                                        {/* Header row: Avatar + Name + Slug */}
+                                        <Box display="flex" alignItems="center" gap={2} mb={2}>
+                                            <Avatar
+                                                src={`${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${t.templateId || t.id}/favicon.ico`}
+                                                sx={{
+                                                    width: 52,
+                                                    height: 52,
+                                                    borderRadius: "14px",
+                                                    bgcolor: "rgba(99,102,241,0.15)",
+                                                    border: "1px solid rgba(99,102,241,0.25)",
+                                                    fontSize: "1.3rem",
+                                                    fontWeight: 800,
+                                                    color: "#818CF8",
+                                                    flexShrink: 0,
+                                                    '& img': { objectFit: 'contain', p: '6px' },
+                                                }}
+                                            >
+                                                {t.displayName?.charAt(0)?.toUpperCase() || "T"}
+                                            </Avatar>
+                                            <Box sx={{ minWidth: 0 }}>
+                                                <Typography
+                                                    variant="h6"
+                                                    fontWeight={800}
+                                                    color="text.primary"
+                                                    sx={{ fontSize: "1rem", lineHeight: 1.3, mb: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
+                                                >
+                                                    {t.displayName}
+                                                </Typography>
+                                                <Box display="flex" alignItems="center" gap={0.5}>
+                                                    <FolderIcon sx={{ fontSize: "0.75rem", color: "text.disabled" }} />
+                                                    <Typography variant="caption" color="text.disabled" sx={{ fontFamily: "monospace", fontSize: "0.72rem" }}>
+                                                        {t.templateId || t.id}
+                                                    </Typography>
+                                                </Box>
+                                            </Box>
+                                        </Box>
+
+                                        {/* Tags row */}
+                                        <Box display="flex" flexWrap="wrap" gap={0.75}>
                                             <Chip
-                                                icon={<CategoryIcon sx={{ fontSize: "0.8rem" }} />}
                                                 label={t.category}
                                                 size="small"
                                                 sx={{
-                                                    background: "rgba(16, 185, 129, 0.1)",
+                                                    bgcolor: "rgba(16,185,129,0.1)",
                                                     color: "#34D399",
-                                                    fontWeight: 600,
-                                                    fontSize: "0.7rem",
-                                                    border: "1px solid rgba(16, 185, 129, 0.15)",
-                                                    height: 20
+                                                    fontWeight: 700,
+                                                    fontSize: "0.68rem",
+                                                    border: "1px solid rgba(16,185,129,0.2)",
+                                                    height: 22,
+                                                    borderRadius: "6px",
                                                 }}
                                             />
                                             {(t.type || "website").split(",").map((typeVal) => {
@@ -432,107 +476,69 @@ const PortalTemplates = () => {
                                                         label={type === "portfolio" ? "Portfolio" : "Website"}
                                                         size="small"
                                                         sx={{
-                                                            background: type === "portfolio" ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                                            bgcolor: type === "portfolio" ? "rgba(99,102,241,0.12)" : "rgba(59,130,246,0.12)",
                                                             color: type === "portfolio" ? "#818CF8" : "#60A5FA",
-                                                            fontWeight: 600,
-                                                            fontSize: "0.7rem",
-                                                            border: type === "portfolio" ? "1px solid rgba(99, 102, 241, 0.15)" : "1px solid rgba(59, 130, 246, 0.15)",
-                                                            height: 20
+                                                            fontWeight: 700,
+                                                            fontSize: "0.68rem",
+                                                            border: type === "portfolio" ? "1px solid rgba(99,102,241,0.2)" : "1px solid rgba(59,130,246,0.2)",
+                                                            height: 22,
+                                                            borderRadius: "6px",
                                                         }}
                                                     />
                                                 );
                                             })}
                                         </Box>
-
-                                        {/* Icon & Title */}
-                                        <Box display="flex" alignItems="center" gap={1.5} mb={1}>
-                                            <Avatar
-                                                src={t.icon ? `${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}${t.icon}` : undefined}
-                                                alt={t.displayName}
-                                                sx={{
-                                                    width: 44,
-                                                    height: 44,
-                                                    borderRadius: "12px",
-                                                    bgcolor: "rgba(255, 255, 255, 0.05)",
-                                                    border: "1px solid rgba(255, 255, 255, 0.1)",
-                                                    boxShadow: "inset 0 0 10px rgba(0,0,0,0.2)"
-                                                }}
-                                            >
-                                                {!t.icon && <BusinessIcon sx={{ fontSize: 24, color: "#10B981" }} />}
-                                            </Avatar>
-                                            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
-                                                <Typography variant="body1" fontWeight={800} color="text.primary" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                                                    {t.displayName}
-                                                </Typography>
-                                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: "0.7rem" }}>
-                                                    Slug: <code>{t.templateId || t.id}</code>
-                                                </Typography>
-                                            </Box>
-                                        </Box>
                                     </CardContent>
 
-                                    <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.05)", mt: "auto" }} />
-
-                                    <CardActions sx={{ p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                                        <Tooltip title={`Pool Path: ${t.path}`} arrow>
-                                            <Typography
-                                                variant="caption"
-                                                color="text.secondary"
+                                    {/* Footer Actions */}
+                                    <Box sx={{
+                                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                                        display: "flex",
+                                        overflow: "hidden",
+                                        borderRadius: "0 0 16px 16px",
+                                    }}>
+                                        <Tooltip title="Edit Details" arrow>
+                                            <Button
+                                                id={`btn-edit-template-${t.id}`}
+                                                startIcon={<EditIcon sx={{ fontSize: "0.85rem" }} />}
+                                                onClick={() => handleOpenEditDialog(t)}
                                                 sx={{
-                                                    fontFamily: "monospace",
-                                                    overflow: "hidden",
-                                                    textOverflow: "ellipsis",
-                                                    whiteSpace: "nowrap",
-                                                    maxWidth: "110px",
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    gap: 0.5,
-                                                    fontSize: "0.7rem",
-                                                    cursor: "pointer"
+                                                    flex: 1,
+                                                    bgcolor: "rgba(59,130,246,0.08)",
+                                                    color: "#60A5FA",
+                                                    borderRadius: 0,
+                                                    fontSize: "0.78rem",
+                                                    fontWeight: 700,
+                                                    textTransform: "none",
+                                                    py: 1.2,
+                                                    borderRight: "1px solid rgba(255,255,255,0.05)",
+                                                    "&:hover": { bgcolor: "rgba(59,130,246,0.18)" }
                                                 }}
                                             >
-                                                <FolderIcon sx={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.4)" }} /> {t.templateId || t.id}
-                                            </Typography>
+                                                Edit
+                                            </Button>
                                         </Tooltip>
-
-                                        <Box display="flex" gap={1}>
-                                            <Tooltip title="Edit Details" arrow>
-                                                <IconButton
-                                                    id={`btn-edit-template-${t.id}`}
-                                                    onClick={() => handleOpenEditDialog(t)}
-                                                    size="small"
-                                                    sx={{
-                                                        background: "rgba(59, 130, 246, 0.1)",
-                                                        color: "#60A5FA",
-                                                        p: 0.75,
-                                                        "&:hover": {
-                                                            background: "rgba(59, 130, 246, 0.2)"
-                                                        }
-                                                    }}
-                                                >
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Tooltip title="Delete & Purge Folder" arrow>
-                                                <IconButton
-                                                    id={`btn-delete-template-${t.id}`}
-                                                    color="error"
-                                                    onClick={() => handleDelete(t.id)}
-                                                    size="small"
-                                                    sx={{
-                                                        background: "rgba(239, 68, 68, 0.1)",
-                                                        color: "#EF4444",
-                                                        p: 0.75,
-                                                        "&:hover": {
-                                                            background: "rgba(239, 68, 68, 0.2)"
-                                                        }
-                                                    }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                        </Box>
-                                    </CardActions>
+                                        <Tooltip title="Delete & Purge" arrow>
+                                            <Button
+                                                id={`btn-delete-template-${t.id}`}
+                                                startIcon={<DeleteIcon sx={{ fontSize: "0.85rem" }} />}
+                                                onClick={() => handleDelete(t.id)}
+                                                sx={{
+                                                    flex: 1,
+                                                    bgcolor: "rgba(239,68,68,0.08)",
+                                                    color: "#F87171",
+                                                    borderRadius: 0,
+                                                    fontSize: "0.78rem",
+                                                    fontWeight: 700,
+                                                    textTransform: "none",
+                                                    py: 1.2,
+                                                    "&:hover": { bgcolor: "rgba(239,68,68,0.18)" }
+                                                }}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </Tooltip>
+                                    </Box>
                                 </Card>
                             </Grid>
                         ))}

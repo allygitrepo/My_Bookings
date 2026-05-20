@@ -420,9 +420,10 @@ const WebsiteGenerator = () => {
                                             .map(c => ({
                                                 id: c.id,
                                                 name: c.displayName,
-                                                img: c.icon || '/templates/minimal.png',
+                                                img: `${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${c.templateId || c.id}/favicon.ico`,
                                                 isCustom: true,
-                                                category: c.category
+                                                category: c.category,
+                                                templateId: c.templateId || c.id,
                                             }));
 
                                         return [...defaultTemplates, ...filteredCustom];
@@ -472,15 +473,19 @@ const WebsiteGenerator = () => {
                                                         borderRadius: 2,
                                                         overflow: 'hidden',
                                                         aspectRatio: '1/1',
-                                                        boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.18)' : 'none'
+                                                        boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.18)' : 'none',
+                                                        bgcolor: tmpl.isCustom ? 'rgba(10,12,22,0.8)' : 'transparent',
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
                                                     }}>
                                                         <CardMedia
                                                             component="img"
                                                             image={tmpl.img}
                                                             sx={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
+                                                                width: tmpl.isCustom ? '60%' : '100%',
+                                                                height: tmpl.isCustom ? '60%' : '100%',
+                                                                objectFit: tmpl.isCustom ? 'contain' : 'cover',
                                                                 objectPosition: 'top',
                                                                 filter: isSelected ? 'none' : 'grayscale(15%)',
                                                                 opacity: isSelected ? 1 : 0.75,
