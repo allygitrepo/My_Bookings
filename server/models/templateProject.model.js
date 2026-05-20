@@ -5,9 +5,16 @@ const TemplateProject = sequelize.define(
     "template_projects",
     {
         id: {
-            type: DataTypes.STRING,
+            type: DataTypes.INTEGER,
             primaryKey: true,
+            autoIncrement: true,
             allowNull: false
+        },
+        templateId: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            unique: true,
+            field: 'template_id'
         },
         displayName: {
             type: DataTypes.STRING,
@@ -17,6 +24,11 @@ const TemplateProject = sequelize.define(
         category: {
             type: DataTypes.STRING,
             allowNull: false
+        },
+        type: {
+            type: DataTypes.STRING,
+            allowNull: false,
+            defaultValue: 'website'
         },
         path: {
             type: DataTypes.STRING,
@@ -44,6 +56,7 @@ const TemplateProject = sequelize.define(
         timestamps: false,
         tableName: "template_projects",
         indexes: [
+            { fields: ["template_id"] },
             { fields: ["category"] },
             { fields: ["is_active"] }
         ]

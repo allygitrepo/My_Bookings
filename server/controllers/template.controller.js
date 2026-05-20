@@ -3,7 +3,7 @@ const path = require("path");
 const AdmZip = require("adm-zip");
 const TemplateProject = require("../models/templateProject.model");
 
-const BASE_TEMPLATES_DIR = "C:\\xampp\\htdocs\\My_Bookings_Templates";
+const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
 const BASE_HTDOCS_DIR = "C:\\xampp\\htdocs";
 
 // Helper to copy directory recursively
@@ -63,6 +63,50 @@ const findIcon = (dir, basePath = dir) => {
     return null;
 };
 
+// Helper to sleep synchronously in Node
+const sleepSync = (ms) => {
+    try {
+        const sab = new SharedArrayBuffer(1024);
+        const int32 = new Int32Array(sab);
+        Atomics.wait(int32, 0, 0, ms);
+    } catch (e) {
+        const start = Date.now();
+        while (Date.now() - start < ms) {}
+    }
+};
+
+// Helper to rename a file/folder with retry and fallback to recursive copy/delete on Windows EPERM/EBUSY locking issues
+const renameWithRetrySync = (src, dest, retries = 5) => {
+    for (let i = 0; i < retries; i++) {
+        try {
+            if (fs.existsSync(dest)) {
+                const statSrc = fs.statSync(src);
+                const statDest = fs.statSync(dest);
+                if (statSrc.isDirectory() && statDest.isDirectory()) {
+                    copyFolderRecursiveSync(src, dest);
+                    fs.rmSync(src, { recursive: true, force: true });
+                    return;
+                } else {
+                    fs.rmSync(dest, { recursive: true, force: true });
+                }
+            }
+            fs.renameSync(src, dest);
+            return;
+        } catch (err) {
+            if (err.code === 'EPERM' || err.code === 'EBUSY') {
+                console.warn(`[Rename Warning] ${src} locked, retrying (${i + 1}/${retries})...`);
+                sleepSync(150);
+            } else {
+                throw err;
+            }
+        }
+    }
+    // Final fallback
+    console.log(`[Rename Fallback] EPERM copy-and-delete fallback: ${src} -> ${dest}`);
+    copyFolderRecursiveSync(src, dest);
+    fs.rmSync(src, { recursive: true, force: true });
+};
+
 // Helper to flatten zip files containing a single parent folder
 const flattenExtractedFolder = (dir) => {
     try {
@@ -77,9 +121,13 @@ const flattenExtractedFolder = (dir) => {
                 subItems.forEach((subItem) => {
                     const src = path.join(singlePath, subItem);
                     const dest = path.join(dir, subItem);
-                    fs.renameSync(src, dest);
+                    renameWithRetrySync(src, dest);
                 });
-                fs.rmdirSync(singlePath);
+                try {
+                    fs.rmdirSync(singlePath);
+                } catch (e) {
+                    fs.rmSync(singlePath, { recursive: true, force: true });
+                }
                 // Run recursively just in case there's another level nested
                 flattenExtractedFolder(dir);
             }
@@ -224,31 +272,92 @@ const templateController = {
     // Initialize & sync existing templates
     initTemplates: async () => {
         try {
-            console.log("[Templates Setup] Checking for nested template folders to flatten...");
-            const templates = await TemplateProject.findAll();
-            for (const template of templates) {
-                const dir = template.path;
-                if (fs.existsSync(dir)) {
-                    flattenExtractedFolder(dir);
-                    const discoveredIcon = findIcon(dir);
-                    const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${template.id}/${discoveredIcon}` : null;
-                    if (iconUrlPath !== template.icon) {
-                        await template.update({ icon: iconUrlPath });
-                        console.log(`[Templates Setup] Updated icon path for template '${template.id}' to: ${iconUrlPath}`);
+            console.log("[Templates Setup] Scanning server/Templates for active templates...");
+            // Ensure server/Templates directory exists
+            if (!fs.existsSync(BASE_TEMPLATES_DIR)) {
+                fs.mkdirSync(BASE_TEMPLATES_DIR, { recursive: true });
+            }
+
+            // Find all directories in server/Templates
+            const templateDirs = fs.readdirSync(BASE_TEMPLATES_DIR).filter(file => {
+                const fullPath = path.join(BASE_TEMPLATES_DIR, file);
+                return fs.statSync(fullPath).isDirectory();
+            });
+
+            for (const dirName of templateDirs) {
+                const dirPath = path.join(BASE_TEMPLATES_DIR, dirName);
+                flattenExtractedFolder(dirPath);
+                const discoveredIcon = findIcon(dirPath);
+                const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${dirName}/${discoveredIcon}` : null;
+
+                // Check if this template already exists in the database
+                let templateRecord = await TemplateProject.findOne({ where: { templateId: dirName } });
+                if (!templateRecord) {
+                    // Try to generate a display name from the folder name
+                    const displayName = dirName
+                        .split("_")
+                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                        .join(" ");
+
+                    // Auto-seed into DB
+                    const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
+                    templateRecord = await TemplateProject.create({
+                        templateId: dirName,
+                        displayName: displayName,
+                        category: "Healthcare / Hospital", // Default category or can be customized
+                        type: templateType,
+                        path: dirPath,
+                        icon: iconUrlPath,
+                        isActive: true
+                    });
+                    console.log(`[Templates Setup] Auto-seeded template '${dirName}' into database as '${templateType}'.`);
+                } else {
+                    // Update paths, icons, and type to make sure they are dynamic and up-to-date
+                    let updated = false;
+                    if (templateRecord.path !== dirPath) {
+                        templateRecord.path = dirPath;
+                        updated = true;
+                    }
+                    if (templateRecord.icon !== iconUrlPath) {
+                        templateRecord.icon = iconUrlPath;
+                        updated = true;
+                    }
+                    const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
+                    if (!templateRecord.type || templateRecord.type !== templateType) {
+                        templateRecord.type = templateType;
+                        updated = true;
+                    }
+                    if (updated) {
+                        await templateRecord.save();
+                        console.log(`[Templates Setup] Updated template metadata for '${dirName}'.`);
                     }
                 }
             }
-            console.log("[Templates Setup] Template flattening check complete.");
+
+            console.log("[Templates Setup] Template initialization and seeding complete.");
         } catch (err) {
             console.error("[Templates Setup] Error during templates initialization:", err);
         }
     },
 
     // Clone template helper
-    cloneTemplateForBusiness: async (templateId, businessId) => {
+    cloneTemplateForBusiness: async (templateIdOrSlug, businessId) => {
         try {
-            const sourcePath = path.join(BASE_TEMPLATES_DIR, templateId);
-            const targetPath = path.join(BASE_HTDOCS_DIR, `${templateId}_biz_${businessId}`);
+            // Find template by either primary key (if integer) or templateId (slug)
+            let template;
+            if (typeof templateIdOrSlug === "number" || !isNaN(templateIdOrSlug)) {
+                template = await TemplateProject.findByPk(templateIdOrSlug);
+            } else {
+                template = await TemplateProject.findOne({ where: { templateId: templateIdOrSlug } });
+            }
+
+            if (!template) {
+                throw new Error(`Template not found for: ${templateIdOrSlug}`);
+            }
+
+            const slug = template.templateId; // e.g. "doctor_drp_portfolio"
+            const sourcePath = template.path;
+            const targetPath = path.join(BASE_HTDOCS_DIR, `${slug}_biz_${businessId}`);
 
             if (!fs.existsSync(sourcePath)) {
                 throw new Error(`Template source path does not exist: ${sourcePath}`);
@@ -257,7 +366,7 @@ const templateController = {
             if (fs.existsSync(targetPath)) {
                 console.log(`[Template Cloning] Template already cloned for business ${businessId}, skipping clone but verifying script injection & path fixes.`);
                 injectWidgetScript(targetPath, businessId);
-                detectAndFixAssetsPaths(targetPath, templateId, businessId);
+                detectAndFixAssetsPaths(targetPath, slug, businessId);
                 return true;
             }
 
@@ -266,7 +375,7 @@ const templateController = {
             console.log(`[Template Cloning] Running automatic booking widget script injection...`);
             injectWidgetScript(targetPath, businessId);
             console.log(`[Template Cloning] Running automatic path rewrite fixes...`);
-            detectAndFixAssetsPaths(targetPath, templateId, businessId);
+            detectAndFixAssetsPaths(targetPath, slug, businessId);
             console.log(`[Template Cloning] Cloning and processing successful for business ${businessId}`);
             return true;
         } catch (error) {
@@ -284,9 +393,10 @@ const templateController = {
 
             // Format custom templates to match the client-side template structure expectation
             const formattedCustom = customTemplates.map((t) => ({
-                id: t.id,
+                id: t.templateId, // Keep returning the slug as id for frontend iframe src compatibility!
                 displayName: t.displayName,
                 category: t.category,
+                type: t.type || 'website',
                 icon: t.icon ? `${process.env.APACHE_BASE_URL || "http://localhost:8080"}${t.icon}` : null,
                 isCustom: true,
                 isActive: t.isActive
@@ -319,7 +429,7 @@ const templateController = {
     // POST /mybookings/templates/portal/deploy (Super Admin protected ZIP deployment)
     portalDeployTemplate: async (req, res) => {
         try {
-            const { displayName, category } = req.body;
+            const { displayName, category, type } = req.body;
             if (!req.file) {
                 return res.status(400).json({ success: false, message: "Please upload a ZIP template file." });
             }
@@ -338,7 +448,7 @@ const templateController = {
                 .replace(/(^_+|_+$)/g, "");
 
             // Verify if template already exists
-            const existing = await TemplateProject.findByPk(templateId);
+            const existing = await TemplateProject.findOne({ where: { templateId } });
             if (existing) {
                 if (req.file.path && fs.existsSync(req.file.path)) {
                     fs.unlinkSync(req.file.path);
@@ -370,9 +480,10 @@ const templateController = {
 
             // Create template entry in MySQL
             const template = await TemplateProject.create({
-                id: templateId,
+                templateId: templateId,
                 displayName,
                 category,
+                type: type || 'website',
                 path: extractPath,
                 icon: iconUrlPath,
                 isActive: true
@@ -384,12 +495,57 @@ const templateController = {
                 data: template
             });
         } catch (error) {
+            console.error("[Deploy Error] Full Stack Trace:", error);
+            try {
+                fs.writeFileSync(
+                    path.join(__dirname, "..", "deploy_error.log"),
+                    `[${new Date().toISOString()}] Error: ${error.message}\nStack: ${error.stack}\n`
+                );
+            } catch (logErr) {
+                console.error("Failed to write deploy error log:", logErr);
+            }
             // Cleanup zip if still exists
             if (req.file && req.file.path && fs.existsSync(req.file.path)) {
                 try {
                     fs.unlinkSync(req.file.path);
                 } catch (e) {}
             }
+            res.status(500).json({ success: false, message: error.message, stack: error.stack });
+        }
+    },
+
+    // PUT /mybookings/templates/portal/:id (Super Admin protected edit)
+    portalUpdateTemplate: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { displayName, category, type } = req.body;
+
+            if (!displayName || !category || !type) {
+                return res.status(400).json({ success: false, message: "Display name, category, and type are required." });
+            }
+
+            let template;
+            if (!isNaN(id)) {
+                template = await TemplateProject.findByPk(id);
+            } else {
+                template = await TemplateProject.findOne({ where: { templateId: id } });
+            }
+
+            if (!template) {
+                return res.status(404).json({ success: false, message: "Template not found." });
+            }
+
+            template.displayName = displayName;
+            template.category = category;
+            template.type = type;
+            await template.save();
+
+            res.json({
+                success: true,
+                message: "Template details updated successfully",
+                data: template
+            });
+        } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
     },
@@ -398,13 +554,19 @@ const templateController = {
     portalDeleteTemplate: async (req, res) => {
         try {
             const { id } = req.params;
-            const template = await TemplateProject.findByPk(id);
+            let template;
+            if (!isNaN(id)) {
+                template = await TemplateProject.findByPk(id);
+            } else {
+                template = await TemplateProject.findOne({ where: { templateId: id } });
+            }
+
             if (!template) {
                 return res.status(404).json({ success: false, message: "Template not found." });
             }
 
             // Remove folder recursively
-            const templatePath = template.path || path.join(BASE_TEMPLATES_DIR, id);
+            const templatePath = template.path || path.join(BASE_TEMPLATES_DIR, template.templateId);
             if (fs.existsSync(templatePath)) {
                 console.log(`[Template Deletion] Purging folder recursively: ${templatePath}`);
                 fs.rmSync(templatePath, { recursive: true, force: true });

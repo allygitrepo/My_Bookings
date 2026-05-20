@@ -26,6 +26,7 @@ import {
 import {
     CloudUpload as UploadIcon,
     Delete as DeleteIcon,
+    Edit as EditIcon,
     Layers as TemplatesIcon,
     Business as BusinessIcon,
     Category as CategoryIcon,
@@ -57,9 +58,18 @@ const PortalTemplates = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [displayName, setDisplayName] = useState("");
     const [category, setCategory] = useState("Healthcare / Hospital");
+    const [templateType, setTemplateType] = useState("website");
     const [zipFile, setZipFile] = useState(null);
     const [fileName, setFileName] = useState("");
     const [deploying, setDeploying] = useState(false);
+
+    // Edit Form State
+    const [openEditDialog, setOpenEditDialog] = useState(false);
+    const [editingTemplateId, setEditingTemplateId] = useState(null);
+    const [editDisplayName, setEditDisplayName] = useState("");
+    const [editCategory, setEditCategory] = useState("Healthcare / Hospital");
+    const [editTemplateType, setEditTemplateType] = useState("website");
+    const [savingEdit, setSavingEdit] = useState(false);
 
     const fetchTemplates = async () => {
         setLoading(true);
@@ -105,6 +115,7 @@ const PortalTemplates = () => {
         const formData = new FormData();
         formData.append("displayName", displayName);
         formData.append("category", category);
+        formData.append("type", templateType);
         formData.append("zipFile", zipFile);
 
         try {
@@ -117,6 +128,8 @@ const PortalTemplates = () => {
                 toast.success("Template extracted & deployed successfully!");
                 setOpenDialog(false);
                 setDisplayName("");
+                setCategory("Healthcare / Hospital");
+                setTemplateType("website");
                 setZipFile(null);
                 setFileName("");
                 fetchTemplates();
@@ -142,6 +155,40 @@ const PortalTemplates = () => {
             }
         } catch (error) {
             toast.error("Failed to delete template");
+        }
+    };
+
+    const handleOpenEditDialog = (template) => {
+        setEditingTemplateId(template.id);
+        setEditDisplayName(template.displayName);
+        setEditCategory(template.category);
+        setEditTemplateType(template.type || "website");
+        setOpenEditDialog(true);
+    };
+
+    const handleEditSubmit = async () => {
+        if (!editDisplayName.trim()) {
+            toast.error("Please provide a template name");
+            return;
+        }
+
+        setSavingEdit(true);
+        try {
+            const response = await axiosInstance.put(`/templates/portal/${editingTemplateId}`, {
+                displayName: editDisplayName,
+                category: editCategory,
+                type: editTemplateType
+            });
+            if (response.data.success) {
+                toast.success("Template metadata updated successfully!");
+                setOpenEditDialog(false);
+                fetchTemplates();
+            }
+        } catch (error) {
+            const errMsg = error.response?.data?.message || "Failed to update template";
+            toast.error(errMsg);
+        } finally {
+            setSavingEdit(false);
         }
     };
 
@@ -273,7 +320,7 @@ const PortalTemplates = () => {
                 ) : (
                     <Grid container spacing={3}>
                         {filteredTemplates.map((t) => (
-                            <Grid item xs={12} sm={6} md={4} key={t.id}>
+                            <Grid item xs={12} sm={6} md={4} lg={3} key={t.id}>
                                 <Card
                                     id={`template-card-${t.id}`}
                                     sx={{
@@ -292,96 +339,124 @@ const PortalTemplates = () => {
                                         }
                                     }}
                                 >
-                                    <CardContent sx={{ flexGrow: 1, p: 3 }}>
+                                    <CardContent sx={{ flexGrow: 1, p: 2.5, pb: 1.5 }}>
                                         {/* Top Meta info */}
-                                        <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+                                        <Box display="flex" flexWrap="wrap" gap={0.75} alignItems="center" mb={2}>
                                             <Chip
-                                                icon={<CategoryIcon fontSize="small" />}
+                                                icon={<CategoryIcon sx={{ fontSize: "0.8rem" }} />}
                                                 label={t.category}
                                                 size="small"
                                                 sx={{
                                                     background: "rgba(16, 185, 129, 0.1)",
                                                     color: "#34D399",
                                                     fontWeight: 600,
-                                                    fontSize: "0.75rem",
-                                                    border: "1px solid rgba(16, 185, 129, 0.15)"
+                                                    fontSize: "0.7rem",
+                                                    border: "1px solid rgba(16, 185, 129, 0.15)",
+                                                    height: 20
                                                 }}
                                             />
                                             <Chip
-                                                icon={<ActiveIcon fontSize="small" color="success" />}
-                                                label="Active"
+                                                label={t.type === "portfolio" ? "Portfolio" : "Website"}
                                                 size="small"
-                                                variant="outlined"
-                                                color="success"
-                                                sx={{ fontWeight: 600, fontSize: "0.75rem" }}
+                                                sx={{
+                                                    background: t.type === "portfolio" ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                                    color: t.type === "portfolio" ? "#818CF8" : "#60A5FA",
+                                                    fontWeight: 600,
+                                                    fontSize: "0.7rem",
+                                                    border: t.type === "portfolio" ? "1px solid rgba(99, 102, 241, 0.15)" : "1px solid rgba(59, 130, 246, 0.15)",
+                                                    height: 20
+                                                }}
                                             />
                                         </Box>
 
                                         {/* Icon & Title */}
-                                        <Box display="flex" alignItems="center" gap={2} mb={3}>
+                                        <Box display="flex" alignItems="center" gap={1.5} mb={1}>
                                             <Avatar
                                                 src={t.icon ? `${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}${t.icon}` : undefined}
                                                 alt={t.displayName}
                                                 sx={{
-                                                    width: 60,
-                                                    height: 60,
-                                                    borderRadius: "16px",
+                                                    width: 44,
+                                                    height: 44,
+                                                    borderRadius: "12px",
                                                     bgcolor: "rgba(255, 255, 255, 0.05)",
                                                     border: "1px solid rgba(255, 255, 255, 0.1)",
                                                     boxShadow: "inset 0 0 10px rgba(0,0,0,0.2)"
                                                 }}
                                             >
-                                                {!t.icon && <BusinessIcon sx={{ fontSize: 32, color: "#10B981" }} />}
+                                                {!t.icon && <BusinessIcon sx={{ fontSize: 24, color: "#10B981" }} />}
                                             </Avatar>
-                                            <Box>
-                                                <Typography variant="h6" fontWeight={800} color="text.primary">
+                                            <Box sx={{ minWidth: 0, flexGrow: 1 }}>
+                                                <Typography variant="body1" fontWeight={800} color="text.primary" sx={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                                                     {t.displayName}
                                                 </Typography>
-                                                <Typography variant="caption" color="text.disabled" display="block">
-                                                    ID: <code>{t.id}</code>
+                                                <Typography variant="caption" color="text.disabled" sx={{ fontSize: "0.7rem" }}>
+                                                    Slug: <code>{t.templateId || t.id}</code>
                                                 </Typography>
                                             </Box>
                                         </Box>
-
-                                        {/* Deployment info */}
-                                        <Paper
-                                            sx={{
-                                                bgcolor: "rgba(15, 23, 42, 0.4)",
-                                                p: 2,
-                                                borderRadius: "12px",
-                                                border: "1px solid rgba(255, 255, 255, 0.03)"
-                                            }}
-                                        >
-                                            <Typography variant="caption" color="text.secondary" display="block" sx={{ fontFamily: "monospace", overflow: "hidden", textOverflow: "ellipsis" }}>
-                                                <strong>Pool Path:</strong> {t.path}
-                                            </Typography>
-                                            <Typography variant="caption" color="text.secondary" display="block" mt={1}>
-                                                <strong>Icon Discovered:</strong> {t.icon ? "Yes" : "Fallback Logo"}
-                                            </Typography>
-                                        </Paper>
                                     </CardContent>
 
-                                    <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.05)" }} />
+                                    <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.05)", mt: "auto" }} />
 
-                                    <CardActions sx={{ p: 2, display: "flex", justifyContent: "space-between" }}>
-                                        <Typography variant="caption" color="text.disabled" sx={{ ml: 1 }}>
-                                            Custom ZIP Package
-                                        </Typography>
-                                        <Tooltip title="Delete & Purge Folder">
-                                            <IconButton
-                                                id={`btn-delete-template-${t.id}`}
-                                                color="error"
-                                                onClick={() => handleDelete(t.id)}
+                                    <CardActions sx={{ p: 1.5, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                        <Tooltip title={`Pool Path: ${t.path}`} arrow>
+                                            <Typography
+                                                variant="caption"
+                                                color="text.secondary"
                                                 sx={{
-                                                    background: "rgba(239, 68, 68, 0.1)",
-                                                    "&:hover": {
-                                                        background: "rgba(239, 68, 68, 0.2)"
-                                                    }
+                                                    fontFamily: "monospace",
+                                                    overflow: "hidden",
+                                                    textOverflow: "ellipsis",
+                                                    whiteSpace: "nowrap",
+                                                    maxWidth: "110px",
+                                                    display: "flex",
+                                                    alignItems: "center",
+                                                    gap: 0.5,
+                                                    fontSize: "0.7rem",
+                                                    cursor: "pointer"
                                                 }}
                                             >
-                                                <DeleteIcon />
-                                            </IconButton>
+                                                <FolderIcon sx={{ fontSize: "0.85rem", color: "rgba(255,255,255,0.4)" }} /> {t.templateId || t.id}
+                                            </Typography>
                                         </Tooltip>
+
+                                        <Box display="flex" gap={1}>
+                                            <Tooltip title="Edit Details" arrow>
+                                                <IconButton
+                                                    id={`btn-edit-template-${t.id}`}
+                                                    onClick={() => handleOpenEditDialog(t)}
+                                                    size="small"
+                                                    sx={{
+                                                        background: "rgba(59, 130, 246, 0.1)",
+                                                        color: "#60A5FA",
+                                                        p: 0.75,
+                                                        "&:hover": {
+                                                            background: "rgba(59, 130, 246, 0.2)"
+                                                        }
+                                                    }}
+                                                >
+                                                    <EditIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                            <Tooltip title="Delete & Purge Folder" arrow>
+                                                <IconButton
+                                                    id={`btn-delete-template-${t.id}`}
+                                                    color="error"
+                                                    onClick={() => handleDelete(t.id)}
+                                                    size="small"
+                                                    sx={{
+                                                        background: "rgba(239, 68, 68, 0.1)",
+                                                        color: "#EF4444",
+                                                        p: 0.75,
+                                                        "&:hover": {
+                                                            background: "rgba(239, 68, 68, 0.2)"
+                                                        }
+                                                    }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
+                                        </Box>
                                     </CardActions>
                                 </Card>
                             </Grid>
@@ -453,6 +528,25 @@ const PortalTemplates = () => {
                             ))}
                         </TextField>
 
+                        <TextField
+                            id="select-template-type"
+                            select
+                            label="Template Type (Site Mode)"
+                            fullWidth
+                            variant="outlined"
+                            value={templateType}
+                            onChange={(e) => setTemplateType(e.target.value)}
+                            disabled={deploying}
+                            sx={{ mb: 3 }}
+                        >
+                            <MenuItem value="website" id="menu-opt-type-website">
+                                🌐 Website
+                            </MenuItem>
+                            <MenuItem value="portfolio" id="menu-opt-type-portfolio">
+                                💼 Portfolio
+                            </MenuItem>
+                        </TextField>
+
                         {/* File Upload drag area */}
                         <Button
                             id="btn-select-zip-file"
@@ -509,6 +603,115 @@ const PortalTemplates = () => {
                             }}
                         >
                             {deploying ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Deploy & Extract"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Edit Template dialog modal */}
+                <Dialog
+                    open={openEditDialog}
+                    onClose={() => !savingEdit && setOpenEditDialog(false)}
+                    PaperProps={{
+                        sx: {
+                            background: "rgba(15, 23, 42, 0.95)",
+                            backdropFilter: "blur(24px)",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            borderRadius: "24px",
+                            color: "text.primary",
+                            maxWidth: "500px",
+                            width: "100%"
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                        <Typography variant="h5" fontWeight={800}>
+                            Edit Template Details
+                        </Typography>
+                        <IconButton
+                            id="btn-close-edit-dialog"
+                            onClick={() => !savingEdit && setOpenEditDialog(false)}
+                            disabled={savingEdit}
+                            sx={{ color: "text.secondary" }}
+                        >
+                            <CloseIcon />
+                        </IconButton>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3 }}>
+                        <Typography variant="body2" color="text.secondary" mb={3}>
+                            Update the metadata details of your template. Note that the underlying folder slug/template ID remains constant to prevent breaking active client setups.
+                        </Typography>
+
+                        <TextField
+                            id="input-edit-template-name"
+                            label="Template Name"
+                            placeholder="e.g. Dr. Aisha Malik Premium Portfolio"
+                            fullWidth
+                            variant="outlined"
+                            value={editDisplayName}
+                            onChange={(e) => setEditDisplayName(e.target.value)}
+                            disabled={savingEdit}
+                            sx={{ mb: 3 }}
+                        />
+
+                        <TextField
+                            id="select-edit-template-category"
+                            select
+                            label="Target Business Category"
+                            fullWidth
+                            variant="outlined"
+                            value={editCategory}
+                            onChange={(e) => setEditCategory(e.target.value)}
+                            disabled={savingEdit}
+                            sx={{ mb: 3 }}
+                        >
+                            {INDUSTRY_OPTIONS.map((opt) => (
+                                <MenuItem key={opt.value} value={opt.value} id={`menu-edit-opt-${opt.value.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}>
+                                    {opt.icon} {opt.label}
+                                </MenuItem>
+                            ))}
+                        </TextField>
+
+                        <TextField
+                            id="select-edit-template-type"
+                            select
+                            label="Template Type (Site Mode)"
+                            fullWidth
+                            variant="outlined"
+                            value={editTemplateType}
+                            onChange={(e) => setEditTemplateType(e.target.value)}
+                            disabled={savingEdit}
+                            sx={{ mb: 3 }}
+                        >
+                            <MenuItem value="website" id="menu-edit-opt-type-website">
+                                🌐 Website
+                            </MenuItem>
+                            <MenuItem value="portfolio" id="menu-edit-opt-type-portfolio">
+                                💼 Portfolio
+                            </MenuItem>
+                        </TextField>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 3, pt: 0, justifyContent: "flex-end", gap: 1.5 }}>
+                        <Button id="btn-cancel-edit" onClick={() => setOpenEditDialog(false)} disabled={savingEdit} sx={{ color: "text.secondary", fontWeight: 600 }}>
+                            Cancel
+                        </Button>
+                        <Button
+                            id="btn-submit-edit"
+                            variant="contained"
+                            onClick={handleEditSubmit}
+                            disabled={savingEdit}
+                            sx={{
+                                borderRadius: "10px",
+                                px: 3,
+                                py: 1.2,
+                                fontWeight: 700,
+                                textTransform: "none",
+                                background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
+                                "&:hover": {
+                                    background: "linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%)"
+                                }
+                            }}
+                        >
+                            {savingEdit ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Save Changes"}
                         </Button>
                     </DialogActions>
                 </Dialog>

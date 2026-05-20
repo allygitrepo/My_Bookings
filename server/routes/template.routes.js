@@ -39,6 +39,7 @@ router.get("/active", authMiddleware, templateController.getActiveTemplates);
 
 // --- Super Admin Portal Routes (Admin Protected) ---
 router.get("/portal", authMiddleware, portalAdminMiddleware, templateController.portalGetTemplates);
+router.put("/portal/:id", authMiddleware, portalAdminMiddleware, templateController.portalUpdateTemplate);
 router.post(
     "/portal/deploy",
     authMiddleware,
