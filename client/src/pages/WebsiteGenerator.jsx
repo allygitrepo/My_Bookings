@@ -3,7 +3,7 @@ import {
     Box, Paper, Typography, TextField, Button, MenuItem,
     Switch, FormControlLabel, Divider, CircularProgress, IconButton,
     ToggleButton, ToggleButtonGroup, Card, CardActionArea, CardMedia, CardContent,
-    Tooltip, Avatar, ThemeProvider, createTheme
+    Tooltip, Avatar, ThemeProvider, createTheme, Chip
 } from '@mui/material';
 import {
     Language as WebsiteIcon,
@@ -17,6 +17,7 @@ import {
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBusinesses, updateBusiness, getBusinessById } from '../api/business.api';
+import axiosInstance from '../api/axiosInstance';
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
@@ -34,6 +35,7 @@ const WebsiteGenerator = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [customTemplates, setCustomTemplates] = useState([]);
 
     // Website Settings State
     const [settings, setSettings] = useState({
@@ -47,6 +49,17 @@ const WebsiteGenerator = () => {
     // Preview Data State (Full business data including services/locations)
     const [previewData, setPreviewData] = useState(null);
     const [viewMode, setViewMode] = useState('desktop');
+
+    const fetchCustomTemplates = async () => {
+        try {
+            const response = await axiosInstance.get('/templates/active');
+            if (response.data.success) {
+                setCustomTemplates(response.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch active custom templates:', error);
+        }
+    };
 
     const fetchBusinesses = async () => {
         setLoading(true);
@@ -99,6 +112,7 @@ const WebsiteGenerator = () => {
 
     useEffect(() => {
         fetchBusinesses();
+        fetchCustomTemplates();
     }, []);
 
     useEffect(() => {
@@ -160,6 +174,22 @@ const WebsiteGenerator = () => {
             isPreview: true,
             viewMode: viewMode
         };
+
+        const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
+        if (!standardTemplates.includes(settings.selected_template)) {
+            return (
+                <iframe
+                    src={`${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${settings.selected_template}_biz_${selectedBusinessId}/`}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        background: '#ffffff'
+                    }}
+                    title="Live Preview"
+                />
+            );
+        }
 
         switch (settings.selected_template) {
             case 'template1': return <TemplateMinimal data={displayData} />;
@@ -319,72 +349,129 @@ const WebsiteGenerator = () => {
                                         5. Choose Template
                                     </Typography>
                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                                        {(settings.website_type === 'portfolio' ? [
-                                            { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
-                                            { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
-                                            { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
-                                        ] : [
-                                            { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
-                                            { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
-                                            { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
-                                        ]).map((tmpl) => {
+                                        {(() => {
+                                            const defaultTemplates = settings.website_type === 'portfolio' ? [
+                                                { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
+                                                { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
+                                                { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
+                                            ] : [
+                                                { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
+                                                { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
+                                                { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
+                                            ];
+
+                                            const customMapped = customTemplates.map(c => ({
+                                                id: c.id,
+                                                name: c.displayName,
+                                                img: c.icon || '/templates/minimal.png',
+                                                isCustom: true,
+                                                category: c.category
+                                            }));
+
+                                            return [...defaultTemplates, ...customMapped];
+                                        })().map((tmpl) => {
                                             const isSelected = settings.selected_template === tmpl.id;
                                             return (
-                                                <Box
-                                                    key={tmpl.id}
-                                                    onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
-                                                    sx={{
-                                                        cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                        opacity: isSuspended ? 0.6 : 1, borderRadius: '12px',
-                                                        position: 'relative',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        border: '2.5px solid',
-                                                        borderColor: isSelected ? 'primary.main' : 'transparent',
-                                                        bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
-                                                        p: 0.5,
-                                                        '&:hover': {
-                                                            transform: 'translateY(-2px)',
-                                                            borderColor: isSelected ? 'primary.main' : 'divider',
-                                                        }
-                                                    }}
-                                                >
-                                                    <Box sx={{
-                                                        borderRadius: 1.5,
-                                                        overflow: 'hidden',
-                                                        aspectRatio: '1/1',
-                                                        boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
-                                                    }}>
-                                                        <CardMedia
-                                                            component="img"
-                                                            image={tmpl.img}
-                                                            sx={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
-                                                                objectPosition: 'top',
-                                                                filter: isSelected ? 'none' : 'grayscale(20%)',
-                                                                opacity: isSelected ? 1 : 0.7,
-                                                                transition: 'all 0.3s'
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                    {isSelected && (
+                                                <Tooltip title={tmpl.name + (tmpl.isCustom ? ` (Custom - ${tmpl.category})` : "")} key={tmpl.id} arrow>
+                                                    <Box
+                                                        onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
+                                                        sx={{
+                                                            cursor: isSuspended ? 'not-allowed' : 'pointer',
+                                                            opacity: isSuspended ? 0.6 : 1, borderRadius: '12px',
+                                                            position: 'relative',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            border: '2.5px solid',
+                                                            borderColor: isSelected ? 'primary.main' : 'transparent',
+                                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
+                                                            p: 0.5,
+                                                            '&:hover': {
+                                                                transform: 'translateY(-2px)',
+                                                                borderColor: isSelected ? 'primary.main' : 'divider',
+                                                            }
+                                                        }}
+                                                    >
+                                                        {tmpl.isCustom && (
+                                                            <Chip
+                                                                label="Custom"
+                                                                size="small"
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: 4,
+                                                                    left: 4,
+                                                                    fontSize: '0.55rem',
+                                                                    height: 14,
+                                                                    fontWeight: 900,
+                                                                    backgroundColor: '#10B981',
+                                                                    color: '#ffffff',
+                                                                    zIndex: 3,
+                                                                    border: 'none',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            />
+                                                        )}
                                                         <Box sx={{
-                                                            position: 'absolute', top: -4, right: -4,
-                                                            bgcolor: 'primary.main', color: 'white',
-                                                            borderRadius: '50%', width: 16, height: 16,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                            zIndex: 2
+                                                            borderRadius: 1.5,
+                                                            overflow: 'hidden',
+                                                            aspectRatio: '1/1',
+                                                            boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
                                                         }}>
-                                                            <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
+                                                            <CardMedia
+                                                                component="img"
+                                                                image={tmpl.img}
+                                                                sx={{
+                                                                    width: '100%',
+                                                                    height: '100%',
+                                                                    objectFit: 'cover',
+                                                                    objectPosition: 'top',
+                                                                    filter: isSelected ? 'none' : 'grayscale(20%)',
+                                                                    opacity: isSelected ? 1 : 0.7,
+                                                                    transition: 'all 0.3s'
+                                                                }}
+                                                            />
                                                         </Box>
-                                                    )}
-                                                </Box>
+                                                        {isSelected && (
+                                                            <Box sx={{
+                                                                position: 'absolute', top: -4, right: -4,
+                                                                bgcolor: 'primary.main', color: 'white',
+                                                                borderRadius: '50%', width: 16, height: 16,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                zIndex: 2
+                                                            }}>
+                                                                <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </Tooltip>
                                             );
                                         })}
                                     </Box>
                                 </Box>
+                            </Box>
+                            
+                            <Divider sx={{ borderColor: 'divider' }} />
+                            
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
+                                <Button
+                                    variant="contained"
+                                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                                    onClick={handleSave}
+                                    disabled={saving || isSuspended}
+                                    sx={{
+                                        borderRadius: '12px',
+                                        py: 1.5,
+                                        px: 4,
+                                        fontWeight: 800,
+                                        textTransform: 'none',
+                                        background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                        boxShadow: '0 8px 24px rgba(99,102,241,0.25)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)'
+                                        }
+                                    }}
+                                >
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </Button>
                             </Box>
                         </Paper>
                     </Box>

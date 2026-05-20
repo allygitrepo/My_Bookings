@@ -12,7 +12,8 @@ import {
     Logout as LogoutIcon,
     ArrowBack as BackIcon,
     Inventory as PackageIcon,
-    Payments as PaymentsIcon
+    Payments as PaymentsIcon,
+    Layers as TemplatesIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
@@ -27,6 +28,7 @@ const PortalSidebar = ({ open, onClose, variant }) => {
     const menuItems = [
         { text: 'Admin Dashboard', icon: <DashboardIcon />, path: '/portal/dashboard' },
         { text: 'Businesses', icon: <BusinessIcon />, path: '/portal/businesses' },
+        { text: 'Templates', icon: <TemplatesIcon />, path: '/portal/templates' },
         { text: 'Packages', icon: <PackageIcon />, path: '/portal/packages' },
         { text: 'Payments', icon: <PaymentsIcon />, path: '/portal/payments' },
         { text: 'Users', icon: <PeopleIcon />, path: '/portal/users' },
