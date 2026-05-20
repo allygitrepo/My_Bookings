@@ -71,7 +71,7 @@ const sleepSync = (ms) => {
         Atomics.wait(int32, 0, 0, ms);
     } catch (e) {
         const start = Date.now();
-        while (Date.now() - start < ms) {}
+        while (Date.now() - start < ms) { }
     }
 };
 
@@ -142,10 +142,10 @@ const injectWidgetScript = (dir, businessId) => {
     try {
         if (!fs.existsSync(dir)) return;
         const files = fs.readdirSync(dir);
-        
+
         // Excluded folders from recursion to prevent contaminating backend code
         const skipFolders = ["node_modules", ".git", ".github", "server", "controllers", "models", "routes", "config", "database", "helpers", "vendor"];
-        
+
         files.forEach((file) => {
             const fullPath = path.join(dir, file);
             const stat = fs.statSync(fullPath);
@@ -157,7 +157,7 @@ const injectWidgetScript = (dir, businessId) => {
                 const ext = path.extname(file).toLowerCase();
                 if (ext === ".html" || ext === ".php") {
                     let content = fs.readFileSync(fullPath, "utf8");
-                    
+
                     // Smart check: Only inject into PHP files if they contain standard HTML/web structure.
                     // This prevents injecting into pure backend API/DB scripts.
                     if (ext === ".php") {
@@ -171,7 +171,7 @@ const injectWidgetScript = (dir, businessId) => {
                     if (!content.includes("mybookings.allysoftsolutions.com/widget.js")) {
                         console.log(`[Script Injection] Found target file for injection: ${fullPath}`);
                         const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="https://mybookings.allysoftsolutions.com/widget.js" data-business-id="${businessId}" data-theme="light" async></script>\n`;
-                        
+
                         if (content.includes("</head>")) {
                             content = content.replace("</head>", `${scriptTag}</head>`);
                         } else if (content.includes("</body>")) {
@@ -529,7 +529,7 @@ const templateController = {
             if (req.file && req.file.path && fs.existsSync(req.file.path)) {
                 try {
                     fs.unlinkSync(req.file.path);
-                } catch (e) {}
+                } catch (e) { }
             }
             res.status(500).json({ success: false, message: error.message, stack: error.stack });
         }

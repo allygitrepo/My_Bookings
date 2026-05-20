@@ -126,9 +126,9 @@ const WebsiteGenerator = () => {
         if (!selectedBusinessId || businesses.length === 0) return;
         const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
         if (!currentBiz) return;
-        
+
         const bizCategory = currentBiz.business_type;
-        
+
         const defaultTemplates = settings.website_type === 'portfolio' ? [
             { id: 'portfolio1' },
             { id: 'portfolio2' },
@@ -138,16 +138,16 @@ const WebsiteGenerator = () => {
             { id: 'template2' },
             { id: 'template3' },
         ];
-        
+
         const filteredCustom = customTemplates.filter(c => {
             const matchCategory = c.category === bizCategory;
             const templateType = c.type || 'website';
             const matchType = templateType.split(',').map(t => t.trim()).includes(settings.website_type);
             return matchCategory && matchType;
         });
-        
+
         const allFilteredIds = [...defaultTemplates.map(t => t.id), ...filteredCustom.map(c => c.id)];
-        
+
         if (!allFilteredIds.includes(settings.selected_template)) {
             const defaultId = settings.website_type === 'portfolio' ? 'portfolio1' : 'template1';
             setSettings(prev => ({ ...prev, selected_template: defaultId }));
@@ -488,7 +488,7 @@ const WebsiteGenerator = () => {
                                                             }}
                                                         />
                                                     </Box>
-                                                    
+
                                                     {/* Template Name Label Below Thumbnail */}
                                                     <Box sx={{ mt: 1, textAlign: 'center' }}>
                                                         <Typography variant="caption" fontWeight={750} display="block" color={isSelected ? 'primary.main' : 'text.primary'} sx={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
@@ -519,9 +519,9 @@ const WebsiteGenerator = () => {
                                     })}
                                 </Box>
                             </Box>
-                            
+
                             <Divider sx={{ borderColor: 'divider' }} />
-                            
+
                             <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
                                 <Button
                                     variant="contained"
@@ -599,12 +599,72 @@ const WebsiteGenerator = () => {
                                     exclusive
                                     onChange={(e, v) => v && setViewMode(v)}
                                     size="small"
-                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
+                                    sx={{
+                                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                        borderRadius: '12px',
+                                        p: '4px',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        width: { xs: '100%', sm: 'auto' }
+                                    }}
                                 >
-                                    <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <ToggleButton
+                                        value="desktop"
+                                        sx={{
+                                            flex: 1,
+                                            px: 2.5,
+                                            py: 0.75,
+                                            border: 'none',
+                                            borderRadius: '8px !important',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            transition: 'all 0.2s ease',
+                                            '&.Mui-selected': {
+                                                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(255, 255, 255, 0.12)'
+                                                }
+                                            },
+                                            '&:hover': {
+                                                color: '#fff',
+                                                bgcolor: 'rgba(255, 255, 255, 0.04)'
+                                            }
+                                        }}
+                                    >
                                         <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
                                     </ToggleButton>
-                                    <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <ToggleButton
+                                        value="mobile"
+                                        sx={{
+                                            flex: 1,
+                                            px: 2.5,
+                                            py: 0.75,
+                                            border: 'none',
+                                            borderRadius: '8px !important',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            transition: 'all 0.2s ease',
+                                            '&.Mui-selected': {
+                                                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(255, 255, 255, 0.12)'
+                                                }
+                                            },
+                                            '&:hover': {
+                                                color: '#fff',
+                                                bgcolor: 'rgba(255, 255, 255, 0.04)'
+                                            }
+                                        }}
+                                    >
                                         <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
                                     </ToggleButton>
                                 </ToggleButtonGroup>
@@ -614,26 +674,37 @@ const WebsiteGenerator = () => {
                             <Box
                                 sx={{
                                     width: '100%',
-                                    bgcolor: 'transparent',
-                                    minHeight: '95vh',
                                     display: 'flex',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                     justifyContent: 'center',
-                                    p: { xs: 0, md: 2 },
-                                    overflow: 'hidden',
+                                    mt: 1,
+                                    overflow: 'visible',
                                     transition: 'all 0.5s ease',
+                                    // In mobile mode, add a dark background only around the phone
+                                    ...(viewMode === 'mobile' ? {
+                                        bgcolor: 'rgba(10,12,18,0.6)',
+                                        borderRadius: '64px',
+                                        p: '24px',
+                                        width: 'fit-content',
+                                        mx: 'auto',
+                                        boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)',
+                                    } : {
+                                        bgcolor: 'transparent',
+                                    })
                                 }}
                             >
                                 {/* Device Wrapper */}
                                 <Box sx={{
                                     position: 'relative',
-                                    width: viewMode === 'mobile' ? 375 + 24 : '100%',
-                                    maxWidth: viewMode === 'mobile' ? 399 : 1200,
-                                    height: viewMode === 'mobile' ? 780 : '75vh',
-                                    bgcolor: '#1a1d21', // Frame color
-                                    borderRadius: viewMode === 'mobile' ? '54px' : '16px 16px 8px 8px',
-                                    p: viewMode === 'mobile' ? '54px 12px 18px 12px' : '40px 0px 0px 0px', // Mockup bezels
-                                    boxShadow: '0 40px 100px -20px rgba(0,0,0,0.3)',
+                                    width: viewMode === 'mobile' ? 375 : '100%',
+                                    maxWidth: viewMode === 'mobile' ? 375 : '100%',
+                                    height: viewMode === 'mobile' ? 780 : '110vh',
+                                    bgcolor: '#1a1d21',
+                                    borderRadius: viewMode === 'mobile' ? '48px' : '16px 16px 8px 8px',
+                                    p: viewMode === 'mobile' ? '52px 10px 16px 10px' : '40px 0px 0px 0px',
+                                    boxShadow: viewMode === 'mobile'
+                                        ? '0 0 0 2px rgba(255,255,255,0.08), 0 30px 80px -10px rgba(0,0,0,0.6)'
+                                        : '0 40px 100px -20px rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                                     display: 'flex',
@@ -649,10 +720,22 @@ const WebsiteGenerator = () => {
 
                                     {/* Desktop Decorations */}
                                     {viewMode === 'desktop' && (
-                                        <Box sx={{ position: 'absolute', top: 16, left: 20, display: 'flex', gap: 1 }}>
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FF5F56' }} />
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FFBD2E' }} />
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#27C93F' }} />
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: 40,
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            px: 2.5
+                                        }}>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FF5F56' }} />
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFBD2E' }} />
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#27C93F' }} />
+                                            </Box>
                                         </Box>
                                     )}
 
@@ -666,9 +749,22 @@ const WebsiteGenerator = () => {
                                             overflowY: 'auto',
                                             overflowX: 'hidden',
                                             containerType: 'inline-size',
-                                            '&::-webkit-scrollbar': { width: 4 },
-                                            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-                                            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 10 }
+                                            '&::-webkit-scrollbar': { display: 'none', width: 0 },
+                                            scrollbarWidth: 'none',
+                                            msOverflowStyle: 'none',
+                                            // Dark strip to cover iframe scrollbar
+                                            '&::after': viewMode === 'mobile' ? {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 0,
+                                                width: '10px',
+                                                height: '100%',
+                                                bgcolor: '#1a1d21',
+                                                zIndex: 10,
+                                                borderRadius: '0 36px 36px 0',
+                                                pointerEvents: 'none',
+                                            } : {},
                                         }}
                                     >
                                         {previewLoading ? (

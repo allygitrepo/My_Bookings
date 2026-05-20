@@ -303,7 +303,7 @@ const businessController = {
             let data;
             try {
                 data = await whatsappService.initiateInstance(keyToPass, business.business_name);
-                
+
                 // Trigger catch if gateway returned success=false with "Instance not found"
                 if (data && data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found'))) {
                     throw new Error('Instance not found');
@@ -311,7 +311,7 @@ const businessController = {
             } catch (initError) {
                 const errorMsg = initError.response?.data?.message || initError.message;
                 const isNotFound = errorMsg === 'Instance not found' || errorMsg?.includes('not found') || errorMsg?.includes('Instance not found');
-                
+
                 if (isNotFound && keyToPass) {
                     console.log(`[WhatsApp] Instance ${keyToPass} not found on gateway. Purging key and requesting a new one...`);
                     // Update model state
@@ -379,9 +379,9 @@ const businessController = {
                     whatsapp_instance_key: null,
                     whatsapp_connected: false
                 });
-                return res.json({ 
-                    success: false, 
-                    status: 'disconnected', 
+                return res.json({
+                    success: false,
+                    status: 'disconnected',
                     message: "Instance not found. Wiped key.",
                     whatsapp_send_staff: business.whatsapp_send_staff,
                     whatsapp_send_customer: business.whatsapp_send_customer

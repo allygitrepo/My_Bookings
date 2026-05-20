@@ -263,8 +263,8 @@ const Businesses = () => {
                                         {biz.business_name}
                                         {biz.website_enabled && (
                                             <Tooltip title="Visit Live Website">
-                                                <IconButton 
-                                                    size="small" 
+                                                <IconButton
+                                                    size="small"
                                                     onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')}
                                                     sx={{ p: 0.5, color: 'secondary.main' }}
                                                 >
@@ -282,21 +282,21 @@ const Businesses = () => {
                                 <TableCell>
                                     {biz.status === false ? (
                                         <Tooltip title={biz.suspended_reason || "Violation of platform policies"} arrow>
-                                            <Chip 
-                                                label="Suspended" 
-                                                color="error" 
-                                                size="small" 
-                                                variant="filled" 
+                                            <Chip
+                                                label="Suspended"
+                                                color="error"
+                                                size="small"
+                                                variant="filled"
                                                 icon={<InfoIcon style={{ fontSize: '0.9rem' }} />}
                                                 sx={{ fontWeight: 700, borderRadius: 1.5, cursor: 'help' }}
                                             />
                                         </Tooltip>
                                     ) : (
-                                        <Chip 
-                                            label="Active" 
-                                            color="success" 
-                                            size="small" 
-                                            variant="outlined" 
+                                        <Chip
+                                            label="Active"
+                                            color="success"
+                                            size="small"
+                                            variant="outlined"
                                             sx={{ fontWeight: 700, borderRadius: 1.5 }}
                                         />
                                     )}
@@ -335,9 +335,9 @@ const Businesses = () => {
                         <Card key={biz.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                                    <Box sx={{ 
-                                        width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.50', 
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem' 
+                                    <Box sx={{
+                                        width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.50',
+                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem'
                                     }}>
                                         {industry?.icon || '🏢'}
                                     </Box>
@@ -345,8 +345,8 @@ const Businesses = () => {
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
                                             {biz.website_enabled && (
-                                                <IconButton 
-                                                    size="small" 
+                                                <IconButton
+                                                    size="small"
                                                     onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')}
                                                     sx={{ p: 0, color: 'secondary.main' }}
                                                 >
@@ -492,7 +492,7 @@ const Businesses = () => {
                                             try {
                                                 const token = JSON.parse(localStorage.getItem('currentUser'))?.token;
                                                 const res = await axios.post(`${import.meta.env.VITE_API_BASE_URL}/upload/logo`, formData, {
-                                                    headers: { 
+                                                    headers: {
                                                         'Content-Type': 'multipart/form-data',
                                                         'Authorization': `Bearer ${token}`
                                                     }
@@ -527,11 +527,11 @@ const Businesses = () => {
                         <Controller name="phone" control={control}
                             rules={{ validate: validatePhone }}
                             render={({ field }) => (
-                                <PhoneInput 
-                                    {...field} 
-                                    label="Phone Number" 
-                                    error={!!errors.phone} 
-                                    helperText={errors.phone?.message} 
+                                <PhoneInput
+                                    {...field}
+                                    label="Phone Number"
+                                    error={!!errors.phone}
+                                    helperText={errors.phone?.message}
                                 />
                             )} />
 
@@ -543,7 +543,7 @@ const Businesses = () => {
                     </Box>
                 </FieldSection>
                 <Divider sx={{ my: 2.5 }} />
-                
+
                 <FieldSection label="Payout Details (Optional)">
                     <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                         Provide your bank details to receive payments from bookings. These are handled via our central Razorpay account.
@@ -553,7 +553,7 @@ const Businesses = () => {
                             render={({ field }) => (
                                 <TextField {...field} fullWidth label="Account Holder Name" placeholder="Full name as per bank" />
                             )} />
-                        
+
                         <Grid container spacing={2}>
                             <Grid item xs={12} sm={6}>
                                 <Controller name="account_number" control={control}
@@ -584,18 +584,18 @@ const Businesses = () => {
                             name="has_multiple_locations"
                             control={control}
                             render={({ field: { value, onChange } }) => (
-                                <Tooltip 
+                                <Tooltip
                                     title={usage?.limits?.locations === 1 ? "Upgrade your plan to enable multiple locations for this business." : ""}
                                     placement="top"
                                     arrow
                                 >
                                     <FormControlLabel
                                         control={
-                                            <Switch 
-                                                checked={usage?.limits?.locations === 1 ? false : !!value} 
-                                                onChange={usage?.limits?.locations === 1 ? undefined : onChange} 
+                                            <Switch
+                                                checked={usage?.limits?.locations === 1 ? false : !!value}
+                                                onChange={usage?.limits?.locations === 1 ? undefined : onChange}
                                                 disabled={usage?.limits?.locations === 1}
-                                                color="primary" 
+                                                color="primary"
                                             />
                                         }
                                         label={
@@ -604,10 +604,10 @@ const Businesses = () => {
                                                     Operating from multiple locations?
                                                 </Typography>
                                                 <Typography variant="caption" color="text.secondary">
-                                                    {usage?.limits?.locations === 1 
+                                                    {usage?.limits?.locations === 1
                                                         ? "Your current plan supports 1 location only."
-                                                        : value 
-                                                            ? "Use the 'Locations' page to manage your branches." 
+                                                        : value
+                                                            ? "Use the 'Locations' page to manage your branches."
                                                             : "Provide address details here to bypass manual location setup."}
                                                 </Typography>
                                             </Box>
@@ -630,9 +630,9 @@ const Businesses = () => {
                                     render={({ field: { value, onChange } }) => (
                                         <Grid container spacing={2}>
                                             <Grid item xs={6}>
-                                                <Paper 
+                                                <Paper
                                                     onClick={() => onChange('Physical')}
-                                                    sx={{ 
+                                                    sx={{
                                                         p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
                                                         border: '2px solid', borderColor: value === 'Physical' ? 'primary.main' : 'divider',
                                                         bgcolor: value === 'Physical' ? 'primary.50' : 'background.paper',
@@ -644,9 +644,9 @@ const Businesses = () => {
                                                 </Paper>
                                             </Grid>
                                             <Grid item xs={6}>
-                                                <Paper 
+                                                <Paper
                                                     onClick={() => onChange('Online')}
-                                                    sx={{ 
+                                                    sx={{
                                                         p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
                                                         border: '2px solid', borderColor: value === 'Online' ? 'primary.main' : 'divider',
                                                         bgcolor: value === 'Online' ? 'primary.50' : 'background.paper',
@@ -666,7 +666,7 @@ const Businesses = () => {
                                         <Controller name="address" control={control}
                                             rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'Address is required' : false }}
                                             render={({ field }) => (
-                                                <TextField {...field} fullWidth label="Full Address *" multiline rows={2} placeholder="Shop No. 5, Business Center..." 
+                                                <TextField {...field} fullWidth label="Full Address *" multiline rows={2} placeholder="Shop No. 5, Business Center..."
                                                     error={!!errors.address} helperText={errors.address?.message} />
                                             )} />
                                         <Grid container spacing={2}>
@@ -689,7 +689,7 @@ const Businesses = () => {
                                 ) : (
                                     <Controller name="meeting_link" control={control}
                                         render={({ field }) => (
-                                            <TextField {...field} fullWidth label="Meeting Link / Instructions" placeholder="Zoom Link, Google Meet URL, etc." 
+                                            <TextField {...field} fullWidth label="Meeting Link / Instructions" placeholder="Zoom Link, Google Meet URL, etc."
                                                 multiline rows={2} helperText="Explain how customers will meet you online." />
                                         )} />
                                 )}
