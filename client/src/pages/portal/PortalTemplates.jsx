@@ -480,7 +480,7 @@ const PortalTemplates = () => {
                         }
                     }}
                 >
-                    <DialogTitle sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <DialogTitle component="div" sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Typography variant="h5" fontWeight={800}>
                             Deploy ZIP Template
                         </Typography>
@@ -623,7 +623,7 @@ const PortalTemplates = () => {
                         }
                     }}
                 >
-                    <DialogTitle sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                    <DialogTitle component="div" sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                         <Typography variant="h5" fontWeight={800}>
                             Edit Template Details
                         </Typography>
