@@ -223,10 +223,10 @@ const businessController = {
             if (safeBody.selected_template) {
                 try {
                     const TemplateProject = require("../models/templateProject.model");
-                    const customTemplate = await TemplateProject.findByPk(safeBody.selected_template);
+                    const customTemplate = await TemplateProject.findOne({ where: { templateId: safeBody.selected_template } });
                     if (customTemplate) {
                         const templateController = require("./template.controller");
-                        await templateController.cloneTemplateForBusiness(customTemplate.id, row.id);
+                        await templateController.cloneTemplateForBusiness(customTemplate.templateId, row.id);
                     }
                 } catch (cloneErr) {
                     console.error("[Business Update] Custom template cloning failed:", cloneErr);

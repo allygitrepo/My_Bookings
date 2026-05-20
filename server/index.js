@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/My_Bookings_Templates', express.static(path.join(__dirname, 'Templates')));
 
 const http = require("http");
 const { initSocket } = require("./services/socket.service");
