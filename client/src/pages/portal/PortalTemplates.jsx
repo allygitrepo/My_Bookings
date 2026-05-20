@@ -21,7 +21,12 @@ import {
     CardContent,
     CardActions,
     Tabs,
-    Tab
+    Tab,
+    Checkbox,
+    FormControlLabel,
+    FormGroup,
+    FormLabel,
+    FormControl
 } from "@mui/material";
 import {
     CloudUpload as UploadIcon,
@@ -58,7 +63,8 @@ const PortalTemplates = () => {
     const [openDialog, setOpenDialog] = useState(false);
     const [displayName, setDisplayName] = useState("");
     const [category, setCategory] = useState("Healthcare / Hospital");
-    const [templateType, setTemplateType] = useState("website");
+    const [deployWebsite, setDeployWebsite] = useState(true);
+    const [deployPortfolio, setDeployPortfolio] = useState(false);
     const [zipFile, setZipFile] = useState(null);
     const [fileName, setFileName] = useState("");
     const [deploying, setDeploying] = useState(false);
@@ -68,7 +74,8 @@ const PortalTemplates = () => {
     const [editingTemplateId, setEditingTemplateId] = useState(null);
     const [editDisplayName, setEditDisplayName] = useState("");
     const [editCategory, setEditCategory] = useState("Healthcare / Hospital");
-    const [editTemplateType, setEditTemplateType] = useState("website");
+    const [editWebsite, setEditWebsite] = useState(true);
+    const [editPortfolio, setEditPortfolio] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
 
     const fetchTemplates = async () => {
@@ -115,7 +122,12 @@ const PortalTemplates = () => {
         const formData = new FormData();
         formData.append("displayName", displayName);
         formData.append("category", category);
-        formData.append("type", templateType);
+        
+        const selectedTypes = [];
+        if (deployWebsite) selectedTypes.push("website");
+        if (deployPortfolio) selectedTypes.push("portfolio");
+        formData.append("type", selectedTypes.length > 0 ? selectedTypes.join(",") : "website");
+        
         formData.append("zipFile", zipFile);
 
         try {
@@ -129,7 +141,8 @@ const PortalTemplates = () => {
                 setOpenDialog(false);
                 setDisplayName("");
                 setCategory("Healthcare / Hospital");
-                setTemplateType("website");
+                setDeployWebsite(true);
+                setDeployPortfolio(false);
                 setZipFile(null);
                 setFileName("");
                 fetchTemplates();
@@ -139,6 +152,46 @@ const PortalTemplates = () => {
             toast.error(errMsg);
         } finally {
             setDeploying(false);
+        }
+    };
+
+    const handleDeployWebsiteChange = (checked) => {
+        if (checked) {
+            setDeployWebsite(true);
+            setDeployPortfolio(false);
+        } else {
+            setDeployWebsite(false);
+            setDeployPortfolio(true);
+        }
+    };
+
+    const handleDeployPortfolioChange = (checked) => {
+        if (checked) {
+            setDeployPortfolio(true);
+            setDeployWebsite(false);
+        } else {
+            setDeployPortfolio(false);
+            setDeployWebsite(true);
+        }
+    };
+
+    const handleEditWebsiteChange = (checked) => {
+        if (checked) {
+            setEditWebsite(true);
+            setEditPortfolio(false);
+        } else {
+            setEditWebsite(false);
+            setEditPortfolio(true);
+        }
+    };
+
+    const handleEditPortfolioChange = (checked) => {
+        if (checked) {
+            setEditPortfolio(true);
+            setEditWebsite(false);
+        } else {
+            setEditPortfolio(false);
+            setEditWebsite(true);
         }
     };
 
@@ -162,7 +215,9 @@ const PortalTemplates = () => {
         setEditingTemplateId(template.id);
         setEditDisplayName(template.displayName);
         setEditCategory(template.category);
-        setEditTemplateType(template.type || "website");
+        const types = (template.type || "website").split(",");
+        setEditWebsite(types.includes("website"));
+        setEditPortfolio(types.includes("portfolio"));
         setOpenEditDialog(true);
     };
 
@@ -174,10 +229,13 @@ const PortalTemplates = () => {
 
         setSavingEdit(true);
         try {
+            const selectedTypes = [];
+            if (editWebsite) selectedTypes.push("website");
+            if (editPortfolio) selectedTypes.push("portfolio");
             const response = await axiosInstance.put(`/templates/portal/${editingTemplateId}`, {
                 displayName: editDisplayName,
                 category: editCategory,
-                type: editTemplateType
+                type: selectedTypes.length > 0 ? selectedTypes.join(",") : "website"
             });
             if (response.data.success) {
                 toast.success("Template metadata updated successfully!");
@@ -355,18 +413,24 @@ const PortalTemplates = () => {
                                                     height: 20
                                                 }}
                                             />
-                                            <Chip
-                                                label={t.type === "portfolio" ? "Portfolio" : "Website"}
-                                                size="small"
-                                                sx={{
-                                                    background: t.type === "portfolio" ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.1)",
-                                                    color: t.type === "portfolio" ? "#818CF8" : "#60A5FA",
-                                                    fontWeight: 600,
-                                                    fontSize: "0.7rem",
-                                                    border: t.type === "portfolio" ? "1px solid rgba(99, 102, 241, 0.15)" : "1px solid rgba(59, 130, 246, 0.15)",
-                                                    height: 20
-                                                }}
-                                            />
+                                            {(t.type || "website").split(",").map((typeVal) => {
+                                                const type = typeVal.trim();
+                                                return (
+                                                    <Chip
+                                                        key={type}
+                                                        label={type === "portfolio" ? "Portfolio" : "Website"}
+                                                        size="small"
+                                                        sx={{
+                                                            background: type === "portfolio" ? "rgba(99, 102, 241, 0.1)" : "rgba(59, 130, 246, 0.1)",
+                                                            color: type === "portfolio" ? "#818CF8" : "#60A5FA",
+                                                            fontWeight: 600,
+                                                            fontSize: "0.7rem",
+                                                            border: type === "portfolio" ? "1px solid rgba(99, 102, 241, 0.15)" : "1px solid rgba(59, 130, 246, 0.15)",
+                                                            height: 20
+                                                        }}
+                                                    />
+                                                );
+                                            })}
                                         </Box>
 
                                         {/* Icon & Title */}
@@ -495,7 +559,7 @@ const PortalTemplates = () => {
                     </DialogTitle>
                     <DialogContent sx={{ p: 3 }}>
                         <Typography variant="body2" color="text.secondary" mb={3}>
-                            Select a rich template package (ZIP file containing standard site directories, index files, or custom databases) to register it in the platform.
+                            Upload a ZIP template package to register it in the platform.
                         </Typography>
 
                         <TextField
@@ -528,24 +592,92 @@ const PortalTemplates = () => {
                             ))}
                         </TextField>
 
-                        <TextField
-                            id="select-template-type"
-                            select
-                            label="Template Type (Site Mode)"
-                            fullWidth
-                            variant="outlined"
-                            value={templateType}
-                            onChange={(e) => setTemplateType(e.target.value)}
-                            disabled={deploying}
-                            sx={{ mb: 3 }}
-                        >
-                            <MenuItem value="website" id="menu-opt-type-website">
-                                🌐 Website
-                            </MenuItem>
-                            <MenuItem value="portfolio" id="menu-opt-type-portfolio">
-                                💼 Portfolio
-                            </MenuItem>
-                        </TextField>
+                        <FormControl component="fieldset" disabled={deploying} sx={{ mb: 3, width: "100%", textAlign: "left" }}>
+                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.85rem", mb: 1.5, fontWeight: 700 }}>
+                                Template Type (Site Mode)
+                            </FormLabel>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                {/* Website Card */}
+                                <Box
+                                    onClick={() => !deploying && handleDeployWebsiteChange(true)}
+                                    sx={{
+                                        flex: 1,
+                                        cursor: deploying ? 'not-allowed' : 'pointer',
+                                        p: 2,
+                                        borderRadius: '16px',
+                                        border: '1.5px solid',
+                                        borderColor: deployWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
+                                        backgroundColor: deployWebsite ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            borderColor: deployWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
+                                            backgroundColor: deployWebsite ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    <Checkbox
+                                        id="checkbox-deploy-website"
+                                        checked={deployWebsite}
+                                        onChange={(e) => handleDeployWebsiteChange(e.target.checked)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        color="primary"
+                                        sx={{ p: 0 }}
+                                        disabled={deploying}
+                                    />
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            🌐 Website
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
+                                            Standard site mode
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Portfolio Card */}
+                                <Box
+                                    onClick={() => !deploying && handleDeployPortfolioChange(true)}
+                                    sx={{
+                                        flex: 1,
+                                        cursor: deploying ? 'not-allowed' : 'pointer',
+                                        p: 2,
+                                        borderRadius: '16px',
+                                        border: '1.5px solid',
+                                        borderColor: deployPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
+                                        backgroundColor: deployPortfolio ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            borderColor: deployPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
+                                            backgroundColor: deployPortfolio ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    <Checkbox
+                                        id="checkbox-deploy-portfolio"
+                                        checked={deployPortfolio}
+                                        onChange={(e) => handleDeployPortfolioChange(e.target.checked)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        color="primary"
+                                        sx={{ p: 0 }}
+                                        disabled={deploying}
+                                    />
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            💼 Portfolio
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
+                                            Solo provider mode
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </FormControl>
 
                         {/* File Upload drag area */}
                         <Button
@@ -671,24 +803,92 @@ const PortalTemplates = () => {
                             ))}
                         </TextField>
 
-                        <TextField
-                            id="select-edit-template-type"
-                            select
-                            label="Template Type (Site Mode)"
-                            fullWidth
-                            variant="outlined"
-                            value={editTemplateType}
-                            onChange={(e) => setEditTemplateType(e.target.value)}
-                            disabled={savingEdit}
-                            sx={{ mb: 3 }}
-                        >
-                            <MenuItem value="website" id="menu-edit-opt-type-website">
-                                🌐 Website
-                            </MenuItem>
-                            <MenuItem value="portfolio" id="menu-edit-opt-type-portfolio">
-                                💼 Portfolio
-                            </MenuItem>
-                        </TextField>
+                        <FormControl component="fieldset" disabled={savingEdit} sx={{ mb: 3, width: "100%", textAlign: "left" }}>
+                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.85rem", mb: 1.5, fontWeight: 700 }}>
+                                Template Type (Site Mode)
+                            </FormLabel>
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                {/* Website Card */}
+                                <Box
+                                    onClick={() => !savingEdit && handleEditWebsiteChange(true)}
+                                    sx={{
+                                        flex: 1,
+                                        cursor: savingEdit ? 'not-allowed' : 'pointer',
+                                        p: 2,
+                                        borderRadius: '16px',
+                                        border: '1.5px solid',
+                                        borderColor: editWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
+                                        backgroundColor: editWebsite ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            borderColor: editWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
+                                            backgroundColor: editWebsite ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    <Checkbox
+                                        id="checkbox-edit-website"
+                                        checked={editWebsite}
+                                        onChange={(e) => handleEditWebsiteChange(e.target.checked)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        color="primary"
+                                        sx={{ p: 0 }}
+                                        disabled={savingEdit}
+                                    />
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            🌐 Website
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
+                                            Standard site mode
+                                        </Typography>
+                                    </Box>
+                                </Box>
+
+                                {/* Portfolio Card */}
+                                <Box
+                                    onClick={() => !savingEdit && handleEditPortfolioChange(true)}
+                                    sx={{
+                                        flex: 1,
+                                        cursor: savingEdit ? 'not-allowed' : 'pointer',
+                                        p: 2,
+                                        borderRadius: '16px',
+                                        border: '1.5px solid',
+                                        borderColor: editPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
+                                        backgroundColor: editPortfolio ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 1.5,
+                                        transition: 'all 0.2s ease',
+                                        '&:hover': {
+                                            borderColor: editPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
+                                            backgroundColor: editPortfolio ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
+                                        }
+                                    }}
+                                >
+                                    <Checkbox
+                                        id="checkbox-edit-portfolio"
+                                        checked={editPortfolio}
+                                        onChange={(e) => handleEditPortfolioChange(e.target.checked)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        color="primary"
+                                        sx={{ p: 0 }}
+                                        disabled={savingEdit}
+                                    />
+                                    <Box>
+                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            💼 Portfolio
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
+                                            Solo provider mode
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Box>
+                        </FormControl>
                     </DialogContent>
                     <DialogActions sx={{ p: 3, pt: 0, justifyContent: "flex-end", gap: 1.5 }}>
                         <Button id="btn-cancel-edit" onClick={() => setOpenEditDialog(false)} disabled={savingEdit} sx={{ color: "text.secondary", fontWeight: 600 }}>

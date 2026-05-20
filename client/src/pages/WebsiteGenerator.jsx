@@ -142,7 +142,7 @@ const WebsiteGenerator = () => {
         const filteredCustom = customTemplates.filter(c => {
             const matchCategory = c.category === bizCategory;
             const templateType = c.type || 'website';
-            const matchType = templateType === settings.website_type;
+            const matchType = templateType.split(',').map(t => t.trim()).includes(settings.website_type);
             return matchCategory && matchType;
         });
         
@@ -337,14 +337,16 @@ const WebsiteGenerator = () => {
                                         2. Choose Site Mode
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
-                                        <Button
-                                            fullWidth
-                                            variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
-                                            onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
-                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
-                                        >
-                                            Website
-                                        </Button>
+                                        <span style={{ flex: 1 }}>
+                                            <Button
+                                                fullWidth
+                                                variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
+                                                onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
+                                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
+                                            >
+                                                Website
+                                            </Button>
+                                        </span>
                                         <Tooltip title={!businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations ? "" : "Portfolios are for solo providers only."}>
                                             <span style={{ flex: 1 }}>
                                                 <Button
@@ -352,7 +354,7 @@ const WebsiteGenerator = () => {
                                                     disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
                                                     variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
                                                     onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: 'portfolio1' })}
-                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1, height: '100%' }}
+                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
                                                 >
                                                     Portfolio
                                                 </Button>
@@ -412,7 +414,7 @@ const WebsiteGenerator = () => {
                                             .filter(c => {
                                                 const matchCategory = c.category === bizCategory;
                                                 const templateType = c.type || 'website';
-                                                const matchType = templateType === settings.website_type;
+                                                const matchType = templateType.split(',').map(t => t.trim()).includes(settings.website_type);
                                                 return matchCategory && matchType;
                                             })
                                             .map(c => ({
