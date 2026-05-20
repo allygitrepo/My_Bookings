@@ -302,6 +302,7 @@ const templateController = {
                     // Auto-seed into DB
                     const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
                     templateRecord = await TemplateProject.create({
+                        id: dirName,
                         templateId: dirName,
                         displayName: displayName,
                         category: "Healthcare / Hospital", // Default category or can be customized
@@ -344,10 +345,8 @@ const templateController = {
     cloneTemplateForBusiness: async (templateIdOrSlug, businessId) => {
         try {
             // Find template by either primary key (if integer) or templateId (slug)
-            let template;
-            if (typeof templateIdOrSlug === "number" || !isNaN(templateIdOrSlug)) {
-                template = await TemplateProject.findByPk(templateIdOrSlug);
-            } else {
+            let template = await TemplateProject.findByPk(templateIdOrSlug);
+            if (!template) {
                 template = await TemplateProject.findOne({ where: { templateId: templateIdOrSlug } });
             }
 
@@ -390,6 +389,27 @@ const templateController = {
             const customTemplates = await TemplateProject.findAll({
                 where: { isActive: true }
             });
+
+            // Automatically clone active templates for the user's businesses in the background to ensure previews don't 404
+            if (req.user && req.user.user_id) {
+                (async () => {
+                    try {
+                        const Business = require("../models/business.model");
+                        const businesses = await Business.findAll({ where: { user_id: req.user.user_id } });
+                        for (const biz of businesses) {
+                            for (const t of customTemplates) {
+                                try {
+                                    await templateController.cloneTemplateForBusiness(t.templateId, biz.id);
+                                } catch (cloneErr) {
+                                    console.error(`[Pre-Cloning] Failed to clone template ${t.templateId} for business ${biz.id}:`, cloneErr);
+                                }
+                            }
+                        }
+                    } catch (dbErr) {
+                        console.error("[Pre-Cloning] Error fetching businesses for pre-cloning:", dbErr);
+                    }
+                })();
+            }
 
             // Format custom templates to match the client-side template structure expectation
             const formattedCustom = customTemplates.map((t) => ({
@@ -480,6 +500,7 @@ const templateController = {
 
             // Create template entry in MySQL
             const template = await TemplateProject.create({
+                id: templateId,
                 templateId: templateId,
                 displayName,
                 category,
@@ -524,10 +545,8 @@ const templateController = {
                 return res.status(400).json({ success: false, message: "Display name, category, and type are required." });
             }
 
-            let template;
-            if (!isNaN(id)) {
-                template = await TemplateProject.findByPk(id);
-            } else {
+            let template = await TemplateProject.findByPk(id);
+            if (!template) {
                 template = await TemplateProject.findOne({ where: { templateId: id } });
             }
 
@@ -554,10 +573,8 @@ const templateController = {
     portalDeleteTemplate: async (req, res) => {
         try {
             const { id } = req.params;
-            let template;
-            if (!isNaN(id)) {
-                template = await TemplateProject.findByPk(id);
-            } else {
+            let template = await TemplateProject.findByPk(id);
+            if (!template) {
                 template = await TemplateProject.findOne({ where: { templateId: id } });
             }
 

@@ -47,6 +47,12 @@ router.post(
     upload.single("zipFile"),
     templateController.portalDeployTemplate
 );
+router.put(
+    "/portal/:id",
+    authMiddleware,
+    portalAdminMiddleware,
+    templateController.portalUpdateTemplate
+);
 router.delete("/portal/:id", authMiddleware, portalAdminMiddleware, templateController.portalDeleteTemplate);
 
 module.exports = router;
