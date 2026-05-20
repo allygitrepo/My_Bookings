@@ -3,7 +3,8 @@ import {
     Box, Card, CardContent, Typography, Button,
     CircularProgress, Alert, Chip, Divider, Paper,
     Stack, IconButton, Tooltip, Zoom, Fade, Avatar,
-    Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions
+    Dialog, DialogTitle, DialogContent, DialogContentText, DialogActions,
+    Switch
 } from '@mui/material';
 import {
     WhatsApp as WhatsAppIcon,
@@ -35,6 +36,9 @@ const WhatsApp = () => {
     const [error, setError] = useState(null);
     const [confirmDisconnect, setConfirmDisconnect] = useState(false);
     const [profileData, setProfileData] = useState(null);
+    const [sendStaff, setSendStaff] = useState(true);
+    const [sendCustomer, setSendCustomer] = useState(true);
+    const [updatingToggles, setUpdatingToggles] = useState(false);
 
     // Filter businesses based on selectedBusinessId
     const currentBusiness = businesses.find(b => String(b.id) === String(selectedBusinessId));
@@ -57,15 +61,22 @@ const WhatsApp = () => {
         }
     }, [selectedBusinessId]);
 
-    const fetchStatus = useCallback(async () => {
+    const fetchStatus = useCallback(async (force = false) => {
         if (!selectedBusinessId || selectedBusinessId === 'all') return;
 
         try {
-            const res = await axiosInstance.get(`/business/whatsapp/status/${selectedBusinessId}`);
+            const url = `/business/whatsapp/status/${selectedBusinessId}${force ? '?force=true' : ''}`;
+            const res = await axiosInstance.get(url);
             if (res.data.success) {
                 setStatus(res.data.status);
                 if (res.data.status === 'connected') {
                     updateProfileData(res.data);
+                }
+                if (res.data.whatsapp_send_staff !== undefined) {
+                    setSendStaff(res.data.whatsapp_send_staff);
+                }
+                if (res.data.whatsapp_send_customer !== undefined) {
+                    setSendCustomer(res.data.whatsapp_send_customer);
                 }
             }
         } catch (err) {
@@ -115,6 +126,12 @@ const WhatsApp = () => {
                         setQrCode(null);
                         setCountdown(0);
                         updateProfileData(res.data);
+                        if (res.data.whatsapp_send_staff !== undefined) {
+                            setSendStaff(res.data.whatsapp_send_staff);
+                        }
+                        if (res.data.whatsapp_send_customer !== undefined) {
+                            setSendCustomer(res.data.whatsapp_send_customer);
+                        }
                         toast.success('WhatsApp Connected Successfully!');
                         clearInterval(interval);
                     }
@@ -148,6 +165,12 @@ const WhatsApp = () => {
                     setStatus('ready');
                     setCountdown(40); // 40 seconds as per WA-Mitra docs
                 }
+                if (res.data.whatsapp_send_staff !== undefined) {
+                    setSendStaff(res.data.whatsapp_send_staff);
+                }
+                if (res.data.whatsapp_send_customer !== undefined) {
+                    setSendCustomer(res.data.whatsapp_send_customer);
+                }
             } else {
                 setError(res.data.message || 'Failed to initiate WhatsApp session.');
             }
@@ -155,6 +178,38 @@ const WhatsApp = () => {
             setError(err.response?.data?.message || 'An error occurred while connecting.');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleToggleChange = async (type, checked) => {
+        setUpdatingToggles(true);
+        try {
+            const payload = {};
+            if (type === 'staff') {
+                payload.whatsapp_send_staff = checked;
+                setSendStaff(checked);
+            } else {
+                payload.whatsapp_send_customer = checked;
+                setSendCustomer(checked);
+            }
+
+            const res = await axiosInstance.put(`/business/update/${selectedBusinessId}`, payload);
+            if (res.data.success) {
+                toast.success('Preferences updated successfully!');
+            } else {
+                toast.error('Failed to update preferences.');
+                // Revert state
+                if (type === 'staff') setSendStaff(!checked);
+                else setSendCustomer(!checked);
+            }
+        } catch (err) {
+            console.error('Failed to update preferences:', err);
+            toast.error('An error occurred. Please try again.');
+            // Revert state
+            if (type === 'staff') setSendStaff(!checked);
+            else setSendCustomer(!checked);
+        } finally {
+            setUpdatingToggles(false);
         }
     };
 
@@ -467,25 +522,92 @@ const WhatsApp = () => {
                                             </Box>
                                         </Fade>
                                     ) : status === 'connected' ? (
-                                        <Box sx={{ opacity: 0.8 }}>
-                                            <Box sx={{ mb: 4, position: 'relative', display: 'inline-block' }}>
-                                                <WhatsAppIcon sx={{ fontSize: 120, color: '#25D366', filter: 'drop-shadow(0 0 20px rgba(37, 211, 102, 0.4))' }} />
-                                            </Box>
-                                            <Typography variant="h6" fontWeight={900}>Interface Active</Typography>
-                                            <Typography variant="body2" color="text.secondary">Receiving and dispatching signals.</Typography>
-
-                                            <Stack spacing={2} sx={{ mt: 5, textAlign: 'left' }}>
-
-                                                <Button
-                                                    startIcon={<RefreshIcon />}
-                                                    fullWidth
-                                                    size="small"
-                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700 }}
-                                                    onClick={fetchStatus}
-                                                >
-                                                    Verify Connection Status
-                                                </Button>
+                                        <Box sx={{ opacity: 1, textAlign: 'left', width: '100%' }}>
+                                            <Stack direction="row" spacing={2} alignItems="center" mb={3} justifyContent="center" sx={{ opacity: 0.8 }}>
+                                                <WhatsAppIcon sx={{ fontSize: 40, color: '#25D366', filter: 'drop-shadow(0 0 8px rgba(37, 211, 102, 0.3))' }} />
+                                                <Box>
+                                                    <Typography variant="subtitle1" fontWeight={900}>Interface Active</Typography>
+                                                    <Typography variant="caption" color="text.secondary">Ready to broadcast signals.</Typography>
+                                                </Box>
                                             </Stack>
+
+                                            <Divider sx={{ mb: 3 }} />
+
+                                            {/* Notification Settings Panel on the Right Side */}
+                                            <Paper
+                                                elevation={0}
+                                                sx={{
+                                                    p: 3,
+                                                    borderRadius: 4,
+                                                    bgcolor: 'rgba(255, 255, 255, 0.01)',
+                                                    border: '1px solid',
+                                                    borderColor: 'divider',
+                                                    mb: 3
+                                                }}
+                                            >
+                                                <Stack direction="row" spacing={1.5} alignItems="center" mb={2}>
+                                                    <SettingsIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                                    <Typography variant="subtitle2" fontWeight={800}>Notification Preferences</Typography>
+                                                </Stack>
+                                                <Divider sx={{ mb: 2 }} />
+                                                <Stack spacing={2.5}>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Box sx={{ pr: 1 }}>
+                                                            <Typography variant="body2" fontWeight={750} sx={{ fontSize: '0.85rem' }}>Send to Customer</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+                                                                WhatsApp confirmation on booking success.
+                                                            </Typography>
+                                                        </Box>
+                                                        <Switch
+                                                            size="small"
+                                                            checked={sendCustomer}
+                                                            onChange={(e) => handleToggleChange('customer', e.target.checked)}
+                                                            disabled={updatingToggles}
+                                                            sx={{
+                                                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                                                    color: '#25D366',
+                                                                    '& + .MuiSwitch-track': {
+                                                                        backgroundColor: '#25D366',
+                                                                    },
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <Box sx={{ pr: 1 }}>
+                                                            <Typography variant="body2" fontWeight={750} sx={{ fontSize: '0.85rem' }}>Send to Staff</Typography>
+                                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.2 }}>
+                                                                Notify assigned staff on WhatsApp.
+                                                            </Typography>
+                                                        </Box>
+                                                        <Switch
+                                                            size="small"
+                                                            checked={sendStaff}
+                                                            onChange={(e) => handleToggleChange('staff', e.target.checked)}
+                                                            disabled={updatingToggles}
+                                                            sx={{
+                                                                '& .MuiSwitch-switchBase.Mui-checked': {
+                                                                    color: '#25D366',
+                                                                    '& + .MuiSwitch-track': {
+                                                                        backgroundColor: '#25D366',
+                                                                    },
+                                                                },
+                                                            }}
+                                                        />
+                                                    </Box>
+                                                </Stack>
+                                            </Paper>
+
+                                            <Button
+                                                startIcon={<RefreshIcon />}
+                                                fullWidth
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ borderRadius: 2.5, textTransform: 'none', fontWeight: 700, py: 1 }}
+                                                onClick={() => fetchStatus(true)}
+                                            >
+                                                Verify Connection
+                                            </Button>
                                         </Box>
                                     ) : (
                                         <Box sx={{ opacity: 0.2, filter: 'grayscale(1)' }}>

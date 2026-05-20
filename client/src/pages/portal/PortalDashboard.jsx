@@ -141,7 +141,8 @@ const AnalyticsChart = ({ title, type, color, data, loading, config, onConfigCha
                                     tickLine={false}
                                     tick={{ fill: '#94a3b8', fontSize: 10 }}
                                     tickFormatter={(str) => dayjs(str).format('DD/MM/YYYY')}
-                                    minTickGap={20}
+                                    minTickGap={40}
+                                    dy={8}
                                 />
                                 <YAxis
                                     axisLine={false}
@@ -158,7 +159,7 @@ const AnalyticsChart = ({ title, type, color, data, loading, config, onConfigCha
                                     strokeWidth={3}
                                     fillOpacity={1}
                                     fill={`url(#color-${type}-1)`}
-                                    dot={{ r: 4, fill: color, strokeWidth: 0 }}
+                                    dot={config.range === 'weekly' ? { r: 3, fill: color, strokeWidth: 0 } : false}
                                     activeDot={{ r: 6, strokeWidth: 0 }}
                                 />
                             </AreaChart>
