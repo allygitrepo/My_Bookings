@@ -417,7 +417,10 @@ const templateController = {
                     }
                     const widgetKey = apiKeyRecord.api_key;
                     const widgetUrl = getWidgetScriptUrl();
-                    const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
+                    let scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
+                    if (req.query.preview === 'true') {
+                        scriptTag += `<style>button[aria-label="book-now"], .MuiFab-root, #booking-widget-root button.MuiFab-root { display: none !important; }</style>\n`;
+                    }
 
                     const hasHTML = /<\/head>|<\/body>|<\/html>|<html/i.test(content);
                     if (hasHTML) {

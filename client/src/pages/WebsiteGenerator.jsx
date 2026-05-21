@@ -219,7 +219,7 @@ const WebsiteGenerator = () => {
             const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
             return (
                 <iframe
-                    src={`${apiBase}/templates/render/${settings.selected_template}/${selectedBusinessId}/`}
+                    src={`${apiBase}/templates/render/${settings.selected_template}/${selectedBusinessId}/?preview=true`}
                     style={{
                         width: '100%',
                         height: '100%',
