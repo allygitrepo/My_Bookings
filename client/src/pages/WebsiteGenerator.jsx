@@ -42,7 +42,7 @@ const WebsiteGenerator = () => {
     // Website Settings State
     const [settings, setSettings] = useState({
         slug: '',
-        selected_template: 'template1',
+        selected_template: '',
         website_enabled: false,
         website_type: 'website',
         description: ''
@@ -79,7 +79,7 @@ const WebsiteGenerator = () => {
                 if (currentBiz) {
                     setSettings({
                         slug: currentBiz.slug || '',
-                        selected_template: currentBiz.selected_template || 'template1',
+                        selected_template: currentBiz.selected_template || '',
                         website_enabled: currentBiz.website_enabled || false,
                         website_type: currentBiz.website_type || 'website',
                         description: currentBiz.description || ''
@@ -135,15 +135,7 @@ const WebsiteGenerator = () => {
 
         const bizCategory = currentBiz.business_type;
 
-        const defaultTemplates = settings.website_type === 'portfolio' ? [
-            { id: 'portfolio1' },
-            { id: 'portfolio2' },
-            { id: 'portfolio3' },
-        ] : [
-            { id: 'template1' },
-            { id: 'template2' },
-            { id: 'template3' },
-        ];
+        const defaultTemplates = [];
 
         const filteredCustom = customTemplates.filter(c => {
             const matchCategory = c.category === bizCategory;
@@ -155,7 +147,7 @@ const WebsiteGenerator = () => {
         const allFilteredIds = [...defaultTemplates.map(t => t.id), ...filteredCustom.map(c => c.id)];
 
         if (!allFilteredIds.includes(settings.selected_template)) {
-            const defaultId = settings.website_type === 'portfolio' ? 'portfolio1' : 'template1';
+            const defaultId = filteredCustom[0]?.id || '';
             setSettings(prev => ({ ...prev, selected_template: defaultId }));
         }
     }, [selectedBusinessId, settings.website_type, customTemplates, businesses]);
@@ -167,7 +159,7 @@ const WebsiteGenerator = () => {
         if (biz) {
             setSettings({
                 slug: biz.slug || '',
-                selected_template: biz.selected_template || 'template1',
+                selected_template: biz.selected_template || '',
                 website_enabled: biz.website_enabled || false,
                 website_type: biz.website_type || 'website',
                 description: biz.description || ''
@@ -348,7 +340,7 @@ const WebsiteGenerator = () => {
                                             <Button
                                                 fullWidth
                                                 variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
-                                                onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
+                                                onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: '' })}
                                                 sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
                                             >
                                                 Website
@@ -360,7 +352,7 @@ const WebsiteGenerator = () => {
                                                     fullWidth
                                                     disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
                                                     variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
-                                                    onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: 'portfolio1' })}
+                                                    onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: '' })}
                                                     sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
                                                 >
                                                     Portfolio
@@ -407,15 +399,7 @@ const WebsiteGenerator = () => {
                                         const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
                                         const bizCategory = currentBiz?.business_type;
 
-                                        const defaultTemplates = settings.website_type === 'portfolio' ? [
-                                            { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
-                                            { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
-                                            { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
-                                        ] : [
-                                            { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
-                                            { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
-                                            { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
-                                        ];
+                                        const defaultTemplates = [];
 
                                         const filteredCustom = customTemplates
                                             .filter(c => {
@@ -433,122 +417,136 @@ const WebsiteGenerator = () => {
                                                 templateId: c.templateId || c.id,
                                             }));
 
-                                        return [...defaultTemplates, ...filteredCustom];
-                                    })().map((tmpl) => {
-                                        const isSelected = settings.selected_template === tmpl.id;
-                                        return (
-                                            <Tooltip title={tmpl.name + (tmpl.isCustom ? ` (Custom - ${tmpl.category})` : "")} key={tmpl.id} arrow>
-                                                <Box
-                                                    onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
-                                                    sx={{
-                                                        cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                        opacity: isSuspended ? 0.6 : 1,
-                                                        borderRadius: '16px',
-                                                        position: 'relative',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        border: '2.5px solid',
-                                                        borderColor: isSelected ? 'primary.main' : 'transparent',
-                                                        bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
-                                                        p: 0.75,
-                                                        '&:hover': {
-                                                            transform: 'translateY(-4px)',
-                                                            borderColor: isSelected ? 'primary.main' : 'divider',
-                                                            boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
-                                                        }
-                                                    }}
-                                                >
-                                                    {tmpl.isCustom && (
-                                                        <Chip
-                                                            label="Custom"
-                                                            size="small"
-                                                            sx={{
-                                                                position: 'absolute',
-                                                                top: 6,
-                                                                left: 6,
-                                                                fontSize: '0.6rem',
-                                                                height: 16,
-                                                                fontWeight: 900,
-                                                                backgroundColor: '#10B981',
-                                                                color: '#ffffff',
-                                                                zIndex: 3,
-                                                                border: 'none',
-                                                                cursor: 'pointer'
-                                                            }}
-                                                        />
-                                                    )}
-                                                    <Box sx={{
-                                                        borderRadius: 2,
-                                                        overflow: 'hidden',
-                                                        aspectRatio: '1/1',
-                                                        boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.18)' : 'none',
-                                                        bgcolor: tmpl.isCustom ? 'rgba(10,12,22,0.8)' : 'transparent',
-                                                        display: 'flex',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                    }}>
-                                                        {tmpl.isCustom && (failedTemplateIcons[tmpl.id] || !tmpl.img) ? (
-                                                            <Avatar
+                                        const list = [...defaultTemplates, ...filteredCustom];
+                                        if (list.length === 0) {
+                                            return (
+                                                <Box sx={{ gridColumn: '1 / -1', py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    <Typography variant="h6" fontWeight={800} color="text.secondary">
+                                                        Templates Coming Soon
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.7 }}>
+                                                        No custom templates are available for this business type yet.
+                                                    </Typography>
+                                                </Box>
+                                            );
+                                        }
+
+                                        return list.map((tmpl) => {
+                                            const isSelected = settings.selected_template === tmpl.id;
+                                            return (
+                                                <Tooltip title={tmpl.name + (tmpl.isCustom ? ` (Custom - ${tmpl.category})` : "")} key={tmpl.id} arrow>
+                                                    <Box
+                                                        onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
+                                                        sx={{
+                                                            cursor: isSuspended ? 'not-allowed' : 'pointer',
+                                                            opacity: isSuspended ? 0.6 : 1,
+                                                            borderRadius: '16px',
+                                                            position: 'relative',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            border: '2.5px solid',
+                                                            borderColor: isSelected ? 'primary.main' : 'transparent',
+                                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
+                                                            p: 0.75,
+                                                            '&:hover': {
+                                                                transform: 'translateY(-4px)',
+                                                                borderColor: isSelected ? 'primary.main' : 'divider',
+                                                                boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                                                            }
+                                                        }}
+                                                    >
+                                                        {tmpl.isCustom && (
+                                                            <Chip
+                                                                label="Custom"
+                                                                size="small"
                                                                 sx={{
-                                                                    width: '60%',
-                                                                    height: '60%',
-                                                                    bgcolor: 'rgba(99,102,241,0.2)',
-                                                                    color: 'primary.main',
-                                                                    fontWeight: 800,
-                                                                    fontSize: '1.5rem',
-                                                                }}
-                                                            >
-                                                                {tmpl.name?.charAt(0)?.toUpperCase() || 'T'}
-                                                            </Avatar>
-                                                        ) : (
-                                                            <CardMedia
-                                                                component="img"
-                                                                image={tmpl.img}
-                                                                onError={() => {
-                                                                    if (tmpl.isCustom) {
-                                                                        setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
-                                                                    }
-                                                                }}
-                                                                sx={{
-                                                                    width: tmpl.isCustom ? '60%' : '100%',
-                                                                    height: tmpl.isCustom ? '60%' : '100%',
-                                                                    objectFit: tmpl.isCustom ? 'contain' : 'cover',
-                                                                    objectPosition: 'top',
-                                                                    filter: isSelected ? 'none' : 'grayscale(15%)',
-                                                                    opacity: isSelected ? 1 : 0.75,
-                                                                    transition: 'all 0.3s'
+                                                                    position: 'absolute',
+                                                                    top: 6,
+                                                                    left: 6,
+                                                                    fontSize: '0.6rem',
+                                                                    height: 16,
+                                                                    fontWeight: 900,
+                                                                    backgroundColor: '#10B981',
+                                                                    color: '#ffffff',
+                                                                    zIndex: 3,
+                                                                    border: 'none',
+                                                                    cursor: 'pointer'
                                                                 }}
                                                             />
                                                         )}
-                                                    </Box>
+                                                        <Box sx={{
+                                                            borderRadius: 2,
+                                                            overflow: 'hidden',
+                                                            aspectRatio: '1/1',
+                                                            boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.18)' : 'none',
+                                                            bgcolor: tmpl.isCustom ? 'rgba(10,12,22,0.8)' : 'transparent',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}>
+                                                            {tmpl.isCustom && (failedTemplateIcons[tmpl.id] || !tmpl.img) ? (
+                                                                <Avatar
+                                                                    sx={{
+                                                                        width: '60%',
+                                                                        height: '60%',
+                                                                        bgcolor: 'rgba(99,102,241,0.2)',
+                                                                        color: 'primary.main',
+                                                                        fontWeight: 800,
+                                                                        fontSize: '1.5rem',
+                                                                    }}
+                                                                >
+                                                                    {tmpl.name?.charAt(0)?.toUpperCase() || 'T'}
+                                                                </Avatar>
+                                                            ) : (
+                                                                <CardMedia
+                                                                    component="img"
+                                                                    image={tmpl.img}
+                                                                    onError={() => {
+                                                                        if (tmpl.isCustom) {
+                                                                            setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
+                                                                        }
+                                                                    }}
+                                                                    sx={{
+                                                                        width: tmpl.isCustom ? '60%' : '100%',
+                                                                        height: tmpl.isCustom ? '60%' : '100%',
+                                                                        objectFit: tmpl.isCustom ? 'contain' : 'cover',
+                                                                        objectPosition: 'top',
+                                                                        filter: isSelected ? 'none' : 'grayscale(15%)',
+                                                                        opacity: isSelected ? 1 : 0.75,
+                                                                        transition: 'all 0.3s'
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
 
-                                                    {/* Template Name Label Below Thumbnail */}
-                                                    <Box sx={{ mt: 1, textAlign: 'center' }}>
-                                                        <Typography variant="caption" fontWeight={750} display="block" color={isSelected ? 'primary.main' : 'text.primary'} sx={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                            {tmpl.name}
-                                                        </Typography>
-                                                        {tmpl.isCustom && (
-                                                            <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                                                {tmpl.category}
+                                                        {/* Template Name Label Below Thumbnail */}
+                                                        <Box sx={{ mt: 1, textAlign: 'center' }}>
+                                                            <Typography variant="caption" fontWeight={750} display="block" color={isSelected ? 'primary.main' : 'text.primary'} sx={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {tmpl.name}
                                                             </Typography>
+                                                            {tmpl.isCustom && (
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {tmpl.category}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+
+                                                        {isSelected && (
+                                                            <Box sx={{
+                                                                position: 'absolute', top: -4, right: -4,
+                                                                bgcolor: 'primary.main', color: 'white',
+                                                                borderRadius: '50%', width: 18, height: 18,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                zIndex: 2
+                                                            }}>
+                                                                <CheckIcon sx={{ fontSize: 11, fontWeight: 900 }} />
+                                                            </Box>
                                                         )}
                                                     </Box>
-
-                                                    {isSelected && (
-                                                        <Box sx={{
-                                                            position: 'absolute', top: -4, right: -4,
-                                                            bgcolor: 'primary.main', color: 'white',
-                                                            borderRadius: '50%', width: 18, height: 18,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                            zIndex: 2
-                                                        }}>
-                                                            <CheckIcon sx={{ fontSize: 11, fontWeight: 900 }} />
-                                                        </Box>
-                                                    )}
-                                                </Box>
-                                            </Tooltip>
-                                        );
-                                    })}
+                                                </Tooltip>
+                                            );
+                                        });
+                                    })()}
                                 </Box>
                             </Box>
 
