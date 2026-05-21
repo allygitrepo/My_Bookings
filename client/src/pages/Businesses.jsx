@@ -259,20 +259,7 @@ const Businesses = () => {
                             <TableRow key={biz.id} hover>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                 <TableCell sx={{ fontWeight: 500 }}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                        {biz.business_name}
-                                        {biz.website_enabled && (
-                                            <Tooltip title="Visit Live Website">
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')}
-                                                    sx={{ p: 0.5, color: 'secondary.main' }}
-                                                >
-                                                    <OpenIcon sx={{ fontSize: '1rem' }} />
-                                                </IconButton>
-                                            </Tooltip>
-                                        )}
-                                    </Box>
+                                    {biz.business_name}
                                 </TableCell>
                                 <TableCell>{biz.business_type}</TableCell>
                                 <TableCell>{biz.phone}</TableCell>
@@ -342,18 +329,7 @@ const Businesses = () => {
                                         {industry?.icon || '🏢'}
                                     </Box>
                                     <Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
-                                            {biz.website_enabled && (
-                                                <IconButton
-                                                    size="small"
-                                                    onClick={() => window.open(`/${encodeBusinessId(biz.id)}`, '_blank')}
-                                                    sx={{ p: 0, color: 'secondary.main' }}
-                                                >
-                                                    <OpenIcon sx={{ fontSize: '1rem' }} />
-                                                </IconButton>
-                                            )}
-                                        </Box>
+                                        <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                                             <Typography variant="caption" color="text.secondary">{biz.business_type}</Typography>
                                             {biz.status === false && (

@@ -605,7 +605,7 @@ const WebsiteGenerator = () => {
                                                 if (isSuspended) return;
                                                 const newEnabled = e.target.checked;
                                                 setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
-
+ 
                                                 setSaving(true);
                                                 try {
                                                     const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
@@ -622,6 +622,17 @@ const WebsiteGenerator = () => {
                                                 }
                                             }}
                                         />
+                                        {settings.website_enabled && (
+                                            <Tooltip title="Visit Live Website">
+                                                <IconButton
+                                                    size="small"
+                                                    onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                    sx={{ p: 0.5, color: 'primary.main' }}
+                                                >
+                                                    <OpenIcon sx={{ fontSize: '1.1rem' }} />
+                                                </IconButton>
+                                            </Tooltip>
+                                        )}
                                     </Box>
                                 </Box>
 
