@@ -623,15 +623,40 @@ const WebsiteGenerator = () => {
                                             }}
                                         />
                                         {settings.website_enabled && (
-                                            <Tooltip title="Visit Live Website">
-                                                <IconButton
-                                                    size="small"
+                                            <>
+                                                <Tooltip title="Visit Live Website">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                        sx={{ p: 0.5, color: 'primary.main' }}
+                                                    >
+                                                        <OpenIcon sx={{ fontSize: '1.1rem' }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Typography 
+                                                    variant="caption" 
+                                                    sx={{ 
+                                                        color: 'text.secondary', 
+                                                        fontFamily: 'monospace', 
+                                                        bgcolor: 'rgba(255,255,255,0.05)', 
+                                                        px: 1.2, 
+                                                        py: 0.5, 
+                                                        borderRadius: 1,
+                                                        border: '1px dashed rgba(255,255,255,0.1)',
+                                                        fontSize: '0.75rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            color: 'primary.main',
+                                                            borderColor: 'primary.main',
+                                                            bgcolor: 'rgba(99,102,241,0.05)'
+                                                        }
+                                                    }}
                                                     onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
-                                                    sx={{ p: 0.5, color: 'primary.main' }}
                                                 >
-                                                    <OpenIcon sx={{ fontSize: '1.1rem' }} />
-                                                </IconButton>
-                                            </Tooltip>
+                                                    {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                                </Typography>
+                                            </>
                                         )}
                                     </Box>
                                 </Box>
