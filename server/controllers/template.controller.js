@@ -9,6 +9,14 @@ const BASE_HTDOCS_DIR = "C:\\xampp\\htdocs";
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
 
+const getWidgetScriptUrl = () => {
+    const apiBase = getApiBaseUrl();
+    if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
+        return "http://localhost:3000/widget.js";
+    }
+    return "https://mybookings.allysoftsolutions.com/widget.js";
+};
+
 const resolveTemplateIconUrl = (iconPath) => {
     if (!iconPath) return null;
     if (iconPath.startsWith("http://") || iconPath.startsWith("https://")) return iconPath;
@@ -177,20 +185,37 @@ const injectWidgetScript = (dir, businessId) => {
                         }
                     }
 
-                    // Check if already injected to prevent duplicates
-                    if (!content.includes("mybookings.allysoftsolutions.com/widget.js")) {
-                        console.log(`[Script Injection] Found target file for injection: ${fullPath}`);
-                        const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="https://mybookings.allysoftsolutions.com/widget.js" data-business-id="${businessId}" data-theme="light" async></script>\n`;
+                    // Check if already injected
+                    const scriptRegex = /<script\s+[^>]*src="[^"]*widget\.js"[^>]*data-business-id="([^"]+)"[^>]*><\/script>/i;
+                    const match = content.match(scriptRegex);
+                    const widgetUrl = getWidgetScriptUrl();
 
-                        if (content.includes("</head>")) {
-                            content = content.replace("</head>", `${scriptTag}</head>`);
-                        } else if (content.includes("</body>")) {
-                            content = content.replace("</body>", `${scriptTag}</body>`);
-                        } else {
-                            content += scriptTag;
+                    if (match) {
+                        const existingId = match[1];
+                        const oldTag = match[0];
+                        const newTag = `<script src="${widgetUrl}" data-business-id="${businessId}" data-theme="light" async></script>`;
+                        
+                        if (existingId !== String(businessId) || !oldTag.includes(widgetUrl)) {
+                            content = content.replace(oldTag, newTag);
+                            fs.writeFileSync(fullPath, content, "utf8");
+                            console.log(`[Script Injection] Updated widget script in ${fullPath}`);
                         }
-                        fs.writeFileSync(fullPath, content, "utf8");
-                        console.log(`[Script Injection] Injected successfully into ${file}`);
+                    } else {
+                        // Check if already injected to prevent duplicates
+                        if (!content.includes("widget.js")) {
+                            console.log(`[Script Injection] Found target file for injection: ${fullPath}`);
+                            const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${businessId}" data-theme="light" async></script>\n`;
+
+                            if (content.includes("</head>")) {
+                                content = content.replace("</head>", `${scriptTag}</head>`);
+                            } else if (content.includes("</body>")) {
+                                content = content.replace("</body>", `${scriptTag}</body>`);
+                            } else {
+                                content += scriptTag;
+                            }
+                            fs.writeFileSync(fullPath, content, "utf8");
+                            console.log(`[Script Injection] Injected successfully into ${file}`);
+                        }
                     }
                 }
             }
@@ -372,9 +397,19 @@ const templateController = {
                 throw new Error(`Template source path does not exist: ${sourcePath}`);
             }
 
+            // Get or create API key for this business to inject into the widget
+            const ApiKey = require("../models/apiKey.model");
+            const crypto = require("crypto");
+            let apiKeyRecord = await ApiKey.findOne({ where: { business_id: businessId, status: true } });
+            if (!apiKeyRecord) {
+                const api_key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+                apiKeyRecord = await ApiKey.create({ business_id: businessId, api_key, status: true });
+            }
+            const widgetKey = apiKeyRecord.api_key;
+
             if (fs.existsSync(targetPath)) {
                 console.log(`[Template Cloning] Template already cloned for business ${businessId}, skipping clone but verifying script injection & path fixes.`);
-                injectWidgetScript(targetPath, businessId);
+                injectWidgetScript(targetPath, widgetKey);
                 detectAndFixAssetsPaths(targetPath, slug, businessId);
                 return true;
             }
@@ -382,7 +417,7 @@ const templateController = {
             console.log(`[Template Cloning] Cloning ${sourcePath} to ${targetPath}`);
             copyFolderRecursiveSync(sourcePath, targetPath);
             console.log(`[Template Cloning] Running automatic booking widget script injection...`);
-            injectWidgetScript(targetPath, businessId);
+            injectWidgetScript(targetPath, widgetKey);
             console.log(`[Template Cloning] Running automatic path rewrite fixes...`);
             detectAndFixAssetsPaths(targetPath, slug, businessId);
             console.log(`[Template Cloning] Cloning and processing successful for business ${businessId}`);

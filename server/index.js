@@ -49,6 +49,19 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/My_Bookings_Templates', express.static(path.join(__dirname, 'Templates')));
 
+// Serve the local widget.js for development
+app.get('/widget.js', (req, res) => {
+    const distPath = path.join(__dirname, '../client/dist/widget.js');
+    const myDistPath = path.join(__dirname, '../client/MyDist/widget.js');
+    if (fs.existsSync(distPath)) {
+        res.sendFile(distPath);
+    } else if (fs.existsSync(myDistPath)) {
+        res.sendFile(myDistPath);
+    } else {
+        res.status(404).send('widget.js not found');
+    }
+});
+
 const http = require("http");
 const { initSocket } = require("./services/socket.service");
 
