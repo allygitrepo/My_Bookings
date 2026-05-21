@@ -197,6 +197,19 @@ const WebsiteGenerator = () => {
     const renderTemplatePreview = () => {
         if (!previewData) return null;
 
+        if (!settings.selected_template) {
+            return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1, p: 3, textAlign: 'center' }}>
+                    <Typography variant="h6" fontWeight={850} color="#ffffff">
+                        Please Select a Template First
+                    </Typography>
+                    <Typography variant="body2" color="rgba(255, 255, 255, 0.6)">
+                        Choose one of the templates above to see its live preview here.
+                    </Typography>
+                </Box>
+            );
+        }
+
         // Overlay current settings onto preview data
         const displayData = {
             ...previewData,
