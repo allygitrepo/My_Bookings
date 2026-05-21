@@ -1,10 +1,10 @@
 const fs = require("fs");
 const path = require("path");
 const AdmZip = require("adm-zip");
+const axios = require("axios");
 const TemplateProject = require("../models/templateProject.model");
 
 const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
-const BASE_HTDOCS_DIR = "C:\\xampp\\htdocs";
 
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
@@ -155,151 +155,64 @@ const flattenExtractedFolder = (dir) => {
     }
 };
 
-// Helper to inject the global booking widget script tag recursively into html/php files
-const injectWidgetScript = (dir, businessId) => {
+// Helper to patch template's database configuration to support dynamic business-isolated SQLite databases
+const patchTemplateDatabaseConfig = (templateDir) => {
     try {
-        if (!fs.existsSync(dir)) return;
-        const files = fs.readdirSync(dir);
+        const configPath = path.join(templateDir, 'server', 'config', 'database.php');
+        if (!fs.existsSync(configPath)) {
+            console.log(`[Template Patch] Database config not found at ${configPath}, skipping.`);
+            return;
+        }
 
-        // Excluded folders from recursion to prevent contaminating backend code
-        const skipFolders = ["node_modules", ".git", ".github", "server", "controllers", "models", "routes", "config", "database", "helpers", "vendor"];
+        let content = fs.readFileSync(configPath, 'utf8');
 
-        files.forEach((file) => {
-            const fullPath = path.join(dir, file);
-            const stat = fs.statSync(fullPath);
-            if (stat.isDirectory()) {
-                if (!skipFolders.includes(file.toLowerCase())) {
-                    injectWidgetScript(fullPath, businessId);
+        // Check if it's already patched
+        if (content.includes('HTTP_X_BUSINESS_ID')) {
+            console.log(`[Template Patch] Database config at ${configPath} is already patched.`);
+            return;
+        }
+
+        // Find the SQLite db filename pattern (e.g. $dbPath = __DIR__ . '/../database/gym.sqlite';)
+        const dbPathRegex = /\$dbPath\s*=\s*__DIR__\s*\.\s*['"]\/?(\.\.\/database\/|database\/)?([^'"]+)\.sqlite['"];/i;
+        const match = content.match(dbPathRegex);
+        if (match) {
+            const relativeDbDir = match[1] || '../database/';
+            const dbBaseName = match[2];
+
+            const patchedCode = `
+            $dbName = '${dbBaseName}';
+            if (isset($_SERVER['HTTP_X_BUSINESS_ID'])) {
+                $bizId = preg_replace('/[^a-zA-Z0-9_-]/', '', $_SERVER['HTTP_X_BUSINESS_ID']);
+                if (!empty($bizId)) {
+                    $dbName = "${dbBaseName}_biz_" . $bizId;
                 }
+            }
+            $dbPath = __DIR__ . '/${relativeDbDir}' . $dbName . '.sqlite';
+            if (!file_exists($dbPath)) {
+                $defaultDb = __DIR__ . '/${relativeDbDir}${dbBaseName}.sqlite';
+                if (file_exists($defaultDb)) {
+                    if (!file_exists(dirname($dbPath))) {
+                        mkdir(dirname($dbPath), 0777, true);
+                    }
+                    copy($defaultDb, $dbPath);
+                }
+            }
+            $pdo = new PDO('sqlite:' . $dbPath);`;
+
+            // Regex matching $dbPath = ... and $pdo = new PDO(...) lines
+            const targetRegex = /\$dbPath\s*=\s*__DIR__\s*\.\s*['"]\/?[^'"]+\.sqlite['"];\s*(?:\/\/[^\n]*\s*)*\$pdo\s*=\s*new\s*PDO\(['"]sqlite:['"]\s*\.\s*\$dbPath\);/i;
+            if (content.match(targetRegex)) {
+                content = content.replace(targetRegex, patchedCode.trim());
+                fs.writeFileSync(configPath, content, 'utf8');
+                console.log(`[Template Patch] Successfully patched database config at: ${configPath}`);
             } else {
-                const ext = path.extname(file).toLowerCase();
-                if (ext === ".html" || ext === ".php") {
-                    let content = fs.readFileSync(fullPath, "utf8");
-
-                    // Smart check: Only inject into PHP files if they contain standard HTML/web structure.
-                    // This prevents injecting into pure backend API/DB scripts.
-                    if (ext === ".php") {
-                        const hasHTML = /<\/head>|<\/body>|<\/html>|<html/i.test(content);
-                        if (!hasHTML) {
-                            return; // skip pure backend script
-                        }
-                    }
-
-                    // Check if already injected
-                    const scriptRegex = /<script\s+[^>]*src="[^"]*widget\.js"[^>]*data-business-id="([^"]+)"[^>]*><\/script>/i;
-                    const match = content.match(scriptRegex);
-                    const widgetUrl = getWidgetScriptUrl();
-
-                    if (match) {
-                        const existingId = match[1];
-                        const oldTag = match[0];
-                        const newTag = `<script src="${widgetUrl}" data-business-id="${businessId}" data-theme="light" async></script>`;
-                        
-                        if (existingId !== String(businessId) || !oldTag.includes(widgetUrl)) {
-                            content = content.replace(oldTag, newTag);
-                            fs.writeFileSync(fullPath, content, "utf8");
-                            console.log(`[Script Injection] Updated widget script in ${fullPath}`);
-                        }
-                    } else {
-                        // Check if already injected to prevent duplicates
-                        if (!content.includes("widget.js")) {
-                            console.log(`[Script Injection] Found target file for injection: ${fullPath}`);
-                            const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${businessId}" data-theme="light" async></script>\n`;
-
-                            if (content.includes("</head>")) {
-                                content = content.replace("</head>", `${scriptTag}</head>`);
-                            } else if (content.includes("</body>")) {
-                                content = content.replace("</body>", `${scriptTag}</body>`);
-                            } else {
-                                content += scriptTag;
-                            }
-                            fs.writeFileSync(fullPath, content, "utf8");
-                            console.log(`[Script Injection] Injected successfully into ${file}`);
-                        }
-                    }
-                }
+                console.warn(`[Template Patch] Target regex pattern did not match database config structure at ${configPath}`);
             }
-        });
-    } catch (err) {
-        console.error("[Script Injection] Error during widget script injection:", err);
-    }
-};
-
-// Helper to rewrite absolute template base URLs in cloned assets/html/js/css to point to the active subfolder
-const fixBaseUrlPaths = (dir, prefixes, targetPrefix) => {
-    try {
-        if (!fs.existsSync(dir)) return;
-        const files = fs.readdirSync(dir);
-        files.forEach((file) => {
-            const fullPath = path.join(dir, file);
-            const stat = fs.statSync(fullPath);
-            if (stat.isDirectory()) {
-                if (file !== "node_modules" && file !== ".git" && file !== ".github") {
-                    fixBaseUrlPaths(fullPath, prefixes, targetPrefix);
-                }
-            } else {
-                const ext = path.extname(file).toLowerCase();
-                const textExtensions = [".html", ".php", ".js", ".css", ".json", ".htaccess", ".txt", ".xml"];
-                if (textExtensions.includes(ext) || file === ".htaccess") {
-                    let content = fs.readFileSync(fullPath, "utf8");
-                    let modified = false;
-
-                    prefixes.forEach((prefix) => {
-                        // Regex to match prefix at the beginning of paths, e.g. /prefix/ or /prefix" or /prefix'
-                        const regex = new RegExp('\\/' + prefix + '(?=[\\/"\'])', 'g');
-                        if (regex.test(content)) {
-                            content = content.replace(regex, `/${targetPrefix}`);
-                            modified = true;
-                        }
-                    });
-
-                    if (modified) {
-                        fs.writeFileSync(fullPath, content, "utf8");
-                        console.log(`[Path Auto-Fix] Updated paths in file: ${fullPath}`);
-                    }
-                }
-            }
-        });
-    } catch (err) {
-        console.error("[Path Auto-Fix] Error running path fix recursive:", err);
-    }
-};
-
-const detectAndFixAssetsPaths = (targetPath, templateId, businessId) => {
-    try {
-        if (!fs.existsSync(targetPath)) return;
-        const targetPrefix = `${templateId}_biz_${businessId}`;
-
-        // Find prefix in index.html or index.php
-        let indexPath = path.join(targetPath, "index.html");
-        if (!fs.existsSync(indexPath)) {
-            indexPath = path.join(targetPath, "index.php");
+        } else {
+            console.warn(`[Template Patch] Could not detect SQLite filename in database config at ${configPath}`);
         }
-
-        let originalPrefixes = [];
-        if (fs.existsSync(indexPath)) {
-            const content = fs.readFileSync(indexPath, "utf8");
-            // Match things like src="/PREFIX/assets/..." or href="/PREFIX/assets/..." or href="/PREFIX/favicon.svg"
-            const match = content.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
-            if (match && match[1]) {
-                const detected = match[1];
-                originalPrefixes.push(detected);
-                console.log(`[Path Auto-Fix] Detected base prefix in HTML: ${detected}`);
-            }
-        }
-
-        // Also always fallback/include "DRP_Doctor" and templateId to be absolutely robust
-        if (!originalPrefixes.includes("DRP_Doctor")) {
-            originalPrefixes.push("DRP_Doctor");
-        }
-        if (!originalPrefixes.includes(templateId)) {
-            originalPrefixes.push(templateId);
-        }
-
-        console.log(`[Path Auto-Fix] Running rewrite in ${targetPath} replacing prefixes: ${JSON.stringify(originalPrefixes)} with: ${targetPrefix}`);
-        fixBaseUrlPaths(targetPath, originalPrefixes, targetPrefix);
-    } catch (err) {
-        console.error("[Path Auto-Fix] Error detecting asset paths:", err);
+    } catch (e) {
+        console.error(`[Template Patch] Error patching database config for ${templateDir}:`, e);
     }
 };
 
@@ -322,6 +235,7 @@ const templateController = {
             for (const dirName of templateDirs) {
                 const dirPath = path.join(BASE_TEMPLATES_DIR, dirName);
                 flattenExtractedFolder(dirPath);
+                patchTemplateDatabaseConfig(dirPath);
                 const discoveredIcon = findIcon(dirPath);
                 const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${dirName}/${discoveredIcon}` : null;
 
@@ -376,55 +290,201 @@ const templateController = {
         }
     },
 
-    // Clone template helper
-    cloneTemplateForBusiness: async (templateIdOrSlug, businessId) => {
+    // Serve template files dynamically
+    renderTemplateFile: async (req, res) => {
         try {
-            // Find template by either primary key (if integer) or templateId (slug)
-            let template = await TemplateProject.findByPk(templateIdOrSlug);
+            const { templateId, businessId } = req.params;
+            let fileSubPath = req.params.file || req.params[0] || 'index.html';
+            if (Array.isArray(fileSubPath)) {
+                fileSubPath = fileSubPath.join('/');
+            }
+            console.log(`[Template Render] serving template: ${templateId}, business: ${businessId}, fileSubPath: ${fileSubPath}`);
+
+            // Check if this is an API request targeting the template's PHP backend.
+            // If so, proxy it to Apache instead of trying to serve it as a static file.
+            if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
+                const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
+                
+                // Dynamically build the Apache URL path relative to htdocs/web root
+                const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
+                let apacheUrlPath = '';
+                const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
+                                    baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
+                                    baseTemplatesNormalized.match(/\/www\/(.+)$/i);
+                
+                if (htdocsMatch) {
+                    apacheUrlPath = '/' + htdocsMatch[1];
+                } else {
+                    const myBookingsIndex = baseTemplatesNormalized.indexOf('My_Bookings');
+                    if (myBookingsIndex !== -1) {
+                        apacheUrlPath = '/' + baseTemplatesNormalized.substring(myBookingsIndex);
+                    } else {
+                        apacheUrlPath = '/My_Bookings/server/Templates';
+                    }
+                }
+                
+                // Ensure fileSubPath has no leading slash when appending
+                const cleanSubPath = fileSubPath.replace(/^\//, '');
+                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
+                console.log(`[Template Proxy] Proxying API request: ${req.method} ${req.url} -> ${apacheUrl}`);
+                
+                try {
+                    const headers = { ...req.headers };
+                    delete headers['host'];
+                    delete headers['content-length'];
+                    delete headers['connection'];
+                    headers['X-Business-ID'] = businessId;
+                    headers['host'] = new URL(apacheBaseUrl).host;
+
+                    const response = await axios({
+                        method: req.method,
+                        url: apacheUrl,
+                        headers: headers,
+                        params: req.query,
+                        data: req.body,
+                        validateStatus: () => true
+                    });
+                    
+                    res.status(response.status);
+                    Object.entries(response.headers).forEach(([key, val]) => {
+                        res.setHeader(key, val);
+                    });
+                    return res.send(response.data);
+                } catch (proxyError) {
+                    console.error("[Template Proxy Error] Proxy request failed:", proxyError);
+                    return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
+                }
+            }
+
+            // Fetch template from the database
+            let template = await TemplateProject.findOne({ where: { templateId } });
             if (!template) {
-                template = await TemplateProject.findOne({ where: { templateId: templateIdOrSlug } });
+                return res.status(404).send("Template not found");
             }
 
-            if (!template) {
-                throw new Error(`Template not found for: ${templateIdOrSlug}`);
+            const templateDir = template.path;
+            let targetFilePath = path.join(templateDir, fileSubPath);
+
+            // Security: Prevent directory traversal
+            const resolvedPath = path.resolve(targetFilePath);
+            if (!resolvedPath.startsWith(path.resolve(templateDir))) {
+                return res.status(403).send("Access denied");
             }
 
-            const slug = template.templateId; // e.g. "doctor_drp_portfolio"
-            const sourcePath = template.path;
-            const targetPath = path.join(BASE_HTDOCS_DIR, `${slug}_biz_${businessId}`);
-
-            if (!fs.existsSync(sourcePath)) {
-                throw new Error(`Template source path does not exist: ${sourcePath}`);
+            // Fallback for subpages (SPA support)
+            if (!fs.existsSync(targetFilePath)) {
+                if (fileSubPath.includes('.') && !fileSubPath.endsWith('.html') && !fileSubPath.endsWith('.php')) {
+                    return res.status(404).send("File not found");
+                }
+                targetFilePath = path.join(templateDir, 'index.html');
+                if (!fs.existsSync(targetFilePath)) {
+                    targetFilePath = path.join(templateDir, 'index.php');
+                }
+                if (!fs.existsSync(targetFilePath)) {
+                    return res.status(404).send("Template entry file not found");
+                }
+                fileSubPath = path.basename(targetFilePath);
             }
 
-            // Get or create API key for this business to inject into the widget
-            const ApiKey = require("../models/apiKey.model");
-            const crypto = require("crypto");
-            let apiKeyRecord = await ApiKey.findOne({ where: { business_id: businessId, status: true } });
-            if (!apiKeyRecord) {
-                const api_key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
-                apiKeyRecord = await ApiKey.create({ business_id: businessId, api_key, status: true });
-            }
-            const widgetKey = apiKeyRecord.api_key;
-
-            if (fs.existsSync(targetPath)) {
-                console.log(`[Template Cloning] Template already cloned for business ${businessId}, skipping clone but verifying script injection & path fixes.`);
-                injectWidgetScript(targetPath, widgetKey);
-                detectAndFixAssetsPaths(targetPath, slug, businessId);
-                return true;
+            const stat = fs.statSync(targetFilePath);
+            if (stat.isDirectory()) {
+                let dirIndexHtml = path.join(targetFilePath, 'index.html');
+                let dirIndexPhp = path.join(targetFilePath, 'index.php');
+                if (fs.existsSync(dirIndexHtml)) {
+                    targetFilePath = dirIndexHtml;
+                } else if (fs.existsSync(dirIndexPhp)) {
+                    targetFilePath = dirIndexPhp;
+                } else {
+                    return res.status(404).send("Directory index not found");
+                }
             }
 
-            console.log(`[Template Cloning] Cloning ${sourcePath} to ${targetPath}`);
-            copyFolderRecursiveSync(sourcePath, targetPath);
-            console.log(`[Template Cloning] Running automatic booking widget script injection...`);
-            injectWidgetScript(targetPath, widgetKey);
-            console.log(`[Template Cloning] Running automatic path rewrite fixes...`);
-            detectAndFixAssetsPaths(targetPath, slug, businessId);
-            console.log(`[Template Cloning] Cloning and processing successful for business ${businessId}`);
-            return true;
+            const ext = path.extname(targetFilePath).toLowerCase();
+            const textExtensions = [".html", ".php", ".js", ".css", ".json", ".xml", ".svg"];
+
+            if (textExtensions.includes(ext)) {
+                let content = fs.readFileSync(targetFilePath, "utf8");
+
+                // Inject widget script if this is the entry page
+                const isEntryFile = path.basename(targetFilePath) === 'index.html' || path.basename(targetFilePath) === 'index.php';
+                if (isEntryFile) {
+                    const ApiKey = require("../models/apiKey.model");
+                    const crypto = require("crypto");
+                    let apiKeyRecord = await ApiKey.findOne({ where: { business_id: businessId, status: true } });
+                    if (!apiKeyRecord) {
+                        const api_key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+                        apiKeyRecord = await ApiKey.create({ business_id: businessId, api_key, status: true });
+                    }
+                    const widgetKey = apiKeyRecord.api_key;
+                    const widgetUrl = getWidgetScriptUrl();
+                    const scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
+
+                    const hasHTML = /<\/head>|<\/body>|<\/html>|<html/i.test(content);
+                    if (hasHTML) {
+                        const scriptRegex = /<script\s+[^>]*src="[^"]*widget\.js"[^>]*data-business-id="([^"]+)"[^>]*><\/script>/i;
+                        const match = content.match(scriptRegex);
+                        if (match) {
+                            content = content.replace(match[0], scriptTag);
+                        } else {
+                            if (content.includes("</head>")) {
+                                content = content.replace("</head>", `${scriptTag}</head>`);
+                            } else if (content.includes("</body>")) {
+                                content = content.replace("</body>", `${scriptTag}</body>`);
+                            } else {
+                                content += scriptTag;
+                            }
+                        }
+                    }
+                }
+
+                // Detect and rewrite absolute asset URL prefixes
+                const templatePrefixes = ["DRP_Doctor", templateId];
+
+                // Dynamically discover the template's base prefix (e.g. gym_trainer_portfolio) by scanning the entry file.
+                // This ensures assets referenced in JS/CSS files also get rewritten correctly.
+                const entryHtmlPath = path.join(templateDir, 'index.html');
+                const entryPhpPath = path.join(templateDir, 'index.php');
+                let entryContent = "";
+                if (fs.existsSync(entryHtmlPath)) {
+                    entryContent = fs.readFileSync(entryHtmlPath, "utf8");
+                } else if (fs.existsSync(entryPhpPath)) {
+                    entryContent = fs.readFileSync(entryPhpPath, "utf8");
+                }
+
+                if (entryContent) {
+                    const match = entryContent.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
+                    if (match && match[1] && !templatePrefixes.includes(match[1])) {
+                        templatePrefixes.push(match[1]);
+                    }
+                }
+
+                // Also check the current file content itself for self-contained declarations
+                const fileMatch = content.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
+                if (fileMatch && fileMatch[1] && !templatePrefixes.includes(fileMatch[1])) {
+                    templatePrefixes.push(fileMatch[1]);
+                }
+
+                // Sort prefixes by length descending
+                templatePrefixes.sort((a, b) => b.length - a.length);
+
+                // Build a combined regex to do a single-pass rewrite to the Express render route.
+                // We use a negative lookbehind (?<!\/mybookings\/templates\/render) to prevent rewriting
+                // any prefix that is already part of the target replacement path.
+                templatePrefixes.forEach((prefix) => {
+                    const regex = new RegExp('(?<!\\/mybookings\\/templates\\/render)\\/' + prefix + '(?=[\\/"\'])', 'g');
+                    content = content.replace(regex, `/mybookings/templates/render/${templateId}/${businessId}`);
+                });
+
+                res.type(ext);
+                res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+                return res.send(content);
+            } else {
+                res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
+                return res.sendFile(targetFilePath);
+            }
         } catch (error) {
-            console.error(`[Template Cloning] Error cloning template:`, error);
-            throw error;
+            console.error("[Template Server Error] renderTemplateFile failed:", error);
+            return res.status(500).send("Internal server error: " + error.message);
         }
     },
 
@@ -434,27 +494,6 @@ const templateController = {
             const customTemplates = await TemplateProject.findAll({
                 where: { isActive: true }
             });
-
-            // Automatically clone active templates for the user's businesses in the background to ensure previews don't 404
-            if (req.user && req.user.user_id) {
-                (async () => {
-                    try {
-                        const Business = require("../models/business.model");
-                        const businesses = await Business.findAll({ where: { user_id: req.user.user_id } });
-                        for (const biz of businesses) {
-                            for (const t of customTemplates) {
-                                try {
-                                    await templateController.cloneTemplateForBusiness(t.templateId, biz.id);
-                                } catch (cloneErr) {
-                                    console.error(`[Pre-Cloning] Failed to clone template ${t.templateId} for business ${biz.id}:`, cloneErr);
-                                }
-                            }
-                        }
-                    } catch (dbErr) {
-                        console.error("[Pre-Cloning] Error fetching businesses for pre-cloning:", dbErr);
-                    }
-                })();
-            }
 
             // Format custom templates to match the client-side template structure expectation
             const formattedCustom = customTemplates.map((t) => ({
@@ -542,6 +581,9 @@ const templateController = {
 
             // Flatten the folder structure if zipped as a single root-level folder
             flattenExtractedFolder(extractPath);
+
+            // Patch the database configuration of the deployed template
+            patchTemplateDatabaseConfig(extractPath);
 
             // Crawl folder to discover favicon or logo
             const discoveredIcon = findIcon(extractPath);

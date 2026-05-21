@@ -108,10 +108,10 @@ const PublicBusinessWebsite = ({ subPath }) => {
 
         const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
         if (!standardTemplates.includes(template)) {
-            const apacheBase = import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080';
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
             const templatePath = subPath
-                ? `${apacheBase}/${template}_biz_${businessData.business.id}/${subPath}/`
-                : `${apacheBase}/${template}_biz_${businessData.business.id}/`;
+                ? `${apiBase}/templates/render/${template}/${businessData.business.id}/${subPath}/`
+                : `${apiBase}/templates/render/${template}/${businessData.business.id}/`;
             return (
                 <iframe
                     src={templatePath}

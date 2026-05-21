@@ -216,9 +216,10 @@ const WebsiteGenerator = () => {
 
         const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
         if (!standardTemplates.includes(settings.selected_template)) {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
             return (
                 <iframe
-                    src={`${import.meta.env.VITE_APACHE_BASE_URL || 'http://localhost:8080'}/${settings.selected_template}_biz_${selectedBusinessId}/`}
+                    src={`${apiBase}/templates/render/${settings.selected_template}/${selectedBusinessId}/`}
                     style={{
                         width: '100%',
                         height: '100%',

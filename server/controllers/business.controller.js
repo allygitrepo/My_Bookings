@@ -219,20 +219,6 @@ const businessController = {
                 safeBody.slug = await generateUniqueSlug(safeBody.business_name, row.id);
             }
 
-            // Clone/Verify custom ZIP template if selected (enables self-healing repair on save)
-            if (safeBody.selected_template) {
-                try {
-                    const TemplateProject = require("../models/templateProject.model");
-                    const customTemplate = await TemplateProject.findOne({ where: { templateId: safeBody.selected_template } });
-                    if (customTemplate) {
-                        const templateController = require("./template.controller");
-                        await templateController.cloneTemplateForBusiness(customTemplate.templateId, row.id);
-                    }
-                } catch (cloneErr) {
-                    console.error("[Business Update] Custom template cloning failed:", cloneErr);
-                }
-            }
-
             await row.update(safeBody);
 
             // If it's single location, sync the location record
