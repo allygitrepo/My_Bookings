@@ -1,5 +1,7 @@
 const express = require("express");
 const { connectDB } = require("./config/db");
+// Ensure database associations and all models are registered prior to DB sync
+require("./models/associations");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
@@ -19,6 +21,13 @@ if (!fs.existsSync(uploadsDir)) {
 // Connect Database and Sync Models
 connectDB().then(() => {
     createDefaultAdmin();
+    // Auto-flatten and update existing template pools on server boot
+    try {
+        const templateController = require("./controllers/template.controller");
+        templateController.initTemplates();
+    } catch (err) {
+        console.error("Failed to initialize templates on startup:", err);
+    }
 });
 
 // Middlewares
@@ -38,6 +47,20 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/My_Bookings_Templates', express.static(path.join(__dirname, 'Templates')));
+
+// Serve the local widget.js for development
+app.get('/widget.js', (req, res) => {
+    const distPath = path.join(__dirname, '../client/dist/widget.js');
+    const myDistPath = path.join(__dirname, '../client/MyDist/widget.js');
+    if (fs.existsSync(distPath)) {
+        res.sendFile(distPath);
+    } else if (fs.existsSync(myDistPath)) {
+        res.sendFile(myDistPath);
+    } else {
+        res.status(404).send('widget.js not found');
+    }
+});
 
 const http = require("http");
 const { initSocket } = require("./services/socket.service");

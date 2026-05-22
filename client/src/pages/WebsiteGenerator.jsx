@@ -3,7 +3,7 @@ import {
     Box, Paper, Typography, TextField, Button, MenuItem,
     Switch, FormControlLabel, Divider, CircularProgress, IconButton,
     ToggleButton, ToggleButtonGroup, Card, CardActionArea, CardMedia, CardContent,
-    Tooltip, Avatar, ThemeProvider, createTheme
+    Tooltip, Avatar, ThemeProvider, createTheme, Chip
 } from '@mui/material';
 import {
     Language as WebsiteIcon,
@@ -17,6 +17,7 @@ import {
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBusinesses, updateBusiness, getBusinessById } from '../api/business.api';
+import axiosInstance from '../api/axiosInstance';
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
@@ -26,6 +27,7 @@ import TemplatePortfolioCreative from '../templates/TemplatePortfolioCreative';
 import { encodeBusinessId } from '../utils/obfuscation';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import { blockEmoji } from '../utils/validators';
+import { getTemplateIconUrl } from '../utils/templateIcon';
 import toast from 'react-hot-toast';
 
 const WebsiteGenerator = () => {
@@ -34,11 +36,13 @@ const WebsiteGenerator = () => {
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [customTemplates, setCustomTemplates] = useState([]);
+    const [failedTemplateIcons, setFailedTemplateIcons] = useState({});
 
     // Website Settings State
     const [settings, setSettings] = useState({
         slug: '',
-        selected_template: 'template1',
+        selected_template: '',
         website_enabled: false,
         website_type: 'website',
         description: ''
@@ -47,6 +51,17 @@ const WebsiteGenerator = () => {
     // Preview Data State (Full business data including services/locations)
     const [previewData, setPreviewData] = useState(null);
     const [viewMode, setViewMode] = useState('desktop');
+
+    const fetchCustomTemplates = async () => {
+        try {
+            const response = await axiosInstance.get('/templates/active');
+            if (response.data.success) {
+                setCustomTemplates(response.data.data);
+            }
+        } catch (error) {
+            console.error('Failed to fetch active custom templates:', error);
+        }
+    };
 
     const fetchBusinesses = async () => {
         setLoading(true);
@@ -64,7 +79,7 @@ const WebsiteGenerator = () => {
                 if (currentBiz) {
                     setSettings({
                         slug: currentBiz.slug || '',
-                        selected_template: currentBiz.selected_template || 'template1',
+                        selected_template: currentBiz.selected_template || '',
                         website_enabled: currentBiz.website_enabled || false,
                         website_type: currentBiz.website_type || 'website',
                         description: currentBiz.description || ''
@@ -99,13 +114,43 @@ const WebsiteGenerator = () => {
 
     useEffect(() => {
         fetchBusinesses();
+        fetchCustomTemplates();
     }, []);
+
+    useEffect(() => {
+        setFailedTemplateIcons({});
+    }, [customTemplates]);
 
     useEffect(() => {
         if (selectedBusinessId && businesses.length > 0) {
             fetchPreviewData(selectedBusinessId);
         }
     }, [selectedBusinessId, businesses]);
+
+    // Auto-select template if the currently selected one is filtered out
+    useEffect(() => {
+        if (!selectedBusinessId || businesses.length === 0) return;
+        const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
+        if (!currentBiz) return;
+
+        const bizCategory = currentBiz.business_type;
+
+        const defaultTemplates = [];
+
+        const filteredCustom = customTemplates.filter(c => {
+            const matchCategory = c.category === bizCategory;
+            const templateType = c.type || 'website';
+            const matchType = templateType.split(',').map(t => t.trim()).includes(settings.website_type);
+            return matchCategory && matchType;
+        });
+
+        const allFilteredIds = [...defaultTemplates.map(t => t.id), ...filteredCustom.map(c => c.id)];
+
+        if (!allFilteredIds.includes(settings.selected_template)) {
+            const defaultId = filteredCustom[0]?.id || '';
+            setSettings(prev => ({ ...prev, selected_template: defaultId }));
+        }
+    }, [selectedBusinessId, settings.website_type, customTemplates, businesses]);
 
     const handleBusinessChange = (e) => {
         const id = e.target.value;
@@ -114,7 +159,7 @@ const WebsiteGenerator = () => {
         if (biz) {
             setSettings({
                 slug: biz.slug || '',
-                selected_template: biz.selected_template || 'template1',
+                selected_template: biz.selected_template || '',
                 website_enabled: biz.website_enabled || false,
                 website_type: biz.website_type || 'website',
                 description: biz.description || ''
@@ -152,6 +197,19 @@ const WebsiteGenerator = () => {
     const renderTemplatePreview = () => {
         if (!previewData) return null;
 
+        if (!settings.selected_template) {
+            return (
+                <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 1, p: 3, textAlign: 'center' }}>
+                    <Typography variant="h6" fontWeight={850} color="#ffffff">
+                        Please Select a Template First
+                    </Typography>
+                    <Typography variant="body2" color="rgba(255, 255, 255, 0.6)">
+                        Choose one of the templates above to see its live preview here.
+                    </Typography>
+                </Box>
+            );
+        }
+
         // Overlay current settings onto preview data
         const displayData = {
             ...previewData,
@@ -160,6 +218,23 @@ const WebsiteGenerator = () => {
             isPreview: true,
             viewMode: viewMode
         };
+
+        const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
+        if (!standardTemplates.includes(settings.selected_template)) {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
+            return (
+                <iframe
+                    src={`${apiBase}/templates/render/${settings.selected_template}/${selectedBusinessId}/?preview=true`}
+                    style={{
+                        width: '100%',
+                        height: '100%',
+                        border: 'none',
+                        background: '#ffffff'
+                    }}
+                    title="Live Preview"
+                />
+            );
+        }
 
         switch (settings.selected_template) {
             case 'template1': return <TemplateMinimal data={displayData} />;
@@ -274,22 +349,24 @@ const WebsiteGenerator = () => {
                                         2. Choose Site Mode
                                     </Typography>
                                     <Box sx={{ display: 'flex', gap: 1.5, mt: 1 }}>
-                                        <Button
-                                            fullWidth
-                                            variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
-                                            onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: 'template1' })}
-                                            sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
-                                        >
-                                            Website
-                                        </Button>
+                                        <span style={{ flex: 1 }}>
+                                            <Button
+                                                fullWidth
+                                                variant={settings.website_type === 'website' ? 'contained' : 'outlined'}
+                                                onClick={() => setSettings({ ...settings, website_type: 'website', selected_template: '' })}
+                                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
+                                            >
+                                                Website
+                                            </Button>
+                                        </span>
                                         <Tooltip title={!businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations ? "" : "Portfolios are for solo providers only."}>
                                             <span style={{ flex: 1 }}>
                                                 <Button
                                                     fullWidth
                                                     disabled={businesses.find(b => String(b.id) === String(selectedBusinessId))?.has_multiple_locations}
                                                     variant={settings.website_type === 'portfolio' ? 'contained' : 'outlined'}
-                                                    onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: 'portfolio1' })}
-                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1, height: '100%' }}
+                                                    onClick={() => setSettings({ ...settings, website_type: 'portfolio', selected_template: '' })}
+                                                    sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 800, py: 1 }}
                                                 >
                                                     Portfolio
                                                 </Button>
@@ -298,7 +375,7 @@ const WebsiteGenerator = () => {
                                     </Box>
                                 </Box>
 
-                                <Box sx={{ gridColumn: { lg: 'span 2' } }}>
+                                <Box sx={{ gridColumn: '1 / -1' }}>
                                     <Typography variant="subtitle2" fontWeight={800} gutterBottom color="primary" sx={{ textTransform: 'uppercase', letterSpacing: 0.5 }}>
                                         3. Professional Bio
                                     </Typography>
@@ -313,78 +390,202 @@ const WebsiteGenerator = () => {
                                         sx={{ mt: 1 }}
                                     />
                                 </Box>
+                            </Box>
 
-                                <Box sx={{ gridColumn: { lg: 'span 1' } }}>
-                                    <Typography sx={{ fontSize: '0.7rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'text.secondary', mb: 1.5 }}>
-                                        5. Choose Template
-                                    </Typography>
-                                    <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                                        {(settings.website_type === 'portfolio' ? [
-                                            { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
-                                            { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
-                                            { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
-                                        ] : [
-                                            { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
-                                            { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
-                                            { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
-                                        ]).map((tmpl) => {
-                                            const isSelected = settings.selected_template === tmpl.id;
+                            <Divider sx={{ borderColor: 'divider' }} />
+
+                            <Box>
+                                <Typography sx={{ fontSize: '0.75rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '1px', color: 'primary.main', mb: 2 }}>
+                                    5. Choose Template
+                                </Typography>
+                                <Box sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: {
+                                        xs: 'repeat(2, 1fr)',
+                                        sm: 'repeat(3, 1fr)',
+                                        md: 'repeat(4, 1fr)',
+                                        lg: 'repeat(6, 1fr)'
+                                    },
+                                    gap: 2.5
+                                }}>
+                                    {(() => {
+                                        const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
+                                        const bizCategory = currentBiz?.business_type;
+
+                                        const defaultTemplates = [];
+
+                                        const filteredCustom = customTemplates
+                                            .filter(c => {
+                                                const matchCategory = c.category === bizCategory;
+                                                const templateType = c.type || 'website';
+                                                const matchType = templateType.split(',').map(t => t.trim()).includes(settings.website_type);
+                                                return matchCategory && matchType;
+                                            })
+                                            .map(c => ({
+                                                id: c.id,
+                                                name: c.displayName,
+                                                img: getTemplateIconUrl(c),
+                                                isCustom: true,
+                                                category: c.category,
+                                                templateId: c.templateId || c.id,
+                                            }));
+
+                                        const list = [...defaultTemplates, ...filteredCustom];
+                                        if (list.length === 0) {
                                             return (
-                                                <Box
-                                                    key={tmpl.id}
-                                                    onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
-                                                    sx={{
-                                                        cursor: isSuspended ? 'not-allowed' : 'pointer',
-                                                        opacity: isSuspended ? 0.6 : 1, borderRadius: '12px',
-                                                        position: 'relative',
-                                                        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                                        border: '2.5px solid',
-                                                        borderColor: isSelected ? 'primary.main' : 'transparent',
-                                                        bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
-                                                        p: 0.5,
-                                                        '&:hover': {
-                                                            transform: 'translateY(-2px)',
-                                                            borderColor: isSelected ? 'primary.main' : 'divider',
-                                                        }
-                                                    }}
-                                                >
-                                                    <Box sx={{
-                                                        borderRadius: 1.5,
-                                                        overflow: 'hidden',
-                                                        aspectRatio: '1/1',
-                                                        boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
-                                                    }}>
-                                                        <CardMedia
-                                                            component="img"
-                                                            image={tmpl.img}
-                                                            sx={{
-                                                                width: '100%',
-                                                                height: '100%',
-                                                                objectFit: 'cover',
-                                                                objectPosition: 'top',
-                                                                filter: isSelected ? 'none' : 'grayscale(20%)',
-                                                                opacity: isSelected ? 1 : 0.7,
-                                                                transition: 'all 0.3s'
-                                                            }}
-                                                        />
-                                                    </Box>
-                                                    {isSelected && (
-                                                        <Box sx={{
-                                                            position: 'absolute', top: -4, right: -4,
-                                                            bgcolor: 'primary.main', color: 'white',
-                                                            borderRadius: '50%', width: 16, height: 16,
-                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                                            boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
-                                                            zIndex: 2
-                                                        }}>
-                                                            <CheckIcon sx={{ fontSize: 10, fontWeight: 900 }} />
-                                                        </Box>
-                                                    )}
+                                                <Box sx={{ gridColumn: '1 / -1', py: 6, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    <Typography variant="h6" fontWeight={800} color="text.secondary">
+                                                        Templates Coming Soon
+                                                    </Typography>
+                                                    <Typography variant="body2" color="text.secondary" sx={{ opacity: 0.7 }}>
+                                                        No custom templates are available for this business type yet.
+                                                    </Typography>
                                                 </Box>
                                             );
-                                        })}
-                                    </Box>
+                                        }
+
+                                        return list.map((tmpl) => {
+                                            const isSelected = settings.selected_template === tmpl.id;
+                                            return (
+                                                <Tooltip title={tmpl.name + (tmpl.isCustom ? ` (Custom - ${tmpl.category})` : "")} key={tmpl.id} arrow>
+                                                    <Box
+                                                        onClick={() => !isSuspended && setSettings({ ...settings, selected_template: tmpl.id })}
+                                                        sx={{
+                                                            cursor: isSuspended ? 'not-allowed' : 'pointer',
+                                                            opacity: isSuspended ? 0.6 : 1,
+                                                            borderRadius: '16px',
+                                                            position: 'relative',
+                                                            transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                                            border: '2.5px solid',
+                                                            borderColor: isSelected ? 'primary.main' : 'transparent',
+                                                            bgcolor: isSelected ? 'rgba(99,102,241,0.05)' : 'transparent',
+                                                            p: 0.75,
+                                                            '&:hover': {
+                                                                transform: 'translateY(-4px)',
+                                                                borderColor: isSelected ? 'primary.main' : 'divider',
+                                                                boxShadow: '0 8px 24px rgba(0,0,0,0.12)'
+                                                            }
+                                                        }}
+                                                    >
+                                                        {tmpl.isCustom && (
+                                                            <Chip
+                                                                label="Custom"
+                                                                size="small"
+                                                                sx={{
+                                                                    position: 'absolute',
+                                                                    top: 6,
+                                                                    left: 6,
+                                                                    fontSize: '0.6rem',
+                                                                    height: 16,
+                                                                    fontWeight: 900,
+                                                                    backgroundColor: '#10B981',
+                                                                    color: '#ffffff',
+                                                                    zIndex: 3,
+                                                                    border: 'none',
+                                                                    cursor: 'pointer'
+                                                                }}
+                                                            />
+                                                        )}
+                                                        <Box sx={{
+                                                            borderRadius: 2,
+                                                            overflow: 'hidden',
+                                                            aspectRatio: '1/1',
+                                                            boxShadow: isSelected ? '0 8px 20px rgba(99,102,241,0.18)' : 'none',
+                                                            bgcolor: tmpl.isCustom ? 'rgba(10,12,22,0.8)' : 'transparent',
+                                                            display: 'flex',
+                                                            alignItems: 'center',
+                                                            justifyContent: 'center',
+                                                        }}>
+                                                            {tmpl.isCustom && (failedTemplateIcons[tmpl.id] || !tmpl.img) ? (
+                                                                <Avatar
+                                                                    sx={{
+                                                                        width: '60%',
+                                                                        height: '60%',
+                                                                        bgcolor: 'rgba(99,102,241,0.2)',
+                                                                        color: 'primary.main',
+                                                                        fontWeight: 800,
+                                                                        fontSize: '1.5rem',
+                                                                    }}
+                                                                >
+                                                                    {tmpl.name?.charAt(0)?.toUpperCase() || 'T'}
+                                                                </Avatar>
+                                                            ) : (
+                                                                <CardMedia
+                                                                    component="img"
+                                                                    image={tmpl.img}
+                                                                    onError={() => {
+                                                                        if (tmpl.isCustom) {
+                                                                            setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
+                                                                        }
+                                                                    }}
+                                                                    sx={{
+                                                                        width: tmpl.isCustom ? '60%' : '100%',
+                                                                        height: tmpl.isCustom ? '60%' : '100%',
+                                                                        objectFit: tmpl.isCustom ? 'contain' : 'cover',
+                                                                        objectPosition: 'top',
+                                                                        filter: isSelected ? 'none' : 'grayscale(15%)',
+                                                                        opacity: isSelected ? 1 : 0.75,
+                                                                        transition: 'all 0.3s'
+                                                                    }}
+                                                                />
+                                                            )}
+                                                        </Box>
+
+                                                        {/* Template Name Label Below Thumbnail */}
+                                                        <Box sx={{ mt: 1, textAlign: 'center' }}>
+                                                            <Typography variant="caption" fontWeight={750} display="block" color={isSelected ? 'primary.main' : 'text.primary'} sx={{ fontSize: '0.75rem', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                {tmpl.name}
+                                                            </Typography>
+                                                            {tmpl.isCustom && (
+                                                                <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', display: 'block', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                                                    {tmpl.category}
+                                                                </Typography>
+                                                            )}
+                                                        </Box>
+
+                                                        {isSelected && (
+                                                            <Box sx={{
+                                                                position: 'absolute', top: -4, right: -4,
+                                                                bgcolor: 'primary.main', color: 'white',
+                                                                borderRadius: '50%', width: 18, height: 18,
+                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                boxShadow: '0 2px 8px rgba(0,0,0,0.2)',
+                                                                zIndex: 2
+                                                            }}>
+                                                                <CheckIcon sx={{ fontSize: 11, fontWeight: 900 }} />
+                                                            </Box>
+                                                        )}
+                                                    </Box>
+                                                </Tooltip>
+                                            );
+                                        });
+                                    })()}
                                 </Box>
+                            </Box>
+
+                            <Divider sx={{ borderColor: 'divider' }} />
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
+                                <Button
+                                    variant="contained"
+                                    startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
+                                    onClick={handleSave}
+                                    disabled={saving || isSuspended}
+                                    sx={{
+                                        borderRadius: '12px',
+                                        py: 1.5,
+                                        px: 4,
+                                        fontWeight: 800,
+                                        textTransform: 'none',
+                                        background: 'linear-gradient(135deg, #6366F1 0%, #4F46E5 100%)',
+                                        boxShadow: '0 8px 24px rgba(99,102,241,0.25)',
+                                        '&:hover': {
+                                            background: 'linear-gradient(135deg, #4F46E5 0%, #4338CA 100%)'
+                                        }
+                                    }}
+                                >
+                                    {saving ? 'Saving...' : 'Save Changes'}
+                                </Button>
                             </Box>
                         </Paper>
                     </Box>
@@ -416,7 +617,7 @@ const WebsiteGenerator = () => {
                                                 if (isSuspended) return;
                                                 const newEnabled = e.target.checked;
                                                 setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
-
+ 
                                                 setSaving(true);
                                                 try {
                                                     const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
@@ -433,6 +634,42 @@ const WebsiteGenerator = () => {
                                                 }
                                             }}
                                         />
+                                        {settings.website_enabled && (
+                                            <>
+                                                <Tooltip title="Visit Live Website">
+                                                    <IconButton
+                                                        size="small"
+                                                        onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                        sx={{ p: 0.5, color: 'primary.main' }}
+                                                    >
+                                                        <OpenIcon sx={{ fontSize: '1.1rem' }} />
+                                                    </IconButton>
+                                                </Tooltip>
+                                                <Typography 
+                                                    variant="caption" 
+                                                    sx={{ 
+                                                        color: 'text.secondary', 
+                                                        fontFamily: 'monospace', 
+                                                        bgcolor: 'rgba(255,255,255,0.05)', 
+                                                        px: 1.2, 
+                                                        py: 0.5, 
+                                                        borderRadius: 1,
+                                                        border: '1px dashed rgba(255,255,255,0.1)',
+                                                        fontSize: '0.75rem',
+                                                        cursor: 'pointer',
+                                                        transition: 'all 0.2s',
+                                                        '&:hover': {
+                                                            color: 'primary.main',
+                                                            borderColor: 'primary.main',
+                                                            bgcolor: 'rgba(99,102,241,0.05)'
+                                                        }
+                                                    }}
+                                                    onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                >
+                                                    {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
+                                                </Typography>
+                                            </>
+                                        )}
                                     </Box>
                                 </Box>
 
@@ -441,12 +678,72 @@ const WebsiteGenerator = () => {
                                     exclusive
                                     onChange={(e, v) => v && setViewMode(v)}
                                     size="small"
-                                    sx={{ bgcolor: 'background.paper', borderRadius: 2, p: 0.3, border: '1px solid divider', width: { xs: '100%', sm: 'auto' } }}
+                                    sx={{
+                                        bgcolor: 'rgba(255, 255, 255, 0.03)',
+                                        borderRadius: '12px',
+                                        p: '4px',
+                                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                                        width: { xs: '100%', sm: 'auto' }
+                                    }}
                                 >
-                                    <ToggleButton value="desktop" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <ToggleButton
+                                        value="desktop"
+                                        sx={{
+                                            flex: 1,
+                                            px: 2.5,
+                                            py: 0.75,
+                                            border: 'none',
+                                            borderRadius: '8px !important',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            transition: 'all 0.2s ease',
+                                            '&.Mui-selected': {
+                                                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(255, 255, 255, 0.12)'
+                                                }
+                                            },
+                                            '&:hover': {
+                                                color: '#fff',
+                                                bgcolor: 'rgba(255, 255, 255, 0.04)'
+                                            }
+                                        }}
+                                    >
                                         <DesktopIcon fontSize="small" sx={{ mr: 1 }} /> Desktop
                                     </ToggleButton>
-                                    <ToggleButton value="mobile" sx={{ flex: 1, px: 2, border: 'none', borderRadius: '6px !important', fontSize: '0.75rem', fontWeight: 700 }}>
+                                    <ToggleButton
+                                        value="mobile"
+                                        sx={{
+                                            flex: 1,
+                                            px: 2.5,
+                                            py: 0.75,
+                                            border: 'none',
+                                            borderRadius: '8px !important',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 800,
+                                            textTransform: 'none',
+                                            color: 'rgba(255, 255, 255, 0.6)',
+                                            transition: 'all 0.2s ease',
+                                            '&.Mui-selected': {
+                                                bgcolor: 'rgba(255, 255, 255, 0.08)',
+                                                color: '#fff',
+                                                border: '1px solid rgba(255, 255, 255, 0.12)',
+                                                boxShadow: '0 4px 20px rgba(0, 0, 0, 0.15)',
+                                                '&:hover': {
+                                                    bgcolor: 'rgba(255, 255, 255, 0.12)'
+                                                }
+                                            },
+                                            '&:hover': {
+                                                color: '#fff',
+                                                bgcolor: 'rgba(255, 255, 255, 0.04)'
+                                            }
+                                        }}
+                                    >
                                         <MobileIcon fontSize="small" sx={{ mr: 1 }} /> Mobile
                                     </ToggleButton>
                                 </ToggleButtonGroup>
@@ -456,26 +753,37 @@ const WebsiteGenerator = () => {
                             <Box
                                 sx={{
                                     width: '100%',
-                                    bgcolor: 'transparent',
-                                    minHeight: '95vh',
                                     display: 'flex',
-                                    alignItems: 'center',
+                                    alignItems: 'flex-start',
                                     justifyContent: 'center',
-                                    p: { xs: 0, md: 2 },
-                                    overflow: 'hidden',
+                                    mt: 1,
+                                    overflow: 'visible',
                                     transition: 'all 0.5s ease',
+                                    // In mobile mode, add a dark background only around the phone
+                                    ...(viewMode === 'mobile' ? {
+                                        bgcolor: 'rgba(10,12,18,0.6)',
+                                        borderRadius: '64px',
+                                        p: '24px',
+                                        width: 'fit-content',
+                                        mx: 'auto',
+                                        boxShadow: 'inset 0 0 60px rgba(0,0,0,0.4)',
+                                    } : {
+                                        bgcolor: 'transparent',
+                                    })
                                 }}
                             >
                                 {/* Device Wrapper */}
                                 <Box sx={{
                                     position: 'relative',
-                                    width: viewMode === 'mobile' ? 375 + 24 : '100%',
-                                    maxWidth: viewMode === 'mobile' ? 399 : 1200,
-                                    height: viewMode === 'mobile' ? 780 : '75vh',
-                                    bgcolor: '#1a1d21', // Frame color
-                                    borderRadius: viewMode === 'mobile' ? '54px' : '16px 16px 8px 8px',
-                                    p: viewMode === 'mobile' ? '54px 12px 18px 12px' : '40px 0px 0px 0px', // Mockup bezels
-                                    boxShadow: '0 40px 100px -20px rgba(0,0,0,0.3)',
+                                    width: viewMode === 'mobile' ? 375 : '100%',
+                                    maxWidth: viewMode === 'mobile' ? 375 : '100%',
+                                    height: viewMode === 'mobile' ? 780 : '110vh',
+                                    bgcolor: '#1a1d21',
+                                    borderRadius: viewMode === 'mobile' ? '48px' : '16px 16px 8px 8px',
+                                    p: viewMode === 'mobile' ? '52px 10px 16px 10px' : '40px 0px 0px 0px',
+                                    boxShadow: viewMode === 'mobile'
+                                        ? '0 0 0 2px rgba(255,255,255,0.08), 0 30px 80px -10px rgba(0,0,0,0.6)'
+                                        : '0 40px 100px -20px rgba(0,0,0,0.3)',
                                     border: '1px solid rgba(255,255,255,0.1)',
                                     transition: 'all 0.5s cubic-bezier(0.4, 0, 0.2, 1)',
                                     display: 'flex',
@@ -491,10 +799,22 @@ const WebsiteGenerator = () => {
 
                                     {/* Desktop Decorations */}
                                     {viewMode === 'desktop' && (
-                                        <Box sx={{ position: 'absolute', top: 16, left: 20, display: 'flex', gap: 1 }}>
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FF5F56' }} />
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#FFBD2E' }} />
-                                            <Box sx={{ width: 9, height: 11, borderRadius: '50%', bgcolor: '#27C93F' }} />
+                                        <Box sx={{
+                                            position: 'absolute',
+                                            top: 0,
+                                            left: 0,
+                                            right: 0,
+                                            height: 40,
+                                            borderBottom: '1px solid rgba(255, 255, 255, 0.06)',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            px: 2.5
+                                        }}>
+                                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FF5F56' }} />
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#FFBD2E' }} />
+                                                <Box sx={{ width: 10, height: 10, borderRadius: '50%', bgcolor: '#27C93F' }} />
+                                            </Box>
                                         </Box>
                                     )}
 
@@ -508,9 +828,22 @@ const WebsiteGenerator = () => {
                                             overflowY: 'auto',
                                             overflowX: 'hidden',
                                             containerType: 'inline-size',
-                                            '&::-webkit-scrollbar': { width: 4 },
-                                            '&::-webkit-scrollbar-track': { bgcolor: 'transparent' },
-                                            '&::-webkit-scrollbar-thumb': { bgcolor: 'rgba(255,255,255,0.1)', borderRadius: 10 }
+                                            '&::-webkit-scrollbar': { display: 'none', width: 0 },
+                                            scrollbarWidth: 'none',
+                                            msOverflowStyle: 'none',
+                                            // Dark strip to cover iframe scrollbar
+                                            '&::after': viewMode === 'mobile' ? {
+                                                content: '""',
+                                                position: 'absolute',
+                                                top: 0,
+                                                right: 0,
+                                                width: '10px',
+                                                height: '100%',
+                                                bgcolor: '#1a1d21',
+                                                zIndex: 10,
+                                                borderRadius: '0 36px 36px 0',
+                                                pointerEvents: 'none',
+                                            } : {},
                                         }}
                                     >
                                         {previewLoading ? (
