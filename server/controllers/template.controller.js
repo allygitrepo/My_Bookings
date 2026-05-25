@@ -309,23 +309,26 @@ const templateController = {
 
                 const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
                 
-                // Dynamically build the Apache URL path relative to htdocs/web root
-                const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
-                let apacheUrlPath = '';
-                const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
-                                    baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
-                                    baseTemplatesNormalized.match(/\/www\/(.+)$/i);
-                
-                if (htdocsMatch) {
-                    apacheUrlPath = '/' + htdocsMatch[1];
-                } else {
-                    const normalizedPath = baseTemplatesNormalized.toLowerCase();
-                    const myBookingsIndex = normalizedPath.indexOf('my_bookings');
-                    if (myBookingsIndex !== -1) {
-                        const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
-                        apacheUrlPath = '/mybookings' + subPath;
+                // Let's first check if an explicit Apache URL path prefix is provided in env
+                let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
+                if (!apacheUrlPath) {
+                    // Fallback to dynamic detection
+                    const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
+                    const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
+                                        baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
+                                        baseTemplatesNormalized.match(/\/www\/(.+)$/i);
+                    
+                    if (htdocsMatch) {
+                        apacheUrlPath = '/' + htdocsMatch[1];
                     } else {
-                        apacheUrlPath = '/mybookings/server/Templates';
+                        const normalizedPath = baseTemplatesNormalized.toLowerCase();
+                        const myBookingsIndex = normalizedPath.indexOf('my_bookings');
+                        if (myBookingsIndex !== -1) {
+                            const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
+                            apacheUrlPath = '/mybookings' + subPath;
+                        } else {
+                            apacheUrlPath = '/mybookings/server/Templates';
+                        }
                     }
                 }
                 
