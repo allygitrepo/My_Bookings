@@ -11,7 +11,15 @@ let hasStartedApacheConnectionLog = false;
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
 
-const getWidgetScriptUrl = () => {
+const getWidgetScriptUrl = (req) => {
+    const host = req ? (req.headers['host'] || '') : '';
+    if (host) {
+        if (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("3000") || host.includes("5173")) {
+            return "http://localhost:3000/widget.js";
+        }
+        return "https://mybookings.allysoftsolutions.com/widget.js";
+    }
+
     const apiBase = getApiBaseUrl();
     if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
         return "http://localhost:3000/widget.js";
@@ -417,7 +425,8 @@ const templateController = {
                         apiKeyRecord = await ApiKey.create({ business_id: businessId, api_key, status: true });
                     }
                     const widgetKey = apiKeyRecord.api_key;
-                    const widgetUrl = getWidgetScriptUrl();
+                    const widgetUrl = getWidgetScriptUrl(req);
+                    console.log(`widget.js URL: ${widgetUrl}`);
                     let scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
                     if (req.query.preview === 'true') {
                         scriptTag += `<style>button[aria-label="book-now"], .MuiFab-root, #booking-widget-root button.MuiFab-root { display: none !important; }</style>\n`;
