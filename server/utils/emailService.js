@@ -26,7 +26,6 @@ const emailService = {
             };
 
             const info = await transporter.sendMail(mailOptions);
-            console.log('OTP Email sent: %s', info.messageId);
             return { success: true, messageId: info.messageId };
         } catch (error) {
             console.error('Error sending OTP email:', error);
@@ -47,7 +46,6 @@ const emailService = {
             };
 
             const info = await transporter.sendMail(mailOptions);
-            console.log('Welcome Email sent: %s', info.messageId);
             return { success: true, messageId: info.messageId };
         } catch (error) {
             console.error('Error sending welcome email:', error);

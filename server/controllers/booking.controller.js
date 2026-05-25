@@ -68,7 +68,6 @@ const bookingController = {
                     service_id: service_id
                 }));
                 await BookingService.bulkCreate(bookingServices);
-                console.log(`[BookingController] Stored ${service_ids.length} services for booking ${row.id}`);
             } else if (req.body.service_id) {
                 // Fallback for single service if service_ids array is not provided
                 await BookingService.create({

@@ -134,7 +134,6 @@ const flattenExtractedFolder = (dir) => {
         if (items.length === 1) {
             const singlePath = path.join(dir, items[0]);
             if (fs.statSync(singlePath).isDirectory()) {
-                console.log(`[ZIP Flattening] Single root directory detected: ${items[0]}. Flattening ${dir}...`);
                 const subItems = fs.readdirSync(singlePath);
                 subItems.forEach((subItem) => {
                     const src = path.join(singlePath, subItem);
@@ -160,7 +159,6 @@ const patchTemplateDatabaseConfig = (templateDir) => {
     try {
         const configPath = path.join(templateDir, 'server', 'config', 'database.php');
         if (!fs.existsSync(configPath)) {
-            console.log(`[Template Patch] Database config not found at ${configPath}, skipping.`);
             return;
         }
 
@@ -168,7 +166,6 @@ const patchTemplateDatabaseConfig = (templateDir) => {
 
         // Check if it's already patched
         if (content.includes('HTTP_X_BUSINESS_ID')) {
-            console.log(`[Template Patch] Database config at ${configPath} is already patched.`);
             return;
         }
 
@@ -204,12 +201,7 @@ const patchTemplateDatabaseConfig = (templateDir) => {
             if (content.match(targetRegex)) {
                 content = content.replace(targetRegex, patchedCode.trim());
                 fs.writeFileSync(configPath, content, 'utf8');
-                console.log(`[Template Patch] Successfully patched database config at: ${configPath}`);
-            } else {
-                console.warn(`[Template Patch] Target regex pattern did not match database config structure at ${configPath}`);
             }
-        } else {
-            console.warn(`[Template Patch] Could not detect SQLite filename in database config at ${configPath}`);
         }
     } catch (e) {
         console.error(`[Template Patch] Error patching database config for ${templateDir}:`, e);
@@ -220,7 +212,6 @@ const templateController = {
     // Initialize & sync existing templates
     initTemplates: async () => {
         try {
-            console.log("[Templates Setup] Scanning server/Templates for active templates...");
             // Ensure server/Templates directory exists
             if (!fs.existsSync(BASE_TEMPLATES_DIR)) {
                 fs.mkdirSync(BASE_TEMPLATES_DIR, { recursive: true });
@@ -260,7 +251,6 @@ const templateController = {
                         icon: iconUrlPath,
                         isActive: true
                     });
-                    console.log(`[Templates Setup] Auto-seeded template '${dirName}' into database as '${templateType}'.`);
                 } else {
                     // Update paths, icons, and type to make sure they are dynamic and up-to-date
                     let updated = false;
@@ -279,12 +269,9 @@ const templateController = {
                     }
                     if (updated) {
                         await templateRecord.save();
-                        console.log(`[Templates Setup] Updated template metadata for '${dirName}'.`);
                     }
                 }
             }
-
-            console.log("[Templates Setup] Template initialization and seeding complete.");
         } catch (err) {
             console.error("[Templates Setup] Error during templates initialization:", err);
         }
@@ -298,7 +285,6 @@ const templateController = {
             if (Array.isArray(fileSubPath)) {
                 fileSubPath = fileSubPath.join('/');
             }
-            console.log(`[Template Render] serving template: ${templateId}, business: ${businessId}, fileSubPath: ${fileSubPath}`);
 
             // Check if this is an API request targeting the template's PHP backend.
             // If so, proxy it to Apache instead of trying to serve it as a static file.
@@ -326,7 +312,8 @@ const templateController = {
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
                 const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
-                console.log(`[Template Proxy] Proxying API request: ${req.method} ${req.url} -> ${apacheUrl}`);
+                
+                console.log(`connecting apache to ${apacheUrl}...`);
                 
                 try {
                     const headers = { ...req.headers };
@@ -345,12 +332,15 @@ const templateController = {
                         validateStatus: () => true
                     });
                     
+                    console.log("connected ..");
+                    
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
                         res.setHeader(key, val);
                     });
                     return res.send(response.data);
                 } catch (proxyError) {
+                    console.log("failed");
                     console.error("[Template Proxy Error] Proxy request failed:", proxyError);
                     return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
                 }
@@ -573,7 +563,6 @@ const templateController = {
             }
 
             // Extract ZIP
-            console.log(`[ZIP Extraction] Extracting ${req.file.path} to ${extractPath}`);
             const zip = new AdmZip(req.file.path);
             zip.extractAllTo(extractPath, true);
 
@@ -679,7 +668,6 @@ const templateController = {
             // Remove folder recursively
             const templatePath = template.path || path.join(BASE_TEMPLATES_DIR, template.templateId);
             if (fs.existsSync(templatePath)) {
-                console.log(`[Template Deletion] Purging folder recursively: ${templatePath}`);
                 fs.rmSync(templatePath, { recursive: true, force: true });
             }
 
