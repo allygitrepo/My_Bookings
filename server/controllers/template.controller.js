@@ -299,6 +299,14 @@ const templateController = {
             // Check if this is an API request targeting the template's PHP backend.
             // If so, proxy it to Apache instead of trying to serve it as a static file.
             if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
+                // Find the template first to resolve the actual physical folder name from the database
+                const template = await TemplateProject.findOne({ where: { templateId } });
+                if (!template) {
+                    console.error(`[Template Proxy Error] Template not found in database for ID: ${templateId}`);
+                    return res.status(404).send("Template not found");
+                }
+                const physicalFolderName = path.basename(template.path);
+
                 const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
                 
                 // Dynamically build the Apache URL path relative to htdocs/web root
@@ -322,7 +330,7 @@ const templateController = {
                 
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
-                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
+                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`;
                 
                 const logThisRequest = !hasStartedApacheConnectionLog;
                 if (logThisRequest) {
@@ -346,8 +354,13 @@ const templateController = {
                         validateStatus: () => true
                     });
                     
-                    if (logThisRequest) {
-                        console.log("connected ..");
+                    if (response.status >= 400) {
+                        console.log(`connecting apache to ${apacheUrl}... failed (Status ${response.status})`);
+                        hasStartedApacheConnectionLog = false;
+                    } else {
+                        if (logThisRequest) {
+                            console.log("connected ..");
+                        }
                     }
                     
                     res.status(response.status);
@@ -356,11 +369,9 @@ const templateController = {
                     });
                     return res.send(response.data);
                 } catch (proxyError) {
-                    if (logThisRequest) {
-                        console.log("failed");
-                        hasStartedApacheConnectionLog = false;
-                    }
+                    console.log(`connecting apache to ${apacheUrl}... failed (Error: ${proxyError.message})`);
                     console.error("[Template Proxy Error] Proxy request failed:", proxyError);
+                    hasStartedApacheConnectionLog = false;
                     return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
                 }
             }
