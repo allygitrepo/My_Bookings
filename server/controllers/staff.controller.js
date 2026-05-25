@@ -14,11 +14,11 @@ const staffController = {
         try {
             const business_id = getBusinessId(req);
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
-            
+
             const { location_ids, ...staffData } = req.body;
-            
+
             const row = await Staff.create({ ...staffData, business_id });
-            
+
             if (location_ids && Array.isArray(location_ids)) {
                 const locs = location_ids.map(locId => ({
                     staff_id: row.id,
@@ -26,7 +26,7 @@ const staffController = {
                 }));
                 await StaffLocation.bulkCreate(locs);
             }
-            
+
             res.status(201).json({ success: true, message: "Staff created successfully", data: row });
         } catch (error) {
             if (error.name === 'SequelizeUniqueConstraintError') {
@@ -40,7 +40,7 @@ const staffController = {
             const page = parseInt(req.query.page) || 1;
             const limit = parseInt(req.query.limit) || 50;
             const offset = (page - 1) * limit;
-            
+
             const whereClause = { status: true };
 
             if (req.isWidget) {
@@ -90,7 +90,7 @@ const staffController = {
     getById: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -110,7 +110,7 @@ const staffController = {
     update: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -122,14 +122,14 @@ const staffController = {
 
             const row = await Staff.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Staff not found" });
-            
+
             const { business_id: _, location_ids, ...safeBody } = req.body;
             if (req.body.business_id) {
                 safeBody.business_id = req.body.business_id;
             }
 
             await row.update(safeBody);
-            
+
             if (location_ids && Array.isArray(location_ids)) {
                 // Remove old assignments and add new ones
                 await StaffLocation.destroy({ where: { staff_id: row.id } });
@@ -139,7 +139,7 @@ const staffController = {
                 }));
                 await StaffLocation.bulkCreate(locs);
             }
-            
+
             res.json({ success: true, message: "Staff updated successfully", data: row });
         } catch (error) {
             if (error.name === 'SequelizeUniqueConstraintError') {
@@ -151,7 +151,7 @@ const staffController = {
     delete: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -163,7 +163,7 @@ const staffController = {
 
             const row = await Staff.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Staff not found" });
-            
+
             await row.update({ status: false });
             res.json({ success: true, message: "Staff deleted successfully" });
         } catch (error) {

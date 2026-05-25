@@ -1,0 +1,23 @@
+{
+    "flutter": {
+        "platforms": {
+            "android": {
+                "default": {
+                    "projectId": "mybookings-cdcf5",
+                    "appId": "1:175183335539:android:d69a11c508200c3cb09a06",
+                    "fileOutput": "android/app/google-services.json"
+                }
+            },
+            "dart": {
+                "lib/firebase_options.dart": {
+                    "projectId": "mybookings-cdcf5",
+                    "configurations": {
+                        "android": "1:175183335539:android:d69a11c508200c3cb09a06",
+                        "ios": "1:175183335539:ios:b6a3ca618c649fc7b09a06",
+                        "web": "1:175183335539:web:e311efe179b46e72b09a06"
+                    }
+                }
+            }
+        }
+    }
+}
