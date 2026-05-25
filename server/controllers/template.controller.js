@@ -311,7 +311,11 @@ const templateController = {
                 
                 // Let's first check if an explicit Apache URL path prefix is provided in env
                 let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
-                if (!apacheUrlPath) {
+                if (apacheUrlPath) {
+                    if (!hasStartedApacheConnectionLog) {
+                        console.log(`[Template Proxy] Using configured APACHE_TEMPLATES_PATH: "${apacheUrlPath}"`);
+                    }
+                } else {
                     // Fallback to dynamic detection
                     const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
                     const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
@@ -360,6 +364,7 @@ const templateController = {
                     
                     if (response.status >= 400) {
                         console.log(`connecting apache to ${apacheUrl}... failed (Status ${response.status})`);
+                        console.log(`[Template Proxy Error Detail] Apache returned body:`, typeof response.data === 'object' ? JSON.stringify(response.data) : response.data);
                         hasStartedApacheConnectionLog = false;
                     } else {
                         if (logThisRequest) {
@@ -374,7 +379,7 @@ const templateController = {
                     return res.send(response.data);
                 } catch (proxyError) {
                     console.log(`connecting apache to ${apacheUrl}... failed (Error: ${proxyError.message})`);
-                    console.error("[Template Proxy Error] Proxy request failed:", proxyError);
+                    console.error("[Template Proxy Error] Proxy request failed. Full details:", proxyError);
                     hasStartedApacheConnectionLog = false;
                     return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
                 }
