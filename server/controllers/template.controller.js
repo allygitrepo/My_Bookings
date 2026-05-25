@@ -6,6 +6,8 @@ const TemplateProject = require("../models/templateProject.model");
 
 const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
 
+let hasStartedApacheConnectionLog = false;
+
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
 
@@ -301,11 +303,12 @@ const templateController = {
                 if (htdocsMatch) {
                     apacheUrlPath = '/' + htdocsMatch[1];
                 } else {
-                    const myBookingsIndex = baseTemplatesNormalized.indexOf('My_Bookings');
+                    const normalizedPath = baseTemplatesNormalized.toLowerCase();
+                    const myBookingsIndex = normalizedPath.indexOf('my_bookings');
                     if (myBookingsIndex !== -1) {
                         apacheUrlPath = '/' + baseTemplatesNormalized.substring(myBookingsIndex);
                     } else {
-                        apacheUrlPath = '/My_Bookings/server/Templates';
+                        apacheUrlPath = '/mybookings/server/Templates';
                     }
                 }
                 
@@ -313,15 +316,18 @@ const templateController = {
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
                 const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
                 
-                console.log(`connecting apache to ${apacheUrl}...`);
+                const logThisRequest = !hasStartedApacheConnectionLog;
+                if (logThisRequest) {
+                    hasStartedApacheConnectionLog = true;
+                    console.log(`connecting apache to ${apacheUrl}...`);
+                }
                 
                 try {
                     const headers = { ...req.headers };
-                    delete headers['host'];
                     delete headers['content-length'];
                     delete headers['connection'];
                     headers['X-Business-ID'] = businessId;
-                    headers['host'] = new URL(apacheBaseUrl).host;
+                    headers['host'] = req.headers['host'] || new URL(apacheBaseUrl).host;
 
                     const response = await axios({
                         method: req.method,
@@ -332,7 +338,9 @@ const templateController = {
                         validateStatus: () => true
                     });
                     
-                    console.log("connected ..");
+                    if (logThisRequest) {
+                        console.log("connected ..");
+                    }
                     
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
@@ -340,7 +348,10 @@ const templateController = {
                     });
                     return res.send(response.data);
                 } catch (proxyError) {
-                    console.log("failed");
+                    if (logThisRequest) {
+                        console.log("failed");
+                        hasStartedApacheConnectionLog = false;
+                    }
                     console.error("[Template Proxy Error] Proxy request failed:", proxyError);
                     return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
                 }
