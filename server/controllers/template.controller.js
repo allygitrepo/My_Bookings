@@ -322,7 +322,8 @@ const templateController = {
                     const normalizedPath = baseTemplatesNormalized.toLowerCase();
                     const myBookingsIndex = normalizedPath.indexOf('my_bookings');
                     if (myBookingsIndex !== -1) {
-                        apacheUrlPath = '/' + baseTemplatesNormalized.substring(myBookingsIndex);
+                        const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
+                        apacheUrlPath = '/mybookings' + subPath;
                     } else {
                         apacheUrlPath = '/mybookings/server/Templates';
                     }
