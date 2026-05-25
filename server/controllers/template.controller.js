@@ -328,10 +328,13 @@ const templateController = {
                         const normalizedPath = baseTemplatesNormalized.toLowerCase();
                         const myBookingsIndex = normalizedPath.indexOf('my_bookings');
                         if (myBookingsIndex !== -1) {
+                            // Extract exact case-sensitive parent folder name (e.g. "My_Bookings") from file system path
+                            const folderPrefix = baseTemplatesNormalized.substring(0, myBookingsIndex + 'my_bookings'.length);
+                            const actualFolderName = folderPrefix.split('/').pop() || 'My_Bookings';
                             const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
-                            apacheUrlPath = '/mybookings' + subPath;
+                            apacheUrlPath = '/' + actualFolderName + subPath;
                         } else {
-                            apacheUrlPath = '/mybookings/server/Templates';
+                            apacheUrlPath = '/My_Bookings/server/Templates';
                         }
                     }
                 }
