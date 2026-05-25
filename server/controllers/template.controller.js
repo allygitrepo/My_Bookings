@@ -160,7 +160,6 @@ const patchTemplateDatabaseConfig = (templateDir) => {
     try {
         const configPath = path.join(templateDir, 'server', 'config', 'database.php');
         if (!fs.existsSync(configPath)) {
-            console.log(`[Template Patch] Database config not found at ${configPath}, skipping.`);
             return;
         }
 
@@ -168,7 +167,6 @@ const patchTemplateDatabaseConfig = (templateDir) => {
 
         // Check if it's already patched
         if (content.includes('HTTP_X_BUSINESS_ID')) {
-            console.log(`[Template Patch] Database config at ${configPath} is already patched.`);
             return;
         }
 
@@ -200,7 +198,7 @@ const patchTemplateDatabaseConfig = (templateDir) => {
             $pdo = new PDO('sqlite:' . $dbPath);`;
 
             // Regex matching $dbPath = ... and $pdo = new PDO(...) lines
-            const targetRegex = /\$dbPath\s*=\s*__DIR__\s*\.\s*['"]\/?[^'"]+\.sqlite['"];\s*(?:\/\/[^\n]*\s*)*\$pdo\s*=\s*new\s*PDO\(['"]sqlite:['"]\s*\.\s*\$dbPath\);/i;
+            const targetRegex = /\$dbPath\s*=\s*__DIR__\s*\.\s*['"]\/?[^'"]+\.sqlite['"];[\s\S]*?\$pdo\s*=\s*new\s*PDO\(['"]sqlite:['"]\s*\.\s*\$dbPath\);/i;
             if (content.match(targetRegex)) {
                 content = content.replace(targetRegex, patchedCode.trim());
                 fs.writeFileSync(configPath, content, 'utf8');
@@ -220,7 +218,6 @@ const templateController = {
     // Initialize & sync existing templates
     initTemplates: async () => {
         try {
-            console.log("[Templates Setup] Scanning server/Templates for active templates...");
             // Ensure server/Templates directory exists
             if (!fs.existsSync(BASE_TEMPLATES_DIR)) {
                 fs.mkdirSync(BASE_TEMPLATES_DIR, { recursive: true });
@@ -284,7 +281,6 @@ const templateController = {
                 }
             }
 
-            console.log("[Templates Setup] Template initialization and seeding complete.");
         } catch (err) {
             console.error("[Templates Setup] Error during templates initialization:", err);
         }
@@ -298,20 +294,19 @@ const templateController = {
             if (Array.isArray(fileSubPath)) {
                 fileSubPath = fileSubPath.join('/');
             }
-            console.log(`[Template Render] serving template: ${templateId}, business: ${businessId}, fileSubPath: ${fileSubPath}`);
 
             // Check if this is an API request targeting the template's PHP backend.
             // If so, proxy it to Apache instead of trying to serve it as a static file.
             if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
                 const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
-                
+
                 // Dynamically build the Apache URL path relative to htdocs/web root
                 const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
                 let apacheUrlPath = '';
-                const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
-                                    baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
-                                    baseTemplatesNormalized.match(/\/www\/(.+)$/i);
-                
+                const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) ||
+                    baseTemplatesNormalized.match(/\/html\/(.+)$/i) ||
+                    baseTemplatesNormalized.match(/\/www\/(.+)$/i);
+
                 if (htdocsMatch) {
                     apacheUrlPath = '/' + htdocsMatch[1];
                 } else {
@@ -322,12 +317,11 @@ const templateController = {
                         apacheUrlPath = '/My_Bookings/server/Templates';
                     }
                 }
-                
+
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
                 const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
-                console.log(`[Template Proxy] Proxying API request: ${req.method} ${req.url} -> ${apacheUrl}`);
-                
+
                 try {
                     const headers = { ...req.headers };
                     delete headers['host'];
@@ -344,7 +338,7 @@ const templateController = {
                         data: req.body,
                         validateStatus: () => true
                     });
-                    
+
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
                         res.setHeader(key, val);
