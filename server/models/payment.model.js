@@ -47,6 +47,11 @@ const Payment = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false
         },
+        settlement_status: {
+            type: DataTypes.ENUM('paid', 'unpaid'),
+            defaultValue: 'unpaid',
+            allowNull: false
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

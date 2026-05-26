@@ -268,6 +268,102 @@ const portalController = {
             console.error('Portal Analytics Error:', error);
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    getSettlements: async (req, res) => {
+        try {
+            const businesses = await Business.findAll({
+                include: [
+                    { model: User, as: 'owner', attributes: ['name', 'email'] }
+                ],
+                order: [['business_name', 'ASC']]
+            });
+
+            const data = await Promise.all(businesses.map(async (biz) => {
+                const totalBookings = await Booking.count({ where: { business_id: biz.id } });
+
+                const payments = await Payment.findAll({
+                    where: { business_id: biz.id, payment_status: true }
+                });
+
+                // Ignore payments with 0 platform fees (commissions)
+                const validPayments = payments.filter(p => parseFloat(p.platform_fees || 0) > 0);
+
+                const portalPayment = validPayments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
+                const commission = validPayments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
+                const payToCustomer = validPayments.reduce((sum, p) => sum + parseFloat(p.final_amount || 0), 0);
+
+                let status = 'no_payments';
+                if (validPayments.length > 0) {
+                    const hasUnpaid = validPayments.some(p => p.settlement_status === 'unpaid');
+                    status = hasUnpaid ? 'unpaid' : 'paid';
+                }
+
+                return {
+                    id: biz.id,
+                    business_name: biz.business_name,
+                    business_type: biz.business_type,
+                    owner: biz.owner,
+                    totalBookings,
+                    portalPayment,
+                    commission,
+                    payToCustomer,
+                    status,
+                    account_details: {
+                        upi_id: biz.upi_id,
+                        account_holder_name: biz.account_holder_name,
+                        account_number: biz.account_number,
+                        ifsc_code: biz.ifsc_code,
+                        bank_name: biz.bank_name
+                    },
+                    payments: validPayments.map(p => ({
+                        id: p.id,
+                        booking_id: p.booking_id,
+                        amount: p.amount,
+                        paid_amount: p.paid_amount,
+                        platform_fees: p.platform_fees,
+                        final_amount: p.final_amount,
+                        payment_method: p.payment_method,
+                        transaction_id: p.transaction_id,
+                        payment_status: p.payment_status,
+                        settlement_status: p.settlement_status,
+                        created_at: p.created_at
+                    }))
+                };
+            }));
+
+            res.json({ success: true, data });
+        } catch (error) {
+            console.error('Portal Settlements Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    markSettlementsPaid: async (req, res) => {
+        try {
+            const { paymentIds, businessId } = req.body;
+
+            if (businessId) {
+                await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { business_id: businessId, payment_status: true, settlement_status: 'unpaid' } }
+                );
+                return res.json({ success: true, message: "All settlements for this business marked as paid" });
+            }
+
+            if (Array.isArray(paymentIds) && paymentIds.length > 0) {
+                await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { id: paymentIds, payment_status: true } }
+                );
+                return res.json({ success: true, message: "Selected settlements marked as paid" });
+            }
+
+            res.status(400).json({ success: false, message: "Invalid parameters" });
+        } catch (error) {
+            console.error('Portal Mark Settlements Paid Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
 

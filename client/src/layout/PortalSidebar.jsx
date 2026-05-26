@@ -13,7 +13,8 @@ import {
     ArrowBack as BackIcon,
     Inventory as PackageIcon,
     Payments as PaymentsIcon,
-    Layers as TemplatesIcon
+    Layers as TemplatesIcon,
+    AccountBalanceWallet as SettlementsIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';
@@ -31,6 +32,7 @@ const PortalSidebar = ({ open, onClose, variant }) => {
         { text: 'Packages', icon: <PackageIcon />, path: '/portal/packages' },
         { text: 'Payments', icon: <PaymentsIcon />, path: '/portal/payments' },
         { text: 'Users', icon: <PeopleIcon />, path: '/portal/users' },
+        { text: 'Settlements', icon: <SettlementsIcon />, path: '/portal/settlements' },
         { text: 'Create Admin', icon: <AdminIcon />, path: '/portal/create-admin' },
         { text: 'Templates', icon: <TemplatesIcon />, path: '/portal/templates' },
     ];
