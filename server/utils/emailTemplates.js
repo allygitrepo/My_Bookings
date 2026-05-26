@@ -146,4 +146,139 @@ const getOtpTemplate = (otp) => {
     `;
 };
 
-module.exports = { getWelcomeTemplate, getOtpTemplate };
+const getSettlementPaidTemplate = (userName, businessName, totalAmount, paymentCount, accountDetails = {}, settledAt) => {
+    const formattedAmount = parseFloat(totalAmount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const formattedDate = new Date(settledAt || Date.now()).toLocaleDateString('en-IN', { year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit' });
+
+    // Mask account number: show last 4 digits only
+    const maskedAccount = accountDetails.account_number
+        ? '••••' + accountDetails.account_number.slice(-4)
+        : null;
+
+    // Build payout destination block
+    let payoutDestination = '';
+    if (accountDetails.upi_id) {
+        payoutDestination += `
+            <tr>
+                <td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;vertical-align:top;">UPI ID</td>
+                <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${accountDetails.upi_id}</td>
+            </tr>`;
+    }
+    if (accountDetails.account_number) {
+        payoutDestination += `
+            <tr>
+                <td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Account Holder</td>
+                <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;">${accountDetails.account_holder_name || '—'}</td>
+            </tr>
+            <tr>
+                <td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Account No.</td>
+                <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${maskedAccount}</td>
+            </tr>
+            <tr>
+                <td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top;">IFSC Code</td>
+                <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;font-family:monospace;">${accountDetails.ifsc_code || '—'}</td>
+            </tr>
+            <tr>
+                <td style="padding:8px 0;color:#6b7280;font-size:13px;vertical-align:top;">Bank</td>
+                <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;">${accountDetails.bank_name || '—'}</td>
+            </tr>`;
+    }
+    if (!accountDetails.upi_id && !accountDetails.account_number) {
+        payoutDestination = `
+            <tr>
+                <td colspan="2" style="padding:8px 0;color:#9ca3af;font-size:13px;font-style:italic;">No payout account configured.</td>
+            </tr>`;
+    }
+
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Settlement Paid — MyBookings</title>
+    </head>
+    <body style="margin:0;padding:0;background-color:#f0f2f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;">
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:24px 0;">
+            <tr>
+                <td align="center">
+                    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
+
+                        <!-- Header -->
+                        <tr>
+                            <td style="background:linear-gradient(135deg,#059669 0%,#10b981 100%);padding:44px 20px 36px;text-align:center;">
+                                <img src="https://mybookings.allysoftsolutions.com/logo.png" alt="MyBookings" style="width:80px;height:80px;border-radius:12px;margin-bottom:12px;box-shadow:0 4px 10px rgba(0,0,0,0.2);">
+                                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:rgba(255,255,255,0.75);margin-bottom:6px;">MyBookings</div>
+                                <div style="font-size:26px;font-weight:700;color:#fff;letter-spacing:-0.5px;">Settlement Successful!</div>
+                                <div style="font-size:14px;color:rgba(255,255,255,0.85);margin-top:8px;">Your payout has been processed.</div>
+                            </td>
+                        </tr>
+
+                        <!-- Body -->
+                        <tr>
+                            <td style="padding:32px 32px 24px;">
+                                <p style="color:#374151;font-size:15px;margin:0 0 20px;line-height:1.7;">
+                                    Hi <strong>${userName}</strong>, great news! A settlement payout for <strong>${businessName}</strong> has been successfully processed.
+                                </p>
+
+                                <!-- Amount Card -->
+                                <div style="background:#ecfdf5;border-radius:10px;padding:20px 22px;border-left:4px solid #059669;margin-bottom:24px;text-align:center;">
+                                    <div style="color:#6b7280;font-size:12px;text-transform:uppercase;letter-spacing:1px;margin-bottom:4px;">Amount Transferred</div>
+                                    <div style="font-size:32px;font-weight:800;color:#059669;letter-spacing:-0.5px;">₹${formattedAmount}</div>
+                                    <div style="color:#6b7280;font-size:13px;margin-top:6px;">${paymentCount} booking${paymentCount > 1 ? 's' : ''} settled</div>
+                                </div>
+
+                                <!-- Details Table -->
+                                <div style="background:#f9fafb;border-radius:10px;padding:18px 20px;margin-bottom:24px;">
+                                    <div style="font-weight:700;color:#374151;font-size:14px;margin-bottom:12px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;">Transaction Details</div>
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        <tr>
+                                            <td style="padding:8px 0;color:#6b7280;font-size:13px;width:140px;">Business</td>
+                                            <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;">${businessName}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding:8px 0;color:#6b7280;font-size:13px;">Settled On</td>
+                                            <td style="padding:8px 0;font-weight:700;color:#111827;font-size:14px;">${formattedDate}</td>
+                                        </tr>
+                                    </table>
+                                </div>
+
+                                <!-- Payout Account -->
+                                <div style="background:#f9fafb;border-radius:10px;padding:18px 20px;margin-bottom:24px;">
+                                    <div style="font-weight:700;color:#374151;font-size:14px;margin-bottom:12px;border-bottom:1px solid #e5e7eb;padding-bottom:8px;">Payout Account</div>
+                                    <table width="100%" cellpadding="0" cellspacing="0">
+                                        ${payoutDestination}
+                                    </table>
+                                </div>
+
+                                <p style="color:#6b7280;font-size:13px;line-height:1.7;margin:0 0 28px;">
+                                    The above amount has been transferred after deducting applicable platform fees. If you have any questions regarding this settlement, please reach out to our support team.
+                                </p>
+
+                                <!-- CTA -->
+                                <div style="text-align:center;">
+                                    <a href="https://mybookings.allysoftsolutions.com/" style="display:inline-block;padding:14px 36px;background:#059669;color:#fff;text-decoration:none;border-radius:8px;font-weight:600;font-size:15px;letter-spacing:0.2px;">View Dashboard →</a>
+                                </div>
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb;">
+                                <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">Questions? Email us at <a href="mailto:support@mybookings.allysoft.in" style="color:#059669;text-decoration:none;">support@mybookings.allysoft.in</a></p>
+                                <p style="color:#d1d5db;font-size:11px;margin:0;">&copy; ${new Date().getFullYear()} MyBookings by Allysoft Solutions. All rights reserved.</p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+    </html>
+    `;
+};
+
+module.exports = { getWelcomeTemplate, getOtpTemplate, getSettlementPaidTemplate };

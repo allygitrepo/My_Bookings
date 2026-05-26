@@ -339,24 +339,111 @@ const portalController = {
     markSettlementsPaid: async (req, res) => {
         try {
             const { paymentIds, businessId } = req.body;
+            const emailService = require("../utils/emailService");
+            const { Op } = require("sequelize");
+
+            let affectedPayments = [];
 
             if (businessId) {
+                // Fetch unpaid payments for this business before marking them
+                affectedPayments = await Payment.findAll({
+                    where: { business_id: businessId, payment_status: true, settlement_status: 'unpaid' }
+                });
+
                 await Payment.update(
                     { settlement_status: 'paid' },
                     { where: { business_id: businessId, payment_status: true, settlement_status: 'unpaid' } }
                 );
-                return res.json({ success: true, message: "All settlements for this business marked as paid" });
-            }
+            } else if (Array.isArray(paymentIds) && paymentIds.length > 0) {
+                // Fetch the specific payments being settled
+                affectedPayments = await Payment.findAll({
+                    where: { id: { [Op.in]: paymentIds }, payment_status: true, settlement_status: 'unpaid' }
+                });
 
-            if (Array.isArray(paymentIds) && paymentIds.length > 0) {
                 await Payment.update(
                     { settlement_status: 'paid' },
-                    { where: { id: paymentIds, payment_status: true } }
+                    { where: { id: { [Op.in]: paymentIds }, payment_status: true } }
                 );
-                return res.json({ success: true, message: "Selected settlements marked as paid" });
+            } else {
+                return res.status(400).json({ success: false, message: "Invalid parameters" });
             }
 
-            res.status(400).json({ success: false, message: "Invalid parameters" });
+            // Send settlement emails grouped by business
+            if (affectedPayments.length > 0) {
+                console.log(`[Settlement Email] ${affectedPayments.length} payment(s) settled. Preparing email notifications...`);
+
+                // Group payments by business_id
+                const paymentsByBusiness = {};
+                for (const p of affectedPayments) {
+                    const bizId = p.business_id;
+                    if (!paymentsByBusiness[bizId]) {
+                        paymentsByBusiness[bizId] = [];
+                    }
+                    paymentsByBusiness[bizId].push(p);
+                }
+
+                console.log(`[Settlement Email] Grouped into ${Object.keys(paymentsByBusiness).length} business(es)`);
+
+                // Send one email per business owner (non-blocking)
+                for (const [bizId, payments] of Object.entries(paymentsByBusiness)) {
+                    (async () => {
+                        try {
+                            const business = await Business.findByPk(bizId, {
+                                include: [{ model: User, as: 'owner', attributes: ['name', 'email'] }]
+                            });
+
+                            if (!business) {
+                                console.warn(`[Settlement Email] Business ID ${bizId} not found. Skipping email.`);
+                                return;
+                            }
+                            if (!business.owner?.email) {
+                                console.warn(`[Settlement Email] No owner email for business "${business.business_name}" (ID: ${bizId}). Skipping email.`);
+                                return;
+                            }
+
+                            // Calculate total payout: paid_amount - platform_fees for each payment
+                            const totalAmount = payments.reduce((sum, p) => {
+                                return sum + (parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0));
+                            }, 0);
+
+                            const accountDetails = {
+                                upi_id: business.upi_id,
+                                account_holder_name: business.account_holder_name,
+                                account_number: business.account_number,
+                                ifsc_code: business.ifsc_code,
+                                bank_name: business.bank_name
+                            };
+
+                            console.log(`[Settlement Email] Sending to ${business.owner.email} | Business: "${business.business_name}" | Amount: ₹${totalAmount.toFixed(2)} | Payments: ${payments.length}`);
+
+                            const result = await emailService.sendSettlementEmail(
+                                business.owner.email,
+                                business.owner.name,
+                                business.business_name,
+                                totalAmount,
+                                payments.length,
+                                accountDetails
+                            );
+
+                            if (result.success) {
+                                console.log(`[Settlement Email] ✅ Sent successfully to ${business.owner.email} (Message ID: ${result.messageId})`);
+                            } else {
+                                console.error(`[Settlement Email] ❌ Failed to send to ${business.owner.email}: ${result.error}`);
+                            }
+                        } catch (emailError) {
+                            console.error(`[Settlement Email] ❌ Error sending email for business ${bizId}:`, emailError.message);
+                        }
+                    })();
+                }
+            } else {
+                console.log('[Settlement Email] No unpaid payments were affected. No emails to send.');
+            }
+
+            const message = businessId
+                ? "All settlements for this business marked as paid"
+                : "Selected settlements marked as paid";
+
+            res.json({ success: true, message });
         } catch (error) {
             console.error('Portal Mark Settlements Paid Error:', error);
             res.status(500).json({ success: false, message: error.message });
