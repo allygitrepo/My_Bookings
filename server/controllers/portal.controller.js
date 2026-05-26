@@ -282,20 +282,17 @@ const portalController = {
             const data = await Promise.all(businesses.map(async (biz) => {
                 const totalBookings = await Booking.count({ where: { business_id: biz.id } });
 
-                const payments = await Payment.findAll({
+                 const payments = await Payment.findAll({
                     where: { business_id: biz.id, payment_status: true }
                 });
 
-                // Ignore payments with 0 platform fees (commissions)
-                const validPayments = payments.filter(p => parseFloat(p.platform_fees || 0) > 0);
-
-                const portalPayment = validPayments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
-                const commission = validPayments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
-                const payToCustomer = validPayments.reduce((sum, p) => sum + parseFloat(p.final_amount || 0), 0);
+                const portalPayment = payments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
+                const commission = payments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
+                const payToCustomer = payments.reduce((sum, p) => sum + parseFloat(p.final_amount || 0), 0);
 
                 let status = 'no_payments';
-                if (validPayments.length > 0) {
-                    const hasUnpaid = validPayments.some(p => p.settlement_status === 'unpaid');
+                if (payments.length > 0) {
+                    const hasUnpaid = payments.some(p => p.settlement_status === 'unpaid');
                     status = hasUnpaid ? 'unpaid' : 'paid';
                 }
 
@@ -316,7 +313,7 @@ const portalController = {
                         ifsc_code: biz.ifsc_code,
                         bank_name: biz.bank_name
                     },
-                    payments: validPayments.map(p => ({
+                    payments: payments.map(p => ({
                         id: p.id,
                         booking_id: p.booking_id,
                         amount: p.amount,

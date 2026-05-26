@@ -4,7 +4,7 @@ import {
     TableContainer, TableHead, TableRow, Chip, Button, IconButton,
     Tooltip, CircularProgress, Dialog, DialogTitle, DialogContent,
     DialogActions, Grid, TextField, InputAdornment, Card, CardContent,
-    Divider, TablePagination, useTheme, Checkbox
+    Divider, TablePagination, useTheme, Checkbox, ButtonGroup
 } from '@mui/material';
 import {
     Search as SearchIcon,
@@ -13,11 +13,14 @@ import {
     Payments as PaymentsIcon,
     CheckCircle as CheckCircleIcon,
     ContentCopy as CopyIcon,
+    FilterList as FilterIcon,
     Info as InfoIcon,
     AccountBalanceWallet as WalletIcon,
     Close as CloseIcon,
     Refresh as RefreshIcon,
-    PriceCheck as SettleIcon
+    PriceCheck as SettleIcon,
+    QrCode as QrIcon,
+    PictureAsPdf as PdfIcon
 } from '@mui/icons-material';
 import axiosInstance from '../../api/axiosInstance';
 import PageTransition from '../../components/PageTransition';
@@ -27,6 +30,10 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import dayjs from 'dayjs';
 
+// PDF Libraries
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+
 const PortalSettlements = () => {
     const theme = useTheme();
     const [settlements, setSettlements] = useState([]);
@@ -35,12 +42,14 @@ const PortalSettlements = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [selectedMonth, setSelectedMonth] = useState(dayjs());
+    const [statusFilter, setStatusFilter] = useState('all');
 
     // Dialog state
     const [openAccountDialog, setOpenAccountDialog] = useState(false);
     const [openBreakdownDialog, setOpenBreakdownDialog] = useState(false);
     const [selectedBusiness, setSelectedBusiness] = useState(null);
     const [actionLoading, setActionLoading] = useState(false);
+    const [showQr, setShowQr] = useState(false);
 
     const fetchSettlements = async () => {
         setLoading(true);
@@ -72,7 +81,7 @@ const PortalSettlements = () => {
             const res = await axiosInstance.put('/portal/settlements/mark-paid', { paymentIds: unpaidPaymentIds });
             if (res.data.success) {
                 toast.success(`Settlements for ${bizGroup.business_name} (${bizGroup.monthLabel}) marked as paid`);
-                
+
                 // Keep dialog selection updated if open
                 if (selectedBusiness && selectedBusiness.id === bizGroup.id && selectedBusiness.monthKey === bizGroup.monthKey) {
                     const updatedBiz = {
@@ -82,7 +91,7 @@ const PortalSettlements = () => {
                     };
                     setSelectedBusiness(updatedBiz);
                 }
-                
+
                 fetchSettlements();
             }
         } catch (error) {
@@ -98,10 +107,10 @@ const PortalSettlements = () => {
             const res = await axiosInstance.put('/portal/settlements/mark-paid', { paymentIds: [paymentId] });
             if (res.data.success) {
                 toast.success('Payment marked as settled');
-                
+
                 // Keep dialog selection updated if open
                 if (selectedBusiness && selectedBusiness.id === businessId && selectedBusiness.monthKey === monthKey) {
-                    const updatedPayments = selectedBusiness.payments.map(p => 
+                    const updatedPayments = selectedBusiness.payments.map(p =>
                         p.id === paymentId ? { ...p, settlement_status: 'paid' } : p
                     );
                     const hasUnpaid = updatedPayments.some(p => p.settlement_status === 'unpaid');
@@ -149,31 +158,24 @@ const PortalSettlements = () => {
             paymentsByMonth[monthKey].payments.push(p);
         });
 
-        if (Object.keys(paymentsByMonth).length === 0) {
-            groupedSettlements.push({
-                id: biz.id,
-                business_name: biz.business_name,
-                business_type: biz.business_type,
-                owner: biz.owner,
-                monthKey: null,
-                monthLabel: '—',
-                totalBookings: 0,
-                portalPayment: 0,
-                commission: 0,
-                payToCustomer: 0,
-                status: 'no_payments',
-                account_details: biz.account_details,
-                payments: []
-            });
-        } else {
+        if (Object.keys(paymentsByMonth).length > 0) {
             Object.values(paymentsByMonth).forEach(group => {
-                const portalPayment = group.payments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
-                const commission = group.payments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
-                const payToCustomer = group.payments.reduce((sum, p) => sum + parseFloat(p.final_amount || 0), 0);
-                const totalBookings = group.payments.length;
-
                 const hasUnpaid = group.payments.some(p => p.settlement_status === 'unpaid');
                 const status = hasUnpaid ? 'unpaid' : 'paid';
+
+                const portalPayment = group.payments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
+                const commission = group.payments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
+
+                // Show ONLY pending final payout (paid_amount - platform_fees) if status is unpaid, else show total final payout
+                const payToCustomer = group.payments.reduce((sum, p) => {
+                    const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+                    if (status === 'unpaid') {
+                        return sum + (p.settlement_status === 'unpaid' ? finalPayout : 0);
+                    }
+                    return sum + finalPayout;
+                }, 0);
+
+                const totalBookings = group.payments.length;
 
                 groupedSettlements.push({
                     id: biz.id,
@@ -204,22 +206,45 @@ const PortalSettlements = () => {
     // Calculations for overall stats cards
     const totalPortalPayments = filteredByMonthSettlements.reduce((sum, s) => sum + parseFloat(s.portalPayment || 0), 0);
     const totalCommissions = filteredByMonthSettlements.reduce((sum, s) => sum + parseFloat(s.commission || 0), 0);
-    
+
     const totalPendingPayout = filteredByMonthSettlements.reduce((sum, s) => {
         const unpaidPayments = s.payments?.filter(p => p.settlement_status === 'unpaid') || [];
-        return sum + unpaidPayments.reduce((pSum, p) => pSum + parseFloat(p.final_amount || 0), 0);
+        return sum + unpaidPayments.reduce((pSum, p) => {
+            const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+            return pSum + finalPayout;
+        }, 0);
     }, 0);
 
     const totalSettledPayout = filteredByMonthSettlements.reduce((sum, s) => {
         const paidPayments = s.payments?.filter(p => p.settlement_status === 'paid') || [];
-        return sum + paidPayments.reduce((pSum, p) => pSum + parseFloat(p.final_amount || 0), 0);
+        return sum + paidPayments.reduce((pSum, p) => {
+            const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+            return pSum + finalPayout;
+        }, 0);
     }, 0);
 
-    // Filtering businesses
-    const filteredSettlements = filteredByMonthSettlements.filter(s => 
-        s.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        s.owner?.name?.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    // Filtering businesses and sorting (Pending on top, Settled at bottom)
+    const filteredSettlements = filteredByMonthSettlements
+        .filter(s =>
+            s.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            s.owner?.name?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+        .filter(s => {
+            if (statusFilter === 'all') return true;
+            if (statusFilter === 'pending') return s.status === 'unpaid';
+            if (statusFilter === 'settled') return s.status === 'paid';
+            return true;
+        })
+        .sort((a, b) => {
+            const score = { unpaid: 1, paid: 2, no_payments: 3 };
+            const scoreA = score[a.status] || 99;
+            const scoreB = score[b.status] || 99;
+            if (scoreA !== scoreB) {
+                return scoreA - scoreB;
+            }
+            // Secondary sort: alphabetically by business name
+            return (a.business_name || '').localeCompare(b.business_name || '');
+        });
 
     const handleChangePage = (event, newPage) => setPage(newPage);
     const handleChangeRowsPerPage = (event) => {
@@ -229,12 +254,95 @@ const PortalSettlements = () => {
 
     const handleOpenAccountDialog = (biz) => {
         setSelectedBusiness(biz);
+        setShowQr(false);
         setOpenAccountDialog(true);
     };
 
     const handleOpenBreakdownDialog = (bizGroup) => {
         setSelectedBusiness(bizGroup);
         setOpenBreakdownDialog(true);
+    };
+
+    const generatePDF = () => {
+        const doc = new jsPDF();
+        
+        // Header Background
+        doc.setFillColor(99, 102, 241);
+        doc.rect(0, 0, 210, 45, 'F');
+        
+        // Header Text
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(18);
+        doc.text('Settlements Report', 15, 18);
+        
+        doc.setFontSize(10);
+        doc.text(`Generated on: ${dayjs().format('DD/MM/YYYY HH:mm')}`, 15, 26);
+        const dateRange = selectedMonth 
+            ? `Period: ${selectedMonth.format('MMMM YYYY')}`
+            : 'Period: All Time';
+        const statusLabel = statusFilter === 'pending' ? ' | Status: Pending' : statusFilter === 'settled' ? ' | Status: Settled' : '';
+        doc.text(dateRange + statusLabel, 15, 32);
+        
+        // Summary stats on the right side of the header
+        doc.setFontSize(9);
+        doc.text(`Total Portal Payment: Rs. ${totalPortalPayments.toLocaleString()}`, 120, 16);
+        doc.text(`Payouts Settled: Rs. ${totalSettledPayout.toLocaleString()}`, 120, 23);
+        doc.text(`Payouts Pending: Rs. ${totalPendingPayout.toLocaleString()}`, 120, 30);
+
+        const headers = [['Sr.', 'Month', 'Business Name', 'Owner', 'Bookings', 'Portal Payment', 'Commission', 'Pay to Customer', 'Status']];
+        const body = filteredSettlements.map((biz, index) => [
+            index + 1,
+            biz.monthLabel || '—',
+            biz.business_name || '—',
+            biz.owner?.name || '—',
+            biz.totalBookings || 0,
+            `Rs. ${parseFloat(biz.portalPayment || 0).toLocaleString()}`,
+            `Rs. ${parseFloat(biz.commission || 0).toLocaleString()}`,
+            `Rs. ${parseFloat(biz.payToCustomer || 0).toLocaleString()}`,
+            biz.status === 'paid' ? 'Settled' : biz.status === 'unpaid' ? 'Pending' : 'No Transactions'
+        ]);
+
+        const totalBookingsCount = filteredSettlements.reduce((sum, s) => sum + (s.totalBookings || 0), 0);
+        const sumPortalPayments = filteredSettlements.reduce((sum, s) => sum + parseFloat(s.portalPayment || 0), 0);
+        const sumCommissions = filteredSettlements.reduce((sum, s) => sum + parseFloat(s.commission || 0), 0);
+        const sumPayToCustomer = filteredSettlements.reduce((sum, s) => sum + parseFloat(s.payToCustomer || 0), 0);
+
+        body.push([
+            { content: 'Total', colSpan: 4, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], halign: 'right' } },
+            { content: totalBookingsCount.toString(), styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+            { content: `Rs. ${sumPortalPayments.toLocaleString()}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+            { content: `Rs. ${sumCommissions.toLocaleString()}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+            { content: `Rs. ${sumPayToCustomer.toLocaleString()}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+            { content: '', styles: { fillColor: [240, 240, 240] } }
+        ]);
+
+        autoTable(doc, {
+            startY: 52,
+            head: headers,
+            body: body,
+            theme: 'grid',
+            headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255], fontStyle: 'bold' },
+            alternateRowStyles: { fillColor: [249, 250, 251] },
+            margin: { left: 15, right: 15 },
+            styles: {
+                fontSize: 8,
+                cellPadding: 3,
+                lineColor: [220, 220, 220],
+                lineWidth: 0.1
+            }
+        });
+
+        // Add page numbers
+        const pageCount = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= pageCount; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(156, 163, 175);
+            doc.text(`Generated on ${dayjs().format('DD/MM/YYYY HH:mm')} | Page ${i} of ${pageCount}`, 15, 285);
+            doc.text('© 2025 MyBookings SaaS platform', 150, 285);
+        }
+
+        doc.save(`Settlements_Report_${dayjs().format('YYYYMMDD')}.pdf`);
     };
 
     return (
@@ -275,71 +383,65 @@ const PortalSettlements = () => {
                     >
                         Refresh
                     </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<PdfIcon />}
+                        onClick={generatePDF}
+                        sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 700, height: 40 }}
+                        disabled={filteredSettlements.length === 0}
+                    >
+                        Export PDF
+                    </Button>
                 </Box>
             </Box>
 
             {/* Overall stats cards */}
-            <Grid container spacing={3} sx={{ mb: 4 }}>
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.paper', borderRadius: 3 }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700}>TOTAL PORTAL PAYMENT</Typography>
-                                <Box sx={{ p: 1, bgcolor: 'primary.50', color: 'primary.main', borderRadius: 2 }}>
-                                    <PaymentsIcon fontSize="small" />
-                                </Box>
+            <Box sx={{
+                display: 'flex',
+                gap: 3,
+                mb: 4,
+                flexDirection: { xs: 'column', md: 'row' },
+                width: '100%'
+            }}>
+                <Card sx={{ bgcolor: 'background.paper', borderRadius: 3, flex: 1 }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700}>TOTAL PORTAL PAYMENT</Typography>
+                            <Box sx={{ p: 1, bgcolor: 'primary.50', color: 'primary.main', borderRadius: 2 }}>
+                                <PaymentsIcon fontSize="small" />
                             </Box>
-                            <Typography variant="h5" fontWeight={900}>₹{totalPortalPayments.toLocaleString()}</Typography>
-                            <Typography variant="caption" color="text.secondary">Collected from customer bookings</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                        </Box>
+                        <Typography variant="h5" fontWeight={900}>₹{totalPortalPayments.toLocaleString()}</Typography>
+                        <Typography variant="caption" color="text.secondary">Collected from customer bookings</Typography>
+                    </CardContent>
+                </Card>
 
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.paper', borderRadius: 3 }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700}>COMMISSION (PORTAL CUT)</Typography>
-                                <Box sx={{ p: 1, bgcolor: 'success.50', color: 'success.main', borderRadius: 2 }}>
-                                    <WalletIcon fontSize="small" />
-                                </Box>
+                <Card sx={{ bgcolor: 'background.paper', borderRadius: 3, flex: 1 }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700}>PAYOUTS SETTLED</Typography>
+                            <Box sx={{ p: 1, bgcolor: 'info.50', color: 'info.main', borderRadius: 2 }}>
+                                <CheckCircleIcon fontSize="small" />
                             </Box>
-                            <Typography variant="h5" fontWeight={900} color="success.main">₹{totalCommissions.toLocaleString()}</Typography>
-                            <Typography variant="caption" color="text.secondary">Platform fees accumulated</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
+                        </Box>
+                        <Typography variant="h5" fontWeight={900} color="info.main">₹{totalSettledPayout.toLocaleString()}</Typography>
+                        <Typography variant="caption" color="text.secondary">Transferred to vendor accounts</Typography>
+                    </CardContent>
+                </Card>
 
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.paper', borderRadius: 3 }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700}>PAYOUTS SETTLED</Typography>
-                                <Box sx={{ p: 1, bgcolor: 'info.50', color: 'info.main', borderRadius: 2 }}>
-                                    <CheckCircleIcon fontSize="small" />
-                                </Box>
+                <Card sx={{ bgcolor: 'background.paper', borderRadius: 3, border: '1px solid', borderColor: totalPendingPayout > 0 ? 'warning.light' : 'transparent', flex: 1 }}>
+                    <CardContent>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
+                            <Typography variant="caption" color="text.secondary" fontWeight={700}>PAYOUTS PENDING</Typography>
+                            <Box sx={{ p: 1, bgcolor: 'warning.50', color: 'warning.main', borderRadius: 2 }}>
+                                <SettleIcon fontSize="small" />
                             </Box>
-                            <Typography variant="h5" fontWeight={900} color="info.main">₹{totalSettledPayout.toLocaleString()}</Typography>
-                            <Typography variant="caption" color="text.secondary">Transferred to vendor accounts</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-
-                <Grid item xs={12} sm={6} md={3}>
-                    <Card sx={{ bgcolor: 'background.paper', borderRadius: 3, border: '1px solid', borderColor: totalPendingPayout > 0 ? 'warning.light' : 'transparent' }}>
-                        <CardContent>
-                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700}>PAYOUTS PENDING</Typography>
-                                <Box sx={{ p: 1, bgcolor: 'warning.50', color: 'warning.main', borderRadius: 2 }}>
-                                    <SettleIcon fontSize="small" />
-                                </Box>
-                            </Box>
-                            <Typography variant="h5" fontWeight={900} color="warning.main">₹{totalPendingPayout.toLocaleString()}</Typography>
-                            <Typography variant="caption" color="text.secondary">Awaiting manual clearance</Typography>
-                        </CardContent>
-                    </Card>
-                </Grid>
-            </Grid>
+                        </Box>
+                        <Typography variant="h5" fontWeight={900} color="warning.main">₹{totalPendingPayout.toLocaleString()}</Typography>
+                        <Typography variant="caption" color="text.secondary">Awaiting manual clearance</Typography>
+                    </CardContent>
+                </Card>
+            </Box>
 
             {/* Main Settlements Table */}
             <Card sx={{ borderRadius: 3 }}>
@@ -358,6 +460,32 @@ const PortalSettlements = () => {
                             ),
                         }}
                     />
+                    <ButtonGroup size="small" sx={{ borderRadius: 2, overflow: 'hidden' }}>
+                        {[
+                            { key: 'all', label: 'All' },
+                            { key: 'pending', label: 'Pending' },
+                            { key: 'settled', label: 'Settled' }
+                        ].map(opt => (
+                            <Button
+                                key={opt.key}
+                                variant={statusFilter === opt.key ? 'contained' : 'outlined'}
+                                onClick={() => { setStatusFilter(opt.key); setPage(0); }}
+                                sx={{
+                                    textTransform: 'none',
+                                    fontWeight: 700,
+                                    px: 2,
+                                    ...(statusFilter === opt.key && {
+                                        bgcolor: opt.key === 'pending' ? 'warning.main' : opt.key === 'settled' ? 'success.main' : 'primary.main',
+                                        '&:hover': {
+                                            bgcolor: opt.key === 'pending' ? 'warning.dark' : opt.key === 'settled' ? 'success.dark' : 'primary.dark',
+                                        }
+                                    })
+                                }}
+                            >
+                                {opt.label}
+                            </Button>
+                        ))}
+                    </ButtonGroup>
                 </Box>
 
                 <TableContainer>
@@ -481,75 +609,116 @@ const PortalSettlements = () => {
                     </IconButton>
                 </DialogTitle>
                 <DialogContent dividers>
-                    {selectedBusiness && (
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, py: 1 }}>
-                            <Box>
-                                <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">BUSINESS NAME</Typography>
-                                <Typography variant="body1" fontWeight={800}>{selectedBusiness.business_name}</Typography>
-                            </Box>
+                    {selectedBusiness && (() => {
+                        const pendingAmount = (selectedBusiness.payments || [])
+                            .filter(p => p.settlement_status === 'unpaid')
+                            .reduce((sum, p) => {
+                                const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+                                return sum + finalPayout;
+                            }, 0);
 
-                            {selectedBusiness.account_details?.upi_id ? (
+                        return (
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, py: 1 }}>
                                 <Box>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700}>UPI ID</Typography>
-                                        <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.upi_id, 'UPI ID')}>
-                                            <CopyIcon fontSize="inherit" />
-                                        </IconButton>
-                                    </Box>
-                                    <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
-                                        {selectedBusiness.account_details.upi_id}
-                                    </Typography>
+                                    <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">BUSINESS NAME</Typography>
+                                    <Typography variant="body1" fontWeight={800}>{selectedBusiness.business_name}</Typography>
                                 </Box>
-                            ) : null}
 
-                            {selectedBusiness.account_details?.account_number ? (
-                                <>
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">ACCOUNT HOLDER</Typography>
-                                        <Typography variant="body1" fontWeight={700}>{selectedBusiness.account_details.account_holder_name || '—'}</Typography>
-                                    </Box>
-
+                                {selectedBusiness.account_details?.upi_id ? (
                                     <Box>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={700}>ACCOUNT NUMBER</Typography>
-                                            <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.account_number, 'Account Number')}>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={700}>UPI ID</Typography>
+                                            <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.upi_id, 'UPI ID')}>
                                                 <CopyIcon fontSize="inherit" />
                                             </IconButton>
                                         </Box>
-                                        <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
-                                            {selectedBusiness.account_details.account_number}
+                                        <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5, mb: 1.5 }}>
+                                            {selectedBusiness.account_details.upi_id}
                                         </Typography>
-                                    </Box>
 
-                                    <Box>
-                                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography variant="caption" color="text.secondary" fontWeight={700}>IFSC CODE</Typography>
-                                            <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.ifsc_code, 'IFSC Code')}>
-                                                <CopyIcon fontSize="inherit" />
-                                            </IconButton>
+                                        {pendingAmount > 0 ? (
+                                            <>
+                                                <Button
+                                                    size="small"
+                                                    variant="outlined"
+                                                    startIcon={<QrIcon />}
+                                                    onClick={() => setShowQr(!showQr)}
+                                                    sx={{ textTransform: 'none', fontWeight: 700, borderRadius: 2, mb: showQr ? 1.5 : 0, width: '100%' }}
+                                                >
+                                                    {showQr ? 'Hide UPI QR Code' : `Show UPI QR Code (₹${pendingAmount.toFixed(2)})`}
+                                                </Button>
+
+                                                {showQr && (
+                                                    <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', mt: 1, p: 2, bgcolor: '#ffffff', borderRadius: 3, border: '1px solid rgba(0,0,0,0.12)' }}>
+                                                        <Box
+                                                            component="img"
+                                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(`upi://pay?pa=${selectedBusiness.account_details.upi_id}&pn=${encodeURIComponent(selectedBusiness.account_details?.account_holder_name || selectedBusiness.business_name || '')}&am=${pendingAmount.toFixed(2)}&cu=INR`)}`}
+                                                            alt="UPI QR Code"
+                                                            sx={{ width: 150, height: 150, mb: 1 }}
+                                                        />
+                                                        <Typography variant="caption" sx={{ color: '#1a1a1a', fontWeight: 800 }}>
+                                                            Scan to Pay ₹{pendingAmount.toFixed(2)}
+                                                        </Typography>
+                                                    </Box>
+                                                )}
+                                            </>
+                                        ) : (
+                                            <Typography variant="body2" color="success.main" fontWeight={700} sx={{ mb: 1.5 }}>
+                                                ✓ No pending amount to pay for this month
+                                            </Typography>
+                                        )}
+                                    </Box>
+                                ) : null}
+
+                                {selectedBusiness.account_details?.account_number ? (
+                                    <>
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">ACCOUNT HOLDER</Typography>
+                                            <Typography variant="body1" fontWeight={700}>{selectedBusiness.account_details.account_holder_name || '—'}</Typography>
                                         </Box>
-                                        <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
-                                            {selectedBusiness.account_details.ifsc_code}
+
+                                        <Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={700}>ACCOUNT NUMBER</Typography>
+                                                <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.account_number, 'Account Number')}>
+                                                    <CopyIcon fontSize="inherit" />
+                                                </IconButton>
+                                            </Box>
+                                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
+                                                {selectedBusiness.account_details.account_number}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box>
+                                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                <Typography variant="caption" color="text.secondary" fontWeight={700}>IFSC CODE</Typography>
+                                                <IconButton size="small" onClick={() => copyToClipboard(selectedBusiness.account_details.ifsc_code, 'IFSC Code')}>
+                                                    <CopyIcon fontSize="inherit" />
+                                                </IconButton>
+                                            </Box>
+                                            <Typography variant="body1" fontWeight={700} sx={{ fontFamily: 'monospace', letterSpacing: 0.5 }}>
+                                                {selectedBusiness.account_details.ifsc_code}
+                                            </Typography>
+                                        </Box>
+
+                                        <Box>
+                                            <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">BANK NAME</Typography>
+                                            <Typography variant="body1" fontWeight={700}>{selectedBusiness.account_details.bank_name || '—'}</Typography>
+                                        </Box>
+                                    </>
+                                ) : null}
+
+                                {!selectedBusiness.account_details?.upi_id && !selectedBusiness.account_details?.account_number && (
+                                    <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <InfoIcon color="action" />
+                                        <Typography variant="body2" color="text.secondary" fontWeight={500}>
+                                            No payout credentials configured by this business.
                                         </Typography>
                                     </Box>
-
-                                    <Box>
-                                        <Typography variant="caption" color="text.secondary" fontWeight={700} display="block">BANK NAME</Typography>
-                                        <Typography variant="body1" fontWeight={700}>{selectedBusiness.account_details.bank_name || '—'}</Typography>
-                                    </Box>
-                                </>
-                            ) : null}
-
-                            {!selectedBusiness.account_details?.upi_id && !selectedBusiness.account_details?.account_number && (
-                                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: 2, display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                    <InfoIcon color="action" />
-                                    <Typography variant="body2" color="text.secondary" fontWeight={500}>
-                                        No payout credentials configured by this business.
-                                    </Typography>
-                                </Box>
-                            )}
-                        </Box>
-                    )}
+                                )}
+                            </Box>
+                        );
+                    })()}
                 </DialogContent>
                 <DialogActions sx={{ p: 2 }}>
                     <Button onClick={() => setOpenAccountDialog(false)} variant="contained" fullWidth sx={{ borderRadius: 2, fontWeight: 700 }}>
@@ -649,7 +818,9 @@ const PortalSettlements = () => {
                                                 <TableCell sx={{ fontWeight: 600 }}>#{p.booking_id}</TableCell>
                                                 <TableCell sx={{ fontWeight: 700 }}>₹{p.paid_amount.toLocaleString()}</TableCell>
                                                 <TableCell sx={{ fontWeight: 600, color: 'success.main' }}>₹{p.platform_fees.toLocaleString()}</TableCell>
-                                                <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>₹{p.final_amount.toLocaleString()}</TableCell>
+                                                <TableCell sx={{ fontWeight: 700, color: 'primary.main' }}>
+                                                    ₹{(parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                </TableCell>
                                                 <TableCell>
                                                     <Chip
                                                         label={p.settlement_status.toUpperCase()}
