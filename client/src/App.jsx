@@ -47,6 +47,7 @@ import CreateAdmin from './pages/portal/CreateAdmin';
 import PortalPackages from './pages/portal/PortalPackages';
 import AdminPayments from './pages/portal/AdminPayments';
 import PortalTemplates from './pages/portal/PortalTemplates';
+import PortalSettlements from './pages/portal/PortalSettlements';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -135,6 +136,7 @@ function App() {
                         <Route path="/portal/packages" element={<PortalPackages />} />
                         <Route path="/portal/payments" element={<AdminPayments />} />
                         <Route path="/portal/templates" element={<PortalTemplates />} />
+                        <Route path="/portal/settlements" element={<PortalSettlements />} />
                     </Route>
 
                   <Route path="/:id" element={<PublicBusinessWebsite />} />
