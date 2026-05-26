@@ -499,7 +499,7 @@ const Services = () => {
                             </Grid>
                         </Grid>
                         <Typography variant="caption" color="error.main" sx={{ mt: 1, display: 'block', fontStyle: 'italic', fontWeight: 600 }}>
-                            Note: Platform charges will be deduct as per the amount transaction via portal
+                            Note: Platform charges will be deduct as per the amount transaction via portal, sattelments will be done at the end of the month
                         </Typography>
                     </Box>
                 </FieldSection>

@@ -524,6 +524,9 @@ const Businesses = () => {
                     <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
                         Provide your bank details to receive payments from bookings. These are handled via our central Razorpay account.
                     </Typography>
+                    <Typography variant="caption" color="text.secondary" sx={{ mb: 2, display: 'block' }}>
+                        It is required for manage the sattlements after bookings
+                    </Typography>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
                         <Controller name="account_holder_name" control={control}
                             render={({ field }) => (
