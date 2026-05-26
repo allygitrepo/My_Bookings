@@ -160,11 +160,7 @@ const portalController = {
             await user.update({ status, suspended_reason: status ? null : suspended_reason });
 
             // Mock Notification
-            if (!status) {
-                console.log(`[NOTIFICATION] Sending suspension notice to user ${user.email}. Reason: ${suspended_reason}`);
-            } else {
-                console.log(`[NOTIFICATION] Sending activation notice to user ${user.email}.`);
-            }
+
 
             res.json({ 
                 success: true, 
@@ -186,14 +182,7 @@ const portalController = {
             await biz.update({ status, suspended_reason: status ? null : suspended_reason });
 
             // Mock Notification
-            const owner = await User.findByPk(biz.owner_id);
-            if (owner) {
-                if (!status) {
-                    console.log(`[NOTIFICATION] Sending suspension notice to business owner ${owner.email} for business ${biz.business_name}. Reason: ${suspended_reason}`);
-                } else {
-                    console.log(`[NOTIFICATION] Sending activation notice to business owner ${owner.email} for business ${biz.business_name}.`);
-                }
-            }
+
 
             res.json({ success: true, message: `Business ${status ? 'activated' : 'suspended'} successfully` });
         } catch (error) {

@@ -6,10 +6,20 @@ const TemplateProject = require("../models/templateProject.model");
 
 const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
 
+let hasStartedApacheConnectionLog = false;
+
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
 
-const getWidgetScriptUrl = () => {
+const getWidgetScriptUrl = (req) => {
+    const host = req ? (req.headers['host'] || '') : '';
+    if (host) {
+        if (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("3000") || host.includes("5173")) {
+            return "http://localhost:3000/widget.js";
+        }
+        return "https://mybookings.allysoftsolutions.com/widget.js";
+    }
+
     const apiBase = getApiBaseUrl();
     if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
         return "http://localhost:3000/widget.js";
@@ -134,7 +144,6 @@ const flattenExtractedFolder = (dir) => {
         if (items.length === 1) {
             const singlePath = path.join(dir, items[0]);
             if (fs.statSync(singlePath).isDirectory()) {
-                console.log(`[ZIP Flattening] Single root directory detected: ${items[0]}. Flattening ${dir}...`);
                 const subItems = fs.readdirSync(singlePath);
                 subItems.forEach((subItem) => {
                     const src = path.join(singlePath, subItem);
@@ -202,12 +211,7 @@ const patchTemplateDatabaseConfig = (templateDir) => {
             if (content.match(targetRegex)) {
                 content = content.replace(targetRegex, patchedCode.trim());
                 fs.writeFileSync(configPath, content, 'utf8');
-                console.log(`[Template Patch] Successfully patched database config at: ${configPath}`);
-            } else {
-                console.warn(`[Template Patch] Target regex pattern did not match database config structure at ${configPath}`);
             }
-        } else {
-            console.warn(`[Template Patch] Could not detect SQLite filename in database config at ${configPath}`);
         }
     } catch (e) {
         console.error(`[Template Patch] Error patching database config for ${templateDir}:`, e);
@@ -257,7 +261,6 @@ const templateController = {
                         icon: iconUrlPath,
                         isActive: true
                     });
-                    console.log(`[Templates Setup] Auto-seeded template '${dirName}' into database as '${templateType}'.`);
                 } else {
                     // Update paths, icons, and type to make sure they are dynamic and up-to-date
                     let updated = false;
@@ -276,11 +279,9 @@ const templateController = {
                     }
                     if (updated) {
                         await templateRecord.save();
-                        console.log(`[Templates Setup] Updated template metadata for '${dirName}'.`);
                     }
                 }
             }
-
         } catch (err) {
             console.error("[Templates Setup] Error during templates initialization:", err);
         }
@@ -298,37 +299,62 @@ const templateController = {
             // Check if this is an API request targeting the template's PHP backend.
             // If so, proxy it to Apache instead of trying to serve it as a static file.
             if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
+                // Find the template first to resolve the actual physical folder name from the database
+                const template = await TemplateProject.findOne({ where: { templateId } });
+                if (!template) {
+                    console.error(`[Template Proxy Error] Template not found in database for ID: ${templateId}`);
+                    return res.status(404).send("Template not found");
+                }
+                const physicalFolderName = path.basename(template.path);
+
                 const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
-
-                // Dynamically build the Apache URL path relative to htdocs/web root
-                const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
-                let apacheUrlPath = '';
-                const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) ||
-                    baseTemplatesNormalized.match(/\/html\/(.+)$/i) ||
-                    baseTemplatesNormalized.match(/\/www\/(.+)$/i);
-
-                if (htdocsMatch) {
-                    apacheUrlPath = '/' + htdocsMatch[1];
+                
+                // Let's first check if an explicit Apache URL path prefix is provided in env
+                let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
+                if (apacheUrlPath) {
+                    if (!hasStartedApacheConnectionLog) {
+                        console.log(`[Template Proxy] Using configured APACHE_TEMPLATES_PATH: "${apacheUrlPath}"`);
+                    }
                 } else {
-                    const myBookingsIndex = baseTemplatesNormalized.indexOf('My_Bookings');
-                    if (myBookingsIndex !== -1) {
-                        apacheUrlPath = '/' + baseTemplatesNormalized.substring(myBookingsIndex);
+                    // Fallback to dynamic detection
+                    const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
+                    const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
+                                        baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
+                                        baseTemplatesNormalized.match(/\/www\/(.+)$/i);
+                    
+                    if (htdocsMatch) {
+                        apacheUrlPath = '/' + htdocsMatch[1];
                     } else {
-                        apacheUrlPath = '/My_Bookings/server/Templates';
+                        const normalizedPath = baseTemplatesNormalized.toLowerCase();
+                        const myBookingsIndex = normalizedPath.indexOf('my_bookings');
+                        if (myBookingsIndex !== -1) {
+                            // Extract exact case-sensitive parent folder name (e.g. "My_Bookings") from file system path
+                            const folderPrefix = baseTemplatesNormalized.substring(0, myBookingsIndex + 'my_bookings'.length);
+                            const actualFolderName = folderPrefix.split('/').pop() || 'My_Bookings';
+                            const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
+                            apacheUrlPath = '/' + actualFolderName + subPath;
+                        } else {
+                            apacheUrlPath = '/My_Bookings/server/Templates';
+                        }
                     }
                 }
 
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
-                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${templateId}/${cleanSubPath}`;
-
+                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`;
+                
+                const logThisRequest = !hasStartedApacheConnectionLog;
+                if (logThisRequest) {
+                    hasStartedApacheConnectionLog = true;
+                    console.log(`connecting apache to ${apacheUrl}...`);
+                }
+                
                 try {
                     const headers = { ...req.headers };
-                    delete headers['host'];
                     delete headers['content-length'];
                     delete headers['connection'];
                     headers['X-Business-ID'] = businessId;
-                    headers['host'] = new URL(apacheBaseUrl).host;
+                    headers['host'] = req.headers['host'] || new URL(apacheBaseUrl).host;
 
                     const response = await axios({
                         method: req.method,
@@ -338,14 +364,26 @@ const templateController = {
                         data: req.body,
                         validateStatus: () => true
                     });
-
+                    
+                    if (response.status >= 400) {
+                        console.log(`connecting apache to ${apacheUrl}... failed (Status ${response.status})`);
+                        console.log(`[Template Proxy Error Detail] Apache returned body:`, typeof response.data === 'object' ? JSON.stringify(response.data) : response.data);
+                        hasStartedApacheConnectionLog = false;
+                    } else {
+                        if (logThisRequest) {
+                            console.log("connected ..");
+                        }
+                    }
+                    
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
                         res.setHeader(key, val);
                     });
                     return res.send(response.data);
                 } catch (proxyError) {
-                    console.error("[Template Proxy Error] Proxy request failed:", proxyError);
+                    console.log(`connecting apache to ${apacheUrl}... failed (Error: ${proxyError.message})`);
+                    console.error("[Template Proxy Error] Proxy request failed. Full details:", proxyError);
+                    hasStartedApacheConnectionLog = false;
                     return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
                 }
             }
@@ -410,7 +448,8 @@ const templateController = {
                         apiKeyRecord = await ApiKey.create({ business_id: businessId, api_key, status: true });
                     }
                     const widgetKey = apiKeyRecord.api_key;
-                    const widgetUrl = getWidgetScriptUrl();
+                    const widgetUrl = getWidgetScriptUrl(req);
+                    console.log(`widget.js URL: ${widgetUrl}`);
                     let scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
                     if (req.query.preview === 'true') {
                         scriptTag += `<style>button[aria-label="book-now"], .MuiFab-root, #booking-widget-root button.MuiFab-root { display: none !important; }</style>\n`;
@@ -567,7 +606,6 @@ const templateController = {
             }
 
             // Extract ZIP
-            console.log(`[ZIP Extraction] Extracting ${req.file.path} to ${extractPath}`);
             const zip = new AdmZip(req.file.path);
             zip.extractAllTo(extractPath, true);
 
@@ -673,7 +711,6 @@ const templateController = {
             // Remove folder recursively
             const templatePath = template.path || path.join(BASE_TEMPLATES_DIR, template.templateId);
             if (fs.existsSync(templatePath)) {
-                console.log(`[Template Deletion] Purging folder recursively: ${templatePath}`);
                 fs.rmSync(templatePath, { recursive: true, force: true });
             }
 

@@ -173,7 +173,6 @@ const whatsappService = {
 
             // Only send if payment is confirmed/paid
             if (!fullBooking.payment_status) {
-                console.log(`[WhatsApp] Skipping: Payment not confirmed for booking ${bookingId}`);
                 return;
             }
 
@@ -199,10 +198,8 @@ const whatsappService = {
 
                     const cleanPhone = fullBooking.customer.phone.replace(/\D/g, '');
                     whatsappService.sendTextMessage(fullBooking.business_id, cleanPhone, customerMsg)
-                        .then(res => console.log(`[WhatsApp] Customer notified:`, res?.success))
                         .catch(err => console.error(`[WhatsApp] Customer notification failed:`, err.message));
                 } else {
-                    console.log(`[WhatsApp] Skipping customer notification: Disabled for business ${fullBooking.business_id}`);
                 }
 
                 // Message to Staff
@@ -211,10 +208,8 @@ const whatsappService = {
                         const staffMsg = `Hi *${staffName}*! 📢\n\nYou have a new confirmed booking!\n\n👤 *Customer:* ${fullBooking.customer.name}\n🛠 *Service:* ${svcNames}\n📅 *Date:* ${dateStr}\n🕒 *Time:* ${timeRange}\n💰 *Amount:* ₹${amount}\n\nCheck your dashboard for details.`;
                         const cleanStaffPhone = fullBooking.staff.phone.replace(/\D/g, '');
                         whatsappService.sendTextMessage(fullBooking.business_id, cleanStaffPhone, staffMsg)
-                            .then(res => console.log(`[WhatsApp] Staff notified:`, res?.success))
                             .catch(err => console.error(`[WhatsApp] Staff notification failed:`, err.message));
                     } else {
-                        console.log(`[WhatsApp] Skipping staff notification: Disabled for business ${fullBooking.business_id}`);
                     }
                 }
             }

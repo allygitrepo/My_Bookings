@@ -360,7 +360,6 @@ const businessController = {
 
             // Handle recovery if the gateway reports the instance does not exist
             if (data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found') || data.message?.includes('not found'))) {
-                console.log(`[WhatsApp] Status reports Instance not found for key ${business.whatsapp_instance_key}. Purging obsolete key...`);
                 await business.update({
                     whatsapp_instance_key: null,
                     whatsapp_connected: false
