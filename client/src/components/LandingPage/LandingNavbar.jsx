@@ -7,6 +7,7 @@ const NAV_LINKS = [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
+    { label: 'Docs', href: '/docs', isRoute: true },
 ];
 
 const LandingNavbar = () => {
@@ -19,10 +20,15 @@ const LandingNavbar = () => {
         return () => window.removeEventListener('scroll', onScroll);
     }, []);
 
-    const handleNavClick = (href) => {
+    const handleNavClick = (link) => {
         setMenuOpen(false);
-        const el = document.querySelector(href);
-        if (el) el.scrollIntoView({ behavior: 'smooth' });
+        if (link.isRoute) {
+            // Let the Link component handle navigation natively if wrapped, or use navigate hook.
+            // But since we use simple buttons, we will wrap them in Links in the render.
+        } else {
+            const el = document.querySelector(link.href);
+            if (el) el.scrollIntoView({ behavior: 'smooth' });
+        }
     };
 
     return (
@@ -59,22 +65,33 @@ const LandingNavbar = () => {
 
                 {/* Desktop Nav Links */}
                 <div style={{ display: 'flex', alignItems: 'center', gap: 4 }} className="lp-desktop-nav">
-                    {NAV_LINKS.map(link => (
-                        <button
-                            key={link.label}
-                            onClick={() => handleNavClick(link.href)}
-                            style={{
-                                background: 'none', border: 'none', cursor: 'pointer',
-                                color: 'rgba(255,255,255,0.72)', fontWeight: 500, fontSize: '0.92rem',
-                                padding: '8px 16px', borderRadius: 8, transition: 'all 0.2s',
-                                fontFamily: 'Inter, sans-serif',
-                            }}
-                            onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
-                            onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.72)'; e.currentTarget.style.background = 'none'; }}
-                        >
-                            {link.label}
-                        </button>
-                    ))}
+                    {NAV_LINKS.map(link => {
+                        const buttonContent = (
+                            <button
+                                onClick={() => !link.isRoute && handleNavClick(link)}
+                                style={{
+                                    background: 'none', border: 'none', cursor: 'pointer',
+                                    color: 'rgba(255,255,255,0.72)', fontWeight: 500, fontSize: '0.92rem',
+                                    padding: '8px 16px', borderRadius: 8, transition: 'all 0.2s',
+                                    fontFamily: 'Inter, sans-serif',
+                                }}
+                                onMouseEnter={e => { e.currentTarget.style.color = 'white'; e.currentTarget.style.background = 'rgba(255,255,255,0.08)'; }}
+                                onMouseLeave={e => { e.currentTarget.style.color = 'rgba(255,255,255,0.72)'; e.currentTarget.style.background = 'none'; }}
+                            >
+                                {link.label}
+                            </button>
+                        );
+
+                        return link.isRoute ? (
+                            <Link key={link.label} to={link.href} style={{ textDecoration: 'none' }}>
+                                {buttonContent}
+                            </Link>
+                        ) : (
+                            <React.Fragment key={link.label}>
+                                {buttonContent}
+                            </React.Fragment>
+                        );
+                    })}
                 </div>
 
                 {/* CTA Buttons */}
@@ -140,16 +157,26 @@ const LandingNavbar = () => {
                         }}
                     >
                         <div style={{ padding: '16px 24px 24px', display: 'flex', flexDirection: 'column', gap: 4 }}>
-                            {NAV_LINKS.map(link => (
-                                <button key={link.label} onClick={() => handleNavClick(link.href)} style={{
-                                    background: 'none', border: 'none', cursor: 'pointer',
-                                    color: 'rgba(255,255,255,0.8)', fontWeight: 500, fontSize: '1rem',
-                                    padding: '12px 16px', borderRadius: 8, textAlign: 'left',
-                                    fontFamily: 'Inter, sans-serif',
-                                }}>
-                                    {link.label}
-                                </button>
-                            ))}
+                            {NAV_LINKS.map(link => {
+                                const btn = (
+                                    <button onClick={() => !link.isRoute && handleNavClick(link)} style={{
+                                        width: '100%',
+                                        background: 'none', border: 'none', cursor: 'pointer',
+                                        color: 'rgba(255,255,255,0.8)', fontWeight: 500, fontSize: '1rem',
+                                        padding: '12px 16px', borderRadius: 8, textAlign: 'left',
+                                        fontFamily: 'Inter, sans-serif',
+                                    }}>
+                                        {link.label}
+                                    </button>
+                                );
+                                return link.isRoute ? (
+                                    <Link key={link.label} to={link.href} style={{ textDecoration: 'none' }} onClick={() => setMenuOpen(false)}>
+                                        {btn}
+                                    </Link>
+                                ) : (
+                                    <React.Fragment key={link.label}>{btn}</React.Fragment>
+                                );
+                            })}
                             <div style={{ display: 'flex', gap: 12, paddingTop: 8 }}>
                                 <Link to="/login" style={{ flex: 1, textDecoration: 'none' }}>
                                     <button style={{

@@ -7,7 +7,7 @@
 ## 🚀 Key Features
 
 - **Multi-Tenant Architecture**: Complete data isolation with multi-business management support.
-- **Dynamic Website Generator**: Businesses can launch a professional storefront in seconds with 3 curated themes (Minimal, Premium, Modern).
+- **Dynamic Website Generator**: Businesses can launch a professional Websit Builderin seconds with 3 curated themes (Minimal, Premium, Modern).
 - **Embeddable Booking Widget**: A lightweight, API-key protected widget that can be integrated into any external website.
 - **Staff & Availability Engine**: Complex scheduling logic with conflict detection and bulk schedule management.
 - **Seamless Payments**: Integrated with **Razorpay** for secure transaction processing and tracking.
@@ -50,7 +50,7 @@ My_Bookings/
 │   │   ├── context/        # Global State (Auth, Business, Search)
 │   │   ├── layout/         # Dashboard & Public Layouts
 │   │   ├── pages/          # Core Feature Pages (Dashboard, Reports, etc.)
-│   │   ├── templates/      # Storefront Themes (Minimal, Premium, Modern)
+│   │   ├── templates/      # Websit BuilderThemes (Minimal, Premium, Modern)
 │   │   ├── widgets/        # Embeddable Widget Logic
 │   │   └── App.jsx         # Main Routing (Auth & Public)
 ├── server/                 # Node.js Backend (Express)

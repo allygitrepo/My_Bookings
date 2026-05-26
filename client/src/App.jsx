@@ -31,6 +31,7 @@ import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
 import WhatsApp from './pages/WhatsApp';
+import Documentation from './pages/Documentation';
 
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -101,6 +102,7 @@ function App() {
                   <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/docs" element={<Documentation />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
 
