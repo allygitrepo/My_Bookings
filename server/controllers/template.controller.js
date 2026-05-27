@@ -92,6 +92,22 @@ const getWidgetScriptUrl = (req) => {
     return "https://mybookings.allysoftsolutions.com/widget.js";
 };
 
+const getTemplateRenderBaseUrl = (req) => {
+    const host = req ? (req.headers['host'] || '') : '';
+    if (host) {
+        if (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("3000") || host.includes("5173")) {
+            return "";
+        }
+        return "https://mybookings.allysoftsolutions.com";
+    }
+
+    const apiBase = getApiBaseUrl();
+    if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
+        return "";
+    }
+    return "https://mybookings.allysoftsolutions.com";
+};
+
 const resolveTemplateIconUrl = (iconPath) => {
     if (!iconPath) return null;
     if (iconPath.startsWith("http://") || iconPath.startsWith("https://")) return iconPath;
@@ -802,9 +818,10 @@ const templateController = {
                 }
 
                 // Rewrite prefixes
+                const renderBaseUrl = getTemplateRenderBaseUrl(req);
                 templatePrefixes.forEach((prefix) => {
                     const regex = new RegExp('(?<!\\/mybookings\\/templates\\/render)\\/' + prefix + '(?=[\\/"\'])', 'g');
-                    content = content.replace(regex, `/mybookings/templates/render/${templateId}/${businessId}`);
+                    content = content.replace(regex, `${renderBaseUrl}/mybookings/templates/render/${templateId}/${businessId}`);
                 });
 
                 res.type(ext);
