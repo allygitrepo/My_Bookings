@@ -322,85 +322,6 @@ const templateController = {
     // Initialize & sync existing templates
     initTemplates: async () => {
         try {
-            // Ensure client/dist/Templates directory exists
-            if (!fs.existsSync(BASE_TEMPLATES_DIR)) {
-                fs.mkdirSync(BASE_TEMPLATES_DIR, { recursive: true });
-            }
-
-            // Migration: Move templates from legacy server/Templates to new client/dist/Templates
-            const oldTemplatesDir = path.resolve(__dirname, "..", "Templates");
-            if (fs.existsSync(oldTemplatesDir) && oldTemplatesDir !== BASE_TEMPLATES_DIR) {
-                try {
-                    const oldDirs = fs.readdirSync(oldTemplatesDir).filter(f => fs.statSync(path.join(oldTemplatesDir, f)).isDirectory());
-                    for (const oldDir of oldDirs) {
-                        const src = path.join(oldTemplatesDir, oldDir);
-                        const dest = path.join(BASE_TEMPLATES_DIR, oldDir);
-                        if (!fs.existsSync(dest)) {
-                            console.log(`[Templates Migration] Moving template ${oldDir} to client/dist/Templates...`);
-                            copyFolderRecursiveSync(src, dest);
-                        }
-                    }
-                } catch (migrationErr) {
-                    console.error("[Templates Migration] Error migrating templates:", migrationErr);
-                }
-            }
-
-            // Find all directories in client/dist/Templates
-            const templateDirs = fs.readdirSync(BASE_TEMPLATES_DIR).filter(file => {
-                const fullPath = path.join(BASE_TEMPLATES_DIR, file);
-                return fs.statSync(fullPath).isDirectory();
-            });
-
-            for (const dirName of templateDirs) {
-                const dirPath = path.join(BASE_TEMPLATES_DIR, dirName);
-                const relativePath = `dist/Templates/${dirName}`;
-                flattenExtractedFolder(dirPath);
-                patchTemplateDatabaseConfig(dirPath);
-                const discoveredIcon = findIcon(dirPath);
-                const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${dirName}/${discoveredIcon}` : null;
-
-                // Check if this template already exists in the database
-                let templateRecord = await TemplateProject.findOne({ where: { templateId: dirName } });
-                if (!templateRecord) {
-                    // Try to generate a display name from the folder name
-                    const displayName = dirName
-                        .split("_")
-                        .map(word => word.charAt(0).toUpperCase() + word.slice(1))
-                        .join(" ");
-
-                    // Auto-seed into DB
-                    const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
-                    templateRecord = await TemplateProject.create({
-                        templateId: dirName,
-                        displayName: displayName,
-                        category: "Healthcare / Hospital", // Default category or can be customized
-                        type: templateType,
-                        path: relativePath,
-                        icon: iconUrlPath,
-                        isActive: true
-                    });
-                } else {
-                    // Update paths, icons, and type to make sure they are dynamic and up-to-date
-                    let updated = false;
-                    if (templateRecord.path !== relativePath) {
-                        templateRecord.path = relativePath;
-                        updated = true;
-                    }
-                    if (templateRecord.icon !== iconUrlPath) {
-                        templateRecord.icon = iconUrlPath;
-                        updated = true;
-                    }
-                    const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
-                    if (!templateRecord.type || templateRecord.type !== templateType) {
-                        templateRecord.type = templateType;
-                        updated = true;
-                    }
-                    if (updated) {
-                        await templateRecord.save();
-                    }
-                }
-            }
-
             // Self-healing migration for legacy BusinessTemplate records
             try {
                 const BusinessTemplate = require("../models/businessTemplate.model");
@@ -715,7 +636,8 @@ const templateController = {
                     'Authorization': `Bearer ${godaddyUploadToken}`
                 },
                 maxContentLength: Infinity,
-                maxBodyLength: Infinity
+                maxBodyLength: Infinity,
+                validateStatus: () => true // Allow capturing 500 responses to show custom PHP error messages
             });
 
             // Clean up temporary ZIP file on VPS
@@ -723,8 +645,12 @@ const templateController = {
                 unlinkWithRetrySync(req.file.path);
             }
 
-            if (!response.data || !response.data.success) {
-                throw new Error(response.data ? response.data.message : "Failed to extract ZIP on GoDaddy");
+            if (response.status >= 400 || !response.data || !response.data.success) {
+                let errorMsg = "Failed to extract ZIP on GoDaddy.";
+                if (response.data) {
+                    errorMsg = typeof response.data === 'object' ? (response.data.message || JSON.stringify(response.data)) : response.data.toString();
+                }
+                throw new Error(`GoDaddy Server Error (Status ${response.status}): ${errorMsg}`);
             }
 
             const discoveredIcon = response.data.icon || null;
