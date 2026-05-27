@@ -244,13 +244,13 @@ const businessController = {
                                 : path.resolve(__dirname, "../../client", template.path);
 
                             const destFolderName = `${businessKey}_${numericId}`;
-                            const destPath = path.join(clientDistPath, "User Templates", destFolderName);
+                            const destPath = path.join(clientDistPath, "User_Templates", destFolderName);
 
                             // Check source existence asynchronously
                             const srcExists = await fs.stat(srcPath).then(() => true).catch(() => false);
                             if (srcExists) {
                                 // Ensure destination parent directory exists
-                                const userTemplatesParentDir = path.join(clientDistPath, "User Templates");
+                                const userTemplatesParentDir = path.join(clientDistPath, "User_Templates");
                                 await fs.mkdir(userTemplatesParentDir, { recursive: true });
 
                                 // Remove existing folder if it exists asynchronously
@@ -273,7 +273,7 @@ const businessController = {
                                 }
 
                                 // Save relative path to DB
-                                const tempPathDb = `dist/User Templates/${destFolderName}`;
+                                const tempPathDb = `dist/User_Templates/${destFolderName}`;
                                 
                                 let bizTemplateRecord = await BusinessTemplate.findOne({
                                     where: { business_id: businessId }

@@ -399,7 +399,12 @@ const templateController = {
                 const BusinessTemplate = require("../models/businessTemplate.model");
                 const bizTemplates = await BusinessTemplate.findAll();
                 for (const bt of bizTemplates) {
-                    const tempPath = bt.temp_path || "";
+                    let tempPath = bt.temp_path || "";
+                    if (tempPath.includes("User Templates")) {
+                        tempPath = tempPath.replace("User Templates", "User_Templates");
+                        await bt.update({ temp_path: tempPath });
+                        console.log(`[Migration] Updated temp_path in DB from 'User Templates' to 'User_Templates' for biz_template ID ${bt.id}`);
+                    }
                     const pathParts = tempPath.split('/');
                     const folderName = pathParts[pathParts.length - 1];
 
@@ -432,11 +437,11 @@ const templateController = {
                             if (isNaN(lastPart)) {
                                 console.log(`[Migration] Legacy business template physical folder format found: ${bt.temp_path}`);
                                 const correctFolderName = `${bt.business_key}_${template.id}`;
-                                const correctPath = `dist/User Templates/${correctFolderName}`;
+                                const correctPath = `dist/User_Templates/${correctFolderName}`;
 
                                 const clientDistPath = path.resolve(__dirname, "../../client/dist");
-                                const legacyFolderFullPath = path.join(clientDistPath, "User Templates", folderName);
-                                const correctFolderFullPath = path.join(clientDistPath, "User Templates", correctFolderName);
+                                const legacyFolderFullPath = path.join(clientDistPath, "User_Templates", folderName);
+                                const correctFolderFullPath = path.join(clientDistPath, "User_Templates", correctFolderName);
 
                                 if (fs.existsSync(legacyFolderFullPath)) {
                                     try {
@@ -507,7 +512,12 @@ const templateController = {
                 (req.headers.referer && req.headers.referer.includes('preview=true'));
 
             if (bizTemplate && bizTemplate.temp_path) {
-                templateDir = getAbsoluteTemplatePath(bizTemplate.temp_path);
+                let tempPath = bizTemplate.temp_path;
+                if (tempPath.includes("User Templates")) {
+                    tempPath = tempPath.replace("User Templates", "User_Templates");
+                    bizTemplate.update({ temp_path: tempPath }).catch(err => console.error("[Dynamic Migration Error] Failed to update temp_path:", err));
+                }
+                templateDir = getAbsoluteTemplatePath(tempPath);
                 // Fallback to master template if replicated folder is missing or incomplete physically
                 if (!hasEntryFile(templateDir)) {
                     templateDir = getAbsoluteTemplatePath(template.path);
@@ -530,8 +540,8 @@ const templateController = {
                 if (!apacheUrlPath) {
                     const clientDistApachePrefix = await detectApacheTemplatesPath(apacheBaseUrl);
                     if (clientDistApachePrefix) {
-                        const isUserTemplate = parentDir.includes('User Templates');
-                        apacheUrlPath = clientDistApachePrefix + (isUserTemplate ? '/User Templates' : '/Templates');
+                        const isUserTemplate = parentDir.includes('User_Templates') || parentDir.includes('User Templates');
+                        apacheUrlPath = clientDistApachePrefix + (isUserTemplate ? '/User_Templates' : '/Templates');
                     } else {
                         // Fallback to legacy regex detection if detector failed
                         const htdocsMatch = parentDir.match(/\/htdocs\/(.+)$/i) ||
