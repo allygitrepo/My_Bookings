@@ -513,7 +513,8 @@ const templateController = {
                 const physicalFolderName = path.basename(templateDir);
                 const parentDir = path.dirname(templateDir).replace(/\\/g, '/');
 
-                const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
+                let apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').trim().replace(/\/$/, '');
+                apacheBaseUrl = apacheBaseUrl.replace(/:$/, '');
                 
                 // Check if an explicit Apache URL path prefix is provided in env
                 let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
@@ -584,6 +585,11 @@ const templateController = {
                         }
                     }
 
+                    const https = require('https');
+                    const httpsAgent = new https.Agent({
+                        rejectUnauthorized: false
+                    });
+
                     const response = await axios({
                         method: req.method,
                         url: apacheUrl,
@@ -593,6 +599,7 @@ const templateController = {
                         responseType: 'arraybuffer',
                         maxContentLength: Infinity,
                         maxBodyLength: Infinity,
+                        httpsAgent: httpsAgent, // ignore self-signed certificate errors for local/internal VPS routing
                         validateStatus: () => true
                     });
                     
