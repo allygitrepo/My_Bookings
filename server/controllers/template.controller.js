@@ -200,6 +200,33 @@ const renameWithRetrySync = (src, dest, retries = 5) => {
     fs.rmSync(src, { recursive: true, force: true });
 };
 
+// Helper to delete/unlink a file with retries and background fallback for Windows EPERM/EBUSY locking issues
+const unlinkWithRetrySync = (filePath, retries = 5, delay = 150) => {
+    if (!fs.existsSync(filePath)) return;
+    for (let i = 0; i < retries; i++) {
+        try {
+            fs.unlinkSync(filePath);
+            return;
+        } catch (err) {
+            if (err.code === 'EPERM' || err.code === 'EBUSY') {
+                if (i === retries - 1) {
+                    console.warn(`[Unlink Sync Warning] Synchronous delete failed for ${filePath} after ${retries} attempts, scheduling background delete.`);
+                    setTimeout(() => {
+                        fs.unlink(filePath, (e) => {
+                            if (e) console.error(`[Background Unlink Error] Failed to delete ${filePath}:`, e.message);
+                        });
+                    }, 500);
+                } else {
+                    console.warn(`[Unlink Sync Warning] ${filePath} locked, retrying delete (${i + 1}/${retries})...`);
+                    sleepSync(delay);
+                }
+            } else {
+                throw err;
+            }
+        }
+    }
+};
+
 // Helper to flatten zip files containing a single parent folder
 const flattenExtractedFolder = (dir) => {
     try {
@@ -822,8 +849,8 @@ const templateController = {
             }
             if (!displayName || !category) {
                 // Delete the uploaded temporary zip file if validation fails
-                if (req.file.path && fs.existsSync(req.file.path)) {
-                    fs.unlinkSync(req.file.path);
+                if (req.file.path) {
+                    unlinkWithRetrySync(req.file.path);
                 }
                 return res.status(400).json({ success: false, message: "Template display name and category are required." });
             }
@@ -835,8 +862,8 @@ const templateController = {
             // Verify if template already exists
             const existing = await TemplateProject.findOne({ where: { templateId } });
             if (existing) {
-                if (req.file.path && fs.existsSync(req.file.path)) {
-                    fs.unlinkSync(req.file.path);
+                if (req.file.path) {
+                    unlinkWithRetrySync(req.file.path);
                 }
                 return res.status(400).json({ success: false, message: `A template with ID '${templateId}' (derived from ZIP name '${req.file.originalname}') already exists.` });
             }
@@ -851,8 +878,8 @@ const templateController = {
             zip.extractAllTo(extractPath, true);
 
             // Clean up temporary ZIP file
-            if (fs.existsSync(req.file.path)) {
-                fs.unlinkSync(req.file.path);
+            if (req.file && req.file.path) {
+                unlinkWithRetrySync(req.file.path);
             }
 
             // Flatten the folder structure if zipped as a single root-level folder
@@ -892,10 +919,8 @@ const templateController = {
                 console.error("Failed to write deploy error log:", logErr);
             }
             // Cleanup zip if still exists
-            if (req.file && req.file.path && fs.existsSync(req.file.path)) {
-                try {
-                    fs.unlinkSync(req.file.path);
-                } catch (e) { }
+            if (req.file && req.file.path) {
+                unlinkWithRetrySync(req.file.path);
             }
             res.status(500).json({ success: false, message: error.message, stack: error.stack });
         }
