@@ -38,8 +38,8 @@ const upload = multer({
 router.get("/active", authMiddleware, templateController.getActiveTemplates);
 
 // --- Public/Template Rendering Routes (Unauthenticated) ---
-router.all("/render/:templateId/:businessId", templateController.renderTemplateFile);
-router.all("/render/:templateId/:businessId/*file", templateController.renderTemplateFile);
+router.all("/:templateId/:businessId", templateController.renderTemplateFile);
+router.all("/:templateId/:businessId/*file", templateController.renderTemplateFile);
 
 // --- Super Admin Portal Routes (Admin Protected) ---
 router.get("/portal", authMiddleware, portalAdminMiddleware, templateController.portalGetTemplates);

@@ -238,40 +238,28 @@ const businessController = {
                             const numericId = template.id;
                             const templateId = template.templateId;
 
-                            const clientDistPath = path.resolve(__dirname, "../../client/dist");
-                            const srcPath = path.isAbsolute(template.path)
-                                ? template.path
-                                : path.resolve(__dirname, "../../client", template.path);
-
                             const destFolderName = `${businessKey}_${numericId}`;
-                            const destPath = path.join(clientDistPath, "User_Templates", destFolderName);
 
-                            // Check source existence asynchronously
-                            const srcExists = await fs.stat(srcPath).then(() => true).catch(() => false);
-                            if (srcExists) {
-                                // Ensure destination parent directory exists
-                                const userTemplatesParentDir = path.join(clientDistPath, "User_Templates");
-                                await fs.mkdir(userTemplatesParentDir, { recursive: true });
+                            const godaddyUploadUrl = process.env.GODADDY_UPLOAD_URL || "https://mybookings.allysoftsolutions.com/extractor.php";
+                            const godaddyUploadToken = process.env.GODADDY_UPLOAD_TOKEN || "mybookings_secret_upload_token_2026";
 
-                                // Remove existing folder if it exists asynchronously
-                                const destExists = await fs.stat(destPath).then(() => true).catch(() => false);
-                                if (destExists) {
-                                    await fs.rm(destPath, { recursive: true, force: true });
+                            console.log(`[GoDaddy Replicate] Requesting replication for business ${businessId} to ${godaddyUploadUrl}...`);
+                            
+                            const axios = require('axios');
+                            const response = await axios.post(godaddyUploadUrl, {
+                                action: 'replicate',
+                                template_id: templateId,
+                                business_id: businessId,
+                                business_key: businessKey,
+                                numeric_id: numericId
+                            }, {
+                                headers: {
+                                    'Authorization': `Bearer ${godaddyUploadToken}`,
+                                    'Content-Type': 'application/json'
                                 }
+                            });
 
-                                // Async non-blocking directory copy
-                                await fs.cp(srcPath, destPath, { recursive: true });
-
-                                // Patch SQLite config on replicated templates
-                                try {
-                                    const templateController = require("./template.controller");
-                                    if (templateController && typeof templateController.patchTemplateDatabaseConfig === 'function') {
-                                        templateController.patchTemplateDatabaseConfig(destPath);
-                                    }
-                                } catch (patchErr) {
-                                    console.error("[Replication Patch Error] Failed to patch isolated SQLite:", patchErr);
-                                }
-
+                            if (response.data && response.data.success) {
                                 // Save relative path to DB
                                 const tempPathDb = `dist/User_Templates/${destFolderName}`;
                                 
@@ -294,9 +282,9 @@ const businessController = {
                                         temp_path: tempPathDb
                                     });
                                 }
-                                console.log(`[Replication Success] Template successfully replicated asynchronously to ${destPath}`);
+                                console.log(`[Replication Success] Template successfully replicated on GoDaddy: ${destFolderName}`);
                             } else {
-                                console.warn(`[Replication Warning] Source template path does not exist: ${srcPath}`);
+                                throw new Error(response.data ? response.data.message : "GoDaddy replication endpoint returned failure");
                             }
                         }
                     } catch (repErr) {

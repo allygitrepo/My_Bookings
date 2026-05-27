@@ -110,8 +110,8 @@ const PublicBusinessWebsite = ({ subPath }) => {
         if (!standardTemplates.includes(template)) {
             const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
             const templatePath = subPath
-                ? `${apiBase}/templates/render/${template}/${businessData.business.id}/${subPath}/`
-                : `${apiBase}/templates/render/${template}/${businessData.business.id}/`;
+                ? `${apiBase}/templates/${template}/${businessData.business.id}/${subPath}/`
+                : `${apiBase}/templates/${template}/${businessData.business.id}/`;
             return (
                 <iframe
                     src={templatePath}

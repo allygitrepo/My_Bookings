@@ -3,13 +3,20 @@ const path = require("path");
 const AdmZip = require("adm-zip");
 const axios = require("axios");
 const TemplateProject = require("../models/templateProject.model");
+const FormData = require('form-data');
 
-const BASE_TEMPLATES_DIR = path.resolve(__dirname, "../../client/dist/Templates");
+const BASE_TEMPLATES_DIR = process.env.CLIENT_DIST_PATH
+    ? path.resolve(process.env.CLIENT_DIST_PATH, "Templates")
+    : path.resolve(__dirname, "../../client/dist/Templates");
 
 const getAbsoluteTemplatePath = (storedPath) => {
     if (!storedPath) return "";
     if (path.isAbsolute(storedPath)) {
         return storedPath;
+    }
+    if (process.env.CLIENT_DIST_PATH) {
+        const relativePath = storedPath.replace(/^dist\//, "");
+        return path.resolve(process.env.CLIENT_DIST_PATH, relativePath);
     }
     return path.resolve(__dirname, "../../client", storedPath);
 };
@@ -90,22 +97,6 @@ const getWidgetScriptUrl = (req) => {
         return "http://localhost:3000/widget.js";
     }
     return "https://mybookings.allysoftsolutions.com/widget.js";
-};
-
-const getTemplateRenderBaseUrl = (req) => {
-    const host = req ? (req.headers['host'] || '') : '';
-    if (host) {
-        if (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("3000") || host.includes("5173")) {
-            return "";
-        }
-        return "https://mybookings.allysoftsolutions.com";
-    }
-
-    const apiBase = getApiBaseUrl();
-    if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
-        return "";
-    }
-    return "https://mybookings.allysoftsolutions.com";
 };
 
 const resolveTemplateIconUrl = (iconPath) => {
@@ -487,7 +478,6 @@ const templateController = {
         }
     },
 
-    // Serve template files dynamically
     renderTemplateFile: async (req, res) => {
         try {
             const { templateId, businessId } = req.params;
@@ -506,7 +496,6 @@ const templateController = {
             const { Op } = require("sequelize");
 
             // Check if there is an isolated replicated version for this business
-            let templateDir;
             const bizTemplate = await BusinessTemplate.findOne({
                 where: {
                     business_id: businessId,
@@ -517,233 +506,73 @@ const templateController = {
                 }
             });
 
-            const hasEntryFile = (dir) => {
-                if (!dir || !fs.existsSync(dir)) return false;
-                if (fs.existsSync(path.join(dir, 'index.html')) || fs.existsSync(path.join(dir, 'index.php'))) return true;
-                if (fs.existsSync(path.join(dir, 'client', 'dist', 'index.html'))) return true;
-                return false;
-            };
+            // Construct the GoDaddy target URL
+            const godaddyBaseUrl = (process.env.GODADDY_BASE_URL || 'https://mybookings.allysoftsolutions.com').trim().replace(/\/$/, '');
+            const cleanSubPath = fileSubPath.replace(/^\//, '');
 
-            const isPreviewRequest = req.query.preview === 'true' ||
-                (req.headers.referer && req.headers.referer.includes('preview=true'));
+            let relativePrefix = 'Templates';
+            let folderName = templateId;
 
             if (bizTemplate && bizTemplate.temp_path) {
                 let tempPath = bizTemplate.temp_path;
-                if (tempPath.includes("User Templates")) {
-                    tempPath = tempPath.replace("User Templates", "User_Templates");
-                    bizTemplate.update({ temp_path: tempPath }).catch(err => console.error("[Dynamic Migration Error] Failed to update temp_path:", err));
+                if (tempPath.includes("User_Templates") || tempPath.includes("User Templates")) {
+                    relativePrefix = 'User_Templates';
                 }
-                templateDir = getAbsoluteTemplatePath(tempPath);
-                // Fallback to master template if replicated folder is missing or incomplete physically
-                if (!hasEntryFile(templateDir)) {
-                    templateDir = getAbsoluteTemplatePath(template.path);
-                }
-            } else {
-                templateDir = getAbsoluteTemplatePath(template.path);
+                folderName = path.basename(tempPath).replace(/User_Templates\//, "").replace(/User Templates\//, "");
             }
 
-            // Check if this is an API request targeting the template's PHP backend.
-            // If so, proxy it to Apache instead of trying to serve it as a static file.
-            if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
-                const physicalFolderName = path.basename(templateDir);
-                const parentDir = path.dirname(templateDir).replace(/\\/g, '/');
+            const godaddyUrl = encodeURI(`${godaddyBaseUrl}/${relativePrefix}/${folderName}/${cleanSubPath}`);
 
-                let apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').trim().replace(/\/$/, '');
-                apacheBaseUrl = apacheBaseUrl.replace(/:$/, '');
+            try {
+                const headers = { ...req.headers };
+                delete headers['connection'];
+                headers['X-Business-ID'] = businessId;
+                headers['host'] = new URL(godaddyBaseUrl).host;
 
-                // Check if an explicit Apache URL path prefix is provided in env
-                let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
-                if (!apacheUrlPath) {
-                    const clientDistApachePrefix = await detectApacheTemplatesPath(apacheBaseUrl);
-                    if (clientDistApachePrefix) {
-                        const isUserTemplate = parentDir.includes('User_Templates') || parentDir.includes('User Templates');
-                        apacheUrlPath = clientDistApachePrefix + (isUserTemplate ? '/User_Templates' : '/Templates');
-                    } else {
-                        // Fallback to legacy regex detection if detector failed
-                        const htdocsMatch = parentDir.match(/\/htdocs\/(.+)$/i) ||
-                            parentDir.match(/\/html\/(.+)$/i) ||
-                            parentDir.match(/\/www\/(.+)$/i);
-
-                        if (htdocsMatch) {
-                            apacheUrlPath = '/' + htdocsMatch[1];
+                let proxyData = undefined;
+                const uppercaseMethod = req.method.toUpperCase();
+                if (['POST', 'PUT', 'PATCH'].includes(uppercaseMethod)) {
+                    proxyData = req;
+                    if (req.rawBody) {
+                        proxyData = req.rawBody;
+                        headers['content-length'] = Buffer.byteLength(req.rawBody);
+                    } else if (req.body && Object.keys(req.body).length > 0) {
+                        if (headers['content-type'] && headers['content-type'].includes('application/json')) {
+                            proxyData = JSON.stringify(req.body);
+                            headers['content-length'] = Buffer.byteLength(proxyData);
                         } else {
-                            const normalizedPath = parentDir.toLowerCase();
-                            const myBookingsIndex = normalizedPath.indexOf('my_bookings');
-                            if (myBookingsIndex !== -1) {
-                                // Extract exact case-sensitive parent folder name (e.g. "My_Bookings") from file system path
-                                const folderPrefix = parentDir.substring(0, myBookingsIndex + 'my_bookings'.length);
-                                const actualFolderName = folderPrefix.split('/').pop() || 'My_Bookings';
-                                const subPath = parentDir.substring(myBookingsIndex + 'my_bookings'.length);
-                                apacheUrlPath = '/' + actualFolderName + subPath;
-                            } else {
-                                apacheUrlPath = '/My_Bookings/client/dist/Templates';
-                            }
+                            const querystring = require('querystring');
+                            proxyData = querystring.stringify(req.body);
+                            headers['content-length'] = Buffer.byteLength(proxyData);
                         }
                     }
                 }
 
-                // Ensure fileSubPath has no leading slash when appending
-                const cleanSubPath = fileSubPath.replace(/^\//, '');
-                const apacheUrl = encodeURI(`${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`);
+                const https = require('https');
+                const httpsAgent = new https.Agent({
+                    rejectUnauthorized: false
+                });
 
-                const logThisRequest = !hasStartedApacheConnectionLog;
-                if (logThisRequest) {
-                    hasStartedApacheConnectionLog = true;
-                    console.log(`connecting apache to ${apacheUrl}...`);
-                }
-
-                try {
-                    const headers = { ...req.headers };
-                    delete headers['connection'];
-                    headers['X-Business-ID'] = businessId;
-                    headers['host'] = req.headers['host'] || new URL(apacheBaseUrl).host;
-
-                    // Forward raw request stream for unparsed body types (like multipart/form-data with images/files),
-                    // or the parsed rawBody/body for parsed types (only for POST/PUT/PATCH methods).
-                    let proxyData = undefined;
-                    const uppercaseMethod = req.method.toUpperCase();
-                    if (['POST', 'PUT', 'PATCH'].includes(uppercaseMethod)) {
-                        proxyData = req;
-                        if (req.rawBody) {
-                            proxyData = req.rawBody;
-                            headers['content-length'] = Buffer.byteLength(req.rawBody);
-                        } else if (req.body && Object.keys(req.body).length > 0) {
-                            // Fallback for pre-parsed standard JSON or urlencoded data if rawBody is somehow missing
-                            if (headers['content-type'] && headers['content-type'].includes('application/json')) {
-                                proxyData = JSON.stringify(req.body);
-                                headers['content-length'] = Buffer.byteLength(proxyData);
-                            } else {
-                                const querystring = require('querystring');
-                                proxyData = querystring.stringify(req.body);
-                                headers['content-length'] = Buffer.byteLength(proxyData);
-                            }
-                        }
-                    }
-
-                    const https = require('https');
-                    const httpsAgent = new https.Agent({
-                        rejectUnauthorized: false
-                    });
-
-                    const response = await axios({
-                        method: req.method,
-                        url: apacheUrl,
-                        headers: headers,
-                        params: req.query,
-                        data: proxyData,
-                        responseType: 'arraybuffer',
-                        maxContentLength: Infinity,
-                        maxBodyLength: Infinity,
-                        httpsAgent: httpsAgent, // ignore self-signed certificate errors for local/internal VPS routing
-                        validateStatus: () => true
-                    });
-
-                    if (response.status >= 400) {
-                        console.log(`connecting apache to ${apacheUrl}... failed (Status ${response.status})`);
-                        console.log(`[Template Proxy Error Detail] Apache returned body:`, typeof response.data === 'object' ? JSON.stringify(response.data) : response.data);
-                        hasStartedApacheConnectionLog = false;
-                    } else {
-                        if (logThisRequest) {
-                            console.log("connected ..");
-                        }
-                    }
-
-                    res.status(response.status);
-                    Object.entries(response.headers).forEach(([key, val]) => {
-                        const lowerKey = key.toLowerCase();
-                        if (lowerKey !== 'transfer-encoding' && lowerKey !== 'content-encoding' && lowerKey !== 'connection') {
-                            res.setHeader(key, val);
-                        }
-                    });
-                    return res.send(response.data);
-                } catch (proxyError) {
-                    console.log(`connecting apache to ${apacheUrl}... failed (Error: ${proxyError.message})`);
-                    console.error("[Template Proxy Error] Proxy request failed. Full details:", proxyError);
-                    hasStartedApacheConnectionLog = false;
-                    return res.status(500).json({ success: false, message: "Template API proxy failed: " + proxyError.message });
-                }
-            }
-
-            // Dynamically resolve static entry directory if client/dist exists (supporting built templates)
-            let staticDir = templateDir;
-            if (fs.existsSync(path.join(templateDir, 'client', 'dist'))) {
-                staticDir = path.join(templateDir, 'client', 'dist');
-            }
-
-            let targetFilePath = path.join(staticDir, fileSubPath);
-
-            // Security: Prevent directory traversal
-            const resolvedPath = path.resolve(targetFilePath);
-            if (!resolvedPath.startsWith(path.resolve(staticDir))) {
-                return res.status(403).send("Access denied");
-            }
-
-            // Fallback for subpages (SPA support)
-            if (!fs.existsSync(targetFilePath)) {
-                let resolvedAsset = false;
-                // If it contains a known static folder in its path, try to strip the routing prefix (e.g. admin/assets/foo -> assets/foo)
-                const knownFolders = ['assets', 'icons', 'images', 'js', 'css', 'fonts', 'favicon'];
-                for (const folder of knownFolders) {
-                    const index = fileSubPath.indexOf(`${folder}/`);
-                    if (index !== -1) {
-                        const strippedPath = fileSubPath.substring(index);
-                        const testPath = path.join(staticDir, strippedPath);
-                        if (fs.existsSync(testPath)) {
-                            targetFilePath = testPath;
-                            resolvedAsset = true;
-                            break;
-                        }
-                    }
-                }
-
-                // Try resolving direct files in the root (like favicon.svg, logo.png) requested relatively from subpaths
-                if (!resolvedAsset) {
-                    const basename = path.basename(fileSubPath);
-                    const testPath = path.join(staticDir, basename);
-                    if (fs.existsSync(testPath)) {
-                        targetFilePath = testPath;
-                        resolvedAsset = true;
-                    }
-                }
-
-                if (!resolvedAsset) {
-                    if (fileSubPath.includes('.') && !fileSubPath.endsWith('.html') && !fileSubPath.endsWith('.php')) {
-                        return res.status(404).send("File not found");
-                    }
-                    targetFilePath = path.join(staticDir, 'index.html');
-                    if (!fs.existsSync(targetFilePath)) {
-                        targetFilePath = path.join(staticDir, 'index.php');
-                    }
-                    if (!fs.existsSync(targetFilePath)) {
-                        return res.status(404).send("Template entry file not found");
-                    }
-                }
-                fileSubPath = path.basename(targetFilePath);
-            }
-
-            const stat = fs.statSync(targetFilePath);
-            if (stat.isDirectory()) {
-                let dirIndexHtml = path.join(targetFilePath, 'index.html');
-                let dirIndexPhp = path.join(targetFilePath, 'index.php');
-                if (fs.existsSync(dirIndexHtml)) {
-                    targetFilePath = dirIndexHtml;
-                } else if (fs.existsSync(dirIndexPhp)) {
-                    targetFilePath = dirIndexPhp;
-                } else {
-                    return res.status(404).send("Directory index not found");
-                }
-            }
-
-            const ext = path.extname(targetFilePath).toLowerCase();
-            const textExtensions = [".html", ".php", ".js", ".css", ".json", ".xml", ".svg"];
-
-            if (textExtensions.includes(ext)) {
-                // Non-blocking async file read
-                let content = await fs.promises.readFile(targetFilePath, "utf8");
+                const response = await axios({
+                    method: req.method,
+                    url: godaddyUrl,
+                    headers: headers,
+                    params: req.query,
+                    data: proxyData,
+                    responseType: 'arraybuffer',
+                    maxContentLength: Infinity,
+                    maxBodyLength: Infinity,
+                    httpsAgent: httpsAgent,
+                    validateStatus: () => true
+                });
 
                 // Inject widget script if this is the entry page
-                const isEntryFile = path.basename(targetFilePath) === 'index.html' || path.basename(targetFilePath) === 'index.php';
-                if (isEntryFile) {
+                const isEntryFile = cleanSubPath === 'index.html' || cleanSubPath === 'index.php' || cleanSubPath === '';
+                let content = response.data;
+                const contentType = (response.headers['content-type'] || '').toLowerCase();
+
+                if (isEntryFile && (contentType.includes('text/html') || contentType.includes('application/xhtml+xml') || cleanSubPath.endsWith('.html') || cleanSubPath.endsWith('.php') || !cleanSubPath.includes('.'))) {
+                    let textContent = content.toString('utf8');
                     const ApiKey = require("../models/apiKey.model");
                     const crypto = require("crypto");
                     let apiKeyRecord = await ApiKey.findOne({ where: { business_id: businessId, status: true } });
@@ -753,83 +582,42 @@ const templateController = {
                     }
                     const widgetKey = apiKeyRecord.api_key;
                     const widgetUrl = getWidgetScriptUrl(req);
-                    console.log(`widget.js URL: ${widgetUrl}`);
+                    
                     let scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
                     if (req.query.preview === 'true') {
                         scriptTag += `<style>button[aria-label="book-now"], .MuiFab-root, #booking-widget-root button.MuiFab-root { display: none !important; }</style>\n`;
                     }
 
-                    const hasHTML = /<\/head>|<\/body>|<\/html>|<html/i.test(content);
+                    const hasHTML = /<\/head>|<\/body>|<\/html>|<html/i.test(textContent);
                     if (hasHTML) {
                         const scriptRegex = /<script\s+[^>]*src="[^"]*widget\.js"[^>]*data-business-id="([^"]+)"[^>]*><\/script>/i;
-                        const match = content.match(scriptRegex);
+                        const match = textContent.match(scriptRegex);
                         if (match) {
-                            content = content.replace(match[0], scriptTag);
+                            textContent = textContent.replace(match[0], scriptTag);
                         } else {
-                            if (content.includes("</head>")) {
-                                content = content.replace("</head>", `${scriptTag}</head>`);
-                            } else if (content.includes("</body>")) {
-                                content = content.replace("</body>", `${scriptTag}</body>`);
+                            if (textContent.includes("</head>")) {
+                                textContent = textContent.replace("</head>", `${scriptTag}</head>`);
+                            } else if (textContent.includes("</body>")) {
+                                textContent = textContent.replace("</body>", `${scriptTag}</body>`);
                             } else {
-                                content += scriptTag;
+                                textContent += scriptTag;
                             }
                         }
                     }
+                    content = Buffer.from(textContent, 'utf8');
                 }
 
-                // In-memory cache for dynamic prefix scanner (avoids reading entry HTML from disk recursively!)
-                if (!global.templatePrefixesCache) {
-                    global.templatePrefixesCache = {};
-                }
-
-                let templatePrefixes = global.templatePrefixesCache[templateId];
-                if (!templatePrefixes) {
-                    templatePrefixes = ["DRP_Doctor", templateId];
-
-                    const entryHtmlPath = path.join(templateDir, 'index.html');
-                    const entryPhpPath = path.join(templateDir, 'index.php');
-                    let entryContent = "";
-                    try {
-                        if (fs.existsSync(entryHtmlPath)) {
-                            entryContent = await fs.promises.readFile(entryHtmlPath, "utf8");
-                        } else if (fs.existsSync(entryPhpPath)) {
-                            entryContent = await fs.promises.readFile(entryPhpPath, "utf8");
-                        }
-                    } catch (e) {
-                        console.error("[Template Cache Loader] Error reading entry file for prefix discovery:", e);
+                res.status(response.status);
+                Object.entries(response.headers).forEach(([key, val]) => {
+                    const lowerKey = key.toLowerCase();
+                    if (lowerKey !== 'transfer-encoding' && lowerKey !== 'content-encoding' && lowerKey !== 'connection') {
+                        res.setHeader(key, val);
                     }
-
-                    if (entryContent) {
-                        const match = entryContent.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
-                        if (match && match[1] && !templatePrefixes.includes(match[1])) {
-                            templatePrefixes.push(match[1]);
-                        }
-                    }
-
-                    if (!isEntryFile) {
-                        const fileMatch = content.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
-                        if (fileMatch && fileMatch[1] && !templatePrefixes.includes(fileMatch[1])) {
-                            templatePrefixes.push(fileMatch[1]);
-                        }
-                    }
-
-                    templatePrefixes.sort((a, b) => b.length - a.length);
-                    global.templatePrefixesCache[templateId] = templatePrefixes;
-                }
-
-                // Rewrite prefixes
-                const renderBaseUrl = getTemplateRenderBaseUrl(req);
-                templatePrefixes.forEach((prefix) => {
-                    const regex = new RegExp('(?<!\\/mybookings\\/templates\\/render)\\/' + prefix + '(?=[\\/"\'])', 'g');
-                    content = content.replace(regex, `${renderBaseUrl}/mybookings/templates/render/${templateId}/${businessId}`);
                 });
-
-                res.type(ext);
-                res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
                 return res.send(content);
-            } else {
-                res.setHeader("Cache-Control", "no-store, no-cache, must-revalidate, private");
-                return res.sendFile(targetFilePath);
+            } catch (proxyError) {
+                console.error("[GoDaddy Proxy Error] Failed to proxy request:", proxyError.message);
+                return res.status(500).send("Template proxy failed: " + proxyError.message);
             }
         } catch (error) {
             console.error("[Template Server Error] renderTemplateFile failed:", error);
@@ -911,28 +699,35 @@ const templateController = {
                 return res.status(400).json({ success: false, message: `A template with ID '${templateId}' (derived from ZIP name '${req.file.originalname}') already exists.` });
             }
 
-            const extractPath = path.join(BASE_TEMPLATES_DIR, templateId);
-            if (!fs.existsSync(extractPath)) {
-                fs.mkdirSync(extractPath, { recursive: true });
-            }
+            // Prepare payload to GoDaddy
+            const godaddyUploadUrl = process.env.GODADDY_UPLOAD_URL || "https://mybookings.allysoftsolutions.com/extractor.php";
+            const godaddyUploadToken = process.env.GODADDY_UPLOAD_TOKEN || "mybookings_secret_upload_token_2026";
 
-            // Extract ZIP
-            const zip = new AdmZip(req.file.path);
-            zip.extractAllTo(extractPath, true);
+            const formData = new FormData();
+            formData.append('template_zip', fs.createReadStream(req.file.path));
+            formData.append('template_id', templateId);
 
-            // Clean up temporary ZIP file
+            console.log(`[GoDaddy Deploy] Forwarding ZIP template '${templateId}' to ${godaddyUploadUrl}...`);
+
+            const response = await axios.post(godaddyUploadUrl, formData, {
+                headers: {
+                    ...formData.getHeaders(),
+                    'Authorization': `Bearer ${godaddyUploadToken}`
+                },
+                maxContentLength: Infinity,
+                maxBodyLength: Infinity
+            });
+
+            // Clean up temporary ZIP file on VPS
             if (req.file && req.file.path) {
                 unlinkWithRetrySync(req.file.path);
             }
 
-            // Flatten the folder structure if zipped as a single root-level folder
-            flattenExtractedFolder(extractPath);
+            if (!response.data || !response.data.success) {
+                throw new Error(response.data ? response.data.message : "Failed to extract ZIP on GoDaddy");
+            }
 
-            // Patch the database configuration of the deployed template
-            patchTemplateDatabaseConfig(extractPath);
-
-            // Crawl folder to discover favicon or logo
-            const discoveredIcon = findIcon(extractPath);
+            const discoveredIcon = response.data.icon || null;
             const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${templateId}/${discoveredIcon}` : null;
 
             // Create template entry in MySQL
@@ -948,7 +743,7 @@ const templateController = {
 
             res.status(201).json({
                 success: true,
-                message: "Template uploaded and deployed successfully",
+                message: "Template uploaded and deployed to GoDaddy successfully",
                 data: template
             });
         } catch (error) {

@@ -47,11 +47,17 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/My_Bookings_Templates', express.static(path.join(__dirname, '../client/dist/Templates')));
+const clientDistTemplates = process.env.CLIENT_DIST_PATH
+    ? path.resolve(process.env.CLIENT_DIST_PATH, 'Templates')
+    : path.join(__dirname, '../client/dist/Templates');
+
+app.use('/My_Bookings_Templates', express.static(clientDistTemplates));
 
 // Serve the local widget.js for development
 app.get('/widget.js', (req, res) => {
-    const distPath = path.join(__dirname, '../client/dist/widget.js');
+    const distPath = process.env.CLIENT_DIST_PATH
+        ? path.resolve(process.env.CLIENT_DIST_PATH, 'widget.js')
+        : path.join(__dirname, '../client/dist/widget.js');
     const myDistPath = path.join(__dirname, '../client/MyDist/widget.js');
     if (fs.existsSync(distPath)) {
         res.sendFile(distPath);
