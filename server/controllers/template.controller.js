@@ -404,11 +404,20 @@ const templateController = {
                     const folderName = pathParts[pathParts.length - 1];
 
                     // Identify if stored temp_id is numeric or string slug
-                    const isNumericId = !isNaN(bt.temp_id);
-                    const templateQuery = isNumericId 
-                        ? { id: parseInt(bt.temp_id) } 
-                        : { templateId: bt.temp_id };
-                    
+                    const tempId = bt.temp_id ? bt.temp_id.toString().trim() : "";
+
+                    if (!tempId) {
+                        console.warn(`[Migration] Skipping business_template ID ${bt.id}: temp_id is empty/null`);
+                        continue;
+                    }
+
+                    const isNumericId = /^\d+$/.test(tempId);
+
+                    const templateQuery = isNumericId
+                        ? { id: Number(tempId) }
+                        : { templateId: tempId };
+
+
                     const template = await TemplateProject.findOne({ where: templateQuery });
                     if (template) {
                         // If it's a legacy string slug temp_id in the database, migrate it to the template's numeric id
@@ -424,11 +433,11 @@ const templateController = {
                                 console.log(`[Migration] Legacy business template physical folder format found: ${bt.temp_path}`);
                                 const correctFolderName = `${bt.business_key}_${template.id}`;
                                 const correctPath = `dist/User Templates/${correctFolderName}`;
-                                
+
                                 const clientDistPath = path.resolve(__dirname, "../../client/dist");
                                 const legacyFolderFullPath = path.join(clientDistPath, "User Templates", folderName);
                                 const correctFolderFullPath = path.join(clientDistPath, "User Templates", correctFolderName);
-                                
+
                                 if (fs.existsSync(legacyFolderFullPath)) {
                                     try {
                                         if (fs.existsSync(correctFolderFullPath)) {
@@ -440,7 +449,7 @@ const templateController = {
                                         console.error(`[Migration Error] Failed to rename physical folder:`, renameErr);
                                     }
                                 }
-                                
+
                                 await bt.update({
                                     temp_path: correctPath
                                 });
@@ -474,11 +483,11 @@ const templateController = {
 
             const BusinessTemplate = require("../models/businessTemplate.model");
             const { Op } = require("sequelize");
-            
+
             // Check if there is an isolated replicated version for this business
             let templateDir;
             const bizTemplate = await BusinessTemplate.findOne({
-                where: { 
+                where: {
                     business_id: businessId,
                     [Op.or]: [
                         { temp_id: template.id.toString() },
@@ -494,8 +503,8 @@ const templateController = {
                 return false;
             };
 
-            const isPreviewRequest = req.query.preview === 'true' || 
-                                     (req.headers.referer && req.headers.referer.includes('preview=true'));
+            const isPreviewRequest = req.query.preview === 'true' ||
+                (req.headers.referer && req.headers.referer.includes('preview=true'));
 
             if (bizTemplate && bizTemplate.temp_path) {
                 templateDir = getAbsoluteTemplatePath(bizTemplate.temp_path);
@@ -515,7 +524,7 @@ const templateController = {
 
                 let apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').trim().replace(/\/$/, '');
                 apacheBaseUrl = apacheBaseUrl.replace(/:$/, '');
-                
+
                 // Check if an explicit Apache URL path prefix is provided in env
                 let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
                 if (!apacheUrlPath) {
@@ -525,10 +534,10 @@ const templateController = {
                         apacheUrlPath = clientDistApachePrefix + (isUserTemplate ? '/User Templates' : '/Templates');
                     } else {
                         // Fallback to legacy regex detection if detector failed
-                        const htdocsMatch = parentDir.match(/\/htdocs\/(.+)$/i) || 
-                                             parentDir.match(/\/html\/(.+)$/i) || 
-                                             parentDir.match(/\/www\/(.+)$/i);
-                        
+                        const htdocsMatch = parentDir.match(/\/htdocs\/(.+)$/i) ||
+                            parentDir.match(/\/html\/(.+)$/i) ||
+                            parentDir.match(/\/www\/(.+)$/i);
+
                         if (htdocsMatch) {
                             apacheUrlPath = '/' + htdocsMatch[1];
                         } else {
@@ -550,13 +559,13 @@ const templateController = {
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
                 const apacheUrl = encodeURI(`${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`);
-                
+
                 const logThisRequest = !hasStartedApacheConnectionLog;
                 if (logThisRequest) {
                     hasStartedApacheConnectionLog = true;
                     console.log(`connecting apache to ${apacheUrl}...`);
                 }
-                
+
                 try {
                     const headers = { ...req.headers };
                     delete headers['connection'];
@@ -602,7 +611,7 @@ const templateController = {
                         httpsAgent: httpsAgent, // ignore self-signed certificate errors for local/internal VPS routing
                         validateStatus: () => true
                     });
-                    
+
                     if (response.status >= 400) {
                         console.log(`connecting apache to ${apacheUrl}... failed (Status ${response.status})`);
                         console.log(`[Template Proxy Error Detail] Apache returned body:`, typeof response.data === 'object' ? JSON.stringify(response.data) : response.data);
@@ -612,7 +621,7 @@ const templateController = {
                             console.log("connected ..");
                         }
                     }
-                    
+
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
                         const lowerKey = key.toLowerCase();
@@ -660,7 +669,7 @@ const templateController = {
                         }
                     }
                 }
-                
+
                 // Try resolving direct files in the root (like favicon.svg, logo.png) requested relatively from subpaths
                 if (!resolvedAsset) {
                     const basename = path.basename(fileSubPath);
