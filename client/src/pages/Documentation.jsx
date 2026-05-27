@@ -16,9 +16,9 @@ const ImagePreview = ({ src, alt, maxHeight = '400px' }) => {
             justifyContent: 'center',
             alignItems: 'center'
         }}>
-            <img 
-                src={src} 
-                alt={alt} 
+            <img
+                src={src}
+                alt={alt}
                 style={{
                     maxWidth: '100%',
                     maxHeight: maxHeight,
@@ -63,7 +63,7 @@ const BookingStepsViewer = () => {
     };
 
     return (
-        <div 
+        <div
             onMouseEnter={() => setIsHovered(true)}
             onMouseLeave={() => setIsHovered(false)}
             style={{
@@ -98,7 +98,7 @@ const BookingStepsViewer = () => {
                     </button>
                 ))}
             </div>
-            
+
             <div style={{
                 background: 'rgba(0, 0, 0, 0.3)',
                 borderRadius: '12px',
@@ -115,15 +115,15 @@ const BookingStepsViewer = () => {
                     {steps[currentStep].desc}
                 </p>
 
-                <div style={{ 
-                    display: 'flex', 
-                    alignItems: 'center', 
+                <div style={{
+                    display: 'flex',
+                    alignItems: 'center',
                     justifyContent: 'space-between',
-                    flex: 1, 
+                    flex: 1,
                     position: 'relative',
                     gap: '20px'
                 }}>
-                    <button 
+                    <button
                         onClick={handlePrev}
                         style={{
                             background: 'rgba(15, 23, 42, 0.6)',
@@ -146,22 +146,22 @@ const BookingStepsViewer = () => {
                     </button>
 
                     <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1, maxHeight: '350px', overflow: 'hidden' }}>
-                        <img 
+                        <img
                             key={currentStep}
-                            src={steps[currentStep].img} 
-                            alt={steps[currentStep].title} 
+                            src={steps[currentStep].img}
+                            alt={steps[currentStep].title}
                             className="carousel-image"
-                            style={{ 
-                                maxWidth: '100%', 
-                                maxHeight: '320px', 
-                                objectFit: 'contain', 
+                            style={{
+                                maxWidth: '100%',
+                                maxHeight: '320px',
+                                objectFit: 'contain',
                                 borderRadius: '8px',
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.5)'
-                            }} 
+                            }}
                         />
                     </div>
 
-                    <button 
+                    <button
                         onClick={handleNext}
                         style={{
                             background: 'rgba(15, 23, 42, 0.6)',
@@ -186,8 +186,8 @@ const BookingStepsViewer = () => {
 
                 <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', marginTop: '10px' }}>
                     {steps.map((_, idx) => (
-                        <div 
-                            key={idx} 
+                        <div
+                            key={idx}
                             onClick={() => setCurrentStep(idx)}
                             style={{
                                 width: '8px',
@@ -470,6 +470,18 @@ const DOC_DATA = [
                             <li>The platform administrators will periodically transfer your available balance directly to your registered bank account.</li>
                             <li>Once the money is sent, you will receive a <strong>Payout Email</strong> confirming the amount and the bank details used.</li>
                         </ol>
+                    </>
+                )
+            },
+            {
+                subtitle: "Settlement Schedule",
+                content: (
+                    <>
+                        <p>To ensure smooth operations and batch processing, all booking payouts are settled on a monthly cycle.</p>
+                        <div className="doc-highlight">
+                            <strong>Payout Date:</strong> The settlements of booking transactions will be sent directly to your registered bank account or UPI ID while creating the Bussiness <strong>between the 1st and 10th of every month</strong>.
+                        </div>
+                        <p>Settlements will be proceed according to the bussinesses. You will receive a mail after successfully settlement of your business. </p>
                     </>
                 )
             }
