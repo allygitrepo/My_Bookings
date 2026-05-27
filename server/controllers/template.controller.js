@@ -4,9 +4,74 @@ const AdmZip = require("adm-zip");
 const axios = require("axios");
 const TemplateProject = require("../models/templateProject.model");
 
-const BASE_TEMPLATES_DIR = path.join(__dirname, "..", "Templates");
+const BASE_TEMPLATES_DIR = path.resolve(__dirname, "../../client/dist/Templates");
+
+const getAbsoluteTemplatePath = (storedPath) => {
+    if (!storedPath) return "";
+    if (path.isAbsolute(storedPath)) {
+        return storedPath;
+    }
+    return path.resolve(__dirname, "../../client", storedPath);
+};
 
 let hasStartedApacheConnectionLog = false;
+
+if (!global.templatePrefixesCache) {
+    global.templatePrefixesCache = {};
+}
+
+let cachedDetectedApachePath = null;
+
+const detectApacheTemplatesPath = async (apacheBaseUrl) => {
+    if (cachedDetectedApachePath !== null) {
+        return cachedDetectedApachePath === 'failed' ? null : cachedDetectedApachePath;
+    }
+
+    // List of candidate path prefixes
+    const projectFolderName = path.basename(path.resolve(__dirname, "../..")); // e.g. "My_Bookings"
+    const candidates = [
+        `/${projectFolderName}/client/dist`,
+        `/client/dist`,
+        `/mybookings/client/dist`,
+        `/My_Bookings/client/dist`
+    ];
+
+    // Remove duplicates
+    const uniqueCandidates = [...new Set(candidates)];
+
+    for (const prefix of uniqueCandidates) {
+        // We test with a known static file that should exist in gym_v1
+        const testUrl = `${apacheBaseUrl}${prefix}/Templates/gym_v1/favicon.svg`;
+        try {
+            const res = await axios.head(testUrl, { timeout: 1000, validateStatus: () => true });
+            if (res.status === 200) {
+                console.log(`[Apache Detector] Successfully auto-detected Apache path prefix: "${prefix}"`);
+                cachedDetectedApachePath = prefix;
+                return prefix;
+            }
+        } catch (e) {
+            // Ignore
+        }
+    }
+
+    for (const prefix of uniqueCandidates) {
+        const testUrl = `${apacheBaseUrl}${prefix}/Templates/doctor_v1/favicon.svg`;
+        try {
+            const res = await axios.head(testUrl, { timeout: 1000, validateStatus: () => true });
+            if (res.status === 200) {
+                console.log(`[Apache Detector] Successfully auto-detected Apache path prefix (via doctor_v1): "${prefix}"`);
+                cachedDetectedApachePath = prefix;
+                return prefix;
+            }
+        } catch (e) {
+            // Ignore
+        }
+    }
+
+    console.warn(`[Apache Detector Warning] Failed to auto-detect Apache path prefix. Falling back to default filesystem matching.`);
+    cachedDetectedApachePath = 'failed';
+    return null;
+};
 
 const getApiBaseUrl = () =>
     (process.env.API_BASE_URL || `http://localhost:${process.env.PORT || 3000}`).replace(/\/$/, "");
@@ -219,15 +284,34 @@ const patchTemplateDatabaseConfig = (templateDir) => {
 };
 
 const templateController = {
+    patchTemplateDatabaseConfig,
     // Initialize & sync existing templates
     initTemplates: async () => {
         try {
-            // Ensure server/Templates directory exists
+            // Ensure client/dist/Templates directory exists
             if (!fs.existsSync(BASE_TEMPLATES_DIR)) {
                 fs.mkdirSync(BASE_TEMPLATES_DIR, { recursive: true });
             }
 
-            // Find all directories in server/Templates
+            // Migration: Move templates from legacy server/Templates to new client/dist/Templates
+            const oldTemplatesDir = path.resolve(__dirname, "..", "Templates");
+            if (fs.existsSync(oldTemplatesDir) && oldTemplatesDir !== BASE_TEMPLATES_DIR) {
+                try {
+                    const oldDirs = fs.readdirSync(oldTemplatesDir).filter(f => fs.statSync(path.join(oldTemplatesDir, f)).isDirectory());
+                    for (const oldDir of oldDirs) {
+                        const src = path.join(oldTemplatesDir, oldDir);
+                        const dest = path.join(BASE_TEMPLATES_DIR, oldDir);
+                        if (!fs.existsSync(dest)) {
+                            console.log(`[Templates Migration] Moving template ${oldDir} to client/dist/Templates...`);
+                            copyFolderRecursiveSync(src, dest);
+                        }
+                    }
+                } catch (migrationErr) {
+                    console.error("[Templates Migration] Error migrating templates:", migrationErr);
+                }
+            }
+
+            // Find all directories in client/dist/Templates
             const templateDirs = fs.readdirSync(BASE_TEMPLATES_DIR).filter(file => {
                 const fullPath = path.join(BASE_TEMPLATES_DIR, file);
                 return fs.statSync(fullPath).isDirectory();
@@ -235,6 +319,7 @@ const templateController = {
 
             for (const dirName of templateDirs) {
                 const dirPath = path.join(BASE_TEMPLATES_DIR, dirName);
+                const relativePath = `dist/Templates/${dirName}`;
                 flattenExtractedFolder(dirPath);
                 patchTemplateDatabaseConfig(dirPath);
                 const discoveredIcon = findIcon(dirPath);
@@ -252,20 +337,19 @@ const templateController = {
                     // Auto-seed into DB
                     const templateType = dirName.toLowerCase().includes("portfolio") ? "portfolio" : "website";
                     templateRecord = await TemplateProject.create({
-                        id: dirName,
                         templateId: dirName,
                         displayName: displayName,
                         category: "Healthcare / Hospital", // Default category or can be customized
                         type: templateType,
-                        path: dirPath,
+                        path: relativePath,
                         icon: iconUrlPath,
                         isActive: true
                     });
                 } else {
                     // Update paths, icons, and type to make sure they are dynamic and up-to-date
                     let updated = false;
-                    if (templateRecord.path !== dirPath) {
-                        templateRecord.path = dirPath;
+                    if (templateRecord.path !== relativePath) {
+                        templateRecord.path = relativePath;
                         updated = true;
                     }
                     if (templateRecord.icon !== iconUrlPath) {
@@ -282,6 +366,65 @@ const templateController = {
                     }
                 }
             }
+
+            // Self-healing migration for legacy BusinessTemplate records
+            try {
+                const BusinessTemplate = require("../models/businessTemplate.model");
+                const bizTemplates = await BusinessTemplate.findAll();
+                for (const bt of bizTemplates) {
+                    const tempPath = bt.temp_path || "";
+                    const pathParts = tempPath.split('/');
+                    const folderName = pathParts[pathParts.length - 1];
+
+                    // Identify if stored temp_id is numeric or string slug
+                    const isNumericId = !isNaN(bt.temp_id);
+                    const templateQuery = isNumericId 
+                        ? { id: parseInt(bt.temp_id) } 
+                        : { templateId: bt.temp_id };
+                    
+                    const template = await TemplateProject.findOne({ where: templateQuery });
+                    if (template) {
+                        // If it's a legacy string slug temp_id in the database, migrate it to the template's numeric id
+                        if (!isNumericId) {
+                            console.log(`[Migration] Converting legacy temp_id slug '${bt.temp_id}' to numeric id '${template.id}' for biz_template ID ${bt.id}`);
+                            await bt.update({ temp_id: template.id.toString() });
+                        }
+
+                        // If folderName contains templateId slug format instead of numeric ID
+                        if (folderName && folderName.includes('_')) {
+                            const lastPart = folderName.split('_').pop();
+                            if (isNaN(lastPart)) {
+                                console.log(`[Migration] Legacy business template physical folder format found: ${bt.temp_path}`);
+                                const correctFolderName = `${bt.business_key}_${template.id}`;
+                                const correctPath = `dist/User Templates/${correctFolderName}`;
+                                
+                                const clientDistPath = path.resolve(__dirname, "../../client/dist");
+                                const legacyFolderFullPath = path.join(clientDistPath, "User Templates", folderName);
+                                const correctFolderFullPath = path.join(clientDistPath, "User Templates", correctFolderName);
+                                
+                                if (fs.existsSync(legacyFolderFullPath)) {
+                                    try {
+                                        if (fs.existsSync(correctFolderFullPath)) {
+                                            fs.rmSync(correctFolderFullPath, { recursive: true, force: true });
+                                        }
+                                        fs.renameSync(legacyFolderFullPath, correctFolderFullPath);
+                                        console.log(`[Migration] Successfully renamed physical folder from ${folderName} to ${correctFolderName}`);
+                                    } catch (renameErr) {
+                                        console.error(`[Migration Error] Failed to rename physical folder:`, renameErr);
+                                    }
+                                }
+                                
+                                await bt.update({
+                                    temp_path: correctPath
+                                });
+                                console.log(`[Migration] Updated DB business_templates ID ${bt.id} path to ${correctPath}`);
+                            }
+                        }
+                    }
+                }
+            } catch (migError) {
+                console.error("[Migration Error] Failed running self-healing templates migration:", migError);
+            }
         } catch (err) {
             console.error("[Templates Setup] Error during templates initialization:", err);
         }
@@ -296,52 +439,89 @@ const templateController = {
                 fileSubPath = fileSubPath.join('/');
             }
 
+            // Fetch template from the database
+            let template = await TemplateProject.findOne({ where: { templateId } });
+            if (!template) {
+                return res.status(404).send("Template not found");
+            }
+
+            const BusinessTemplate = require("../models/businessTemplate.model");
+            const { Op } = require("sequelize");
+            
+            // Check if there is an isolated replicated version for this business
+            let templateDir;
+            const bizTemplate = await BusinessTemplate.findOne({
+                where: { 
+                    business_id: businessId,
+                    [Op.or]: [
+                        { temp_id: template.id.toString() },
+                        { temp_id: templateId }
+                    ]
+                }
+            });
+
+            const hasEntryFile = (dir) => {
+                if (!dir || !fs.existsSync(dir)) return false;
+                if (fs.existsSync(path.join(dir, 'index.html')) || fs.existsSync(path.join(dir, 'index.php'))) return true;
+                if (fs.existsSync(path.join(dir, 'client', 'dist', 'index.html'))) return true;
+                return false;
+            };
+
+            const isPreviewRequest = req.query.preview === 'true' || 
+                                     (req.headers.referer && req.headers.referer.includes('preview=true'));
+
+            if (bizTemplate && bizTemplate.temp_path) {
+                templateDir = getAbsoluteTemplatePath(bizTemplate.temp_path);
+                // Fallback to master template if replicated folder is missing or incomplete physically
+                if (!hasEntryFile(templateDir)) {
+                    templateDir = getAbsoluteTemplatePath(template.path);
+                }
+            } else {
+                templateDir = getAbsoluteTemplatePath(template.path);
+            }
+
             // Check if this is an API request targeting the template's PHP backend.
             // If so, proxy it to Apache instead of trying to serve it as a static file.
             if (fileSubPath.startsWith('server/public/') || fileSubPath.startsWith('/server/public/')) {
-                // Find the template first to resolve the actual physical folder name from the database
-                const template = await TemplateProject.findOne({ where: { templateId } });
-                if (!template) {
-                    console.error(`[Template Proxy Error] Template not found in database for ID: ${templateId}`);
-                    return res.status(404).send("Template not found");
-                }
-                const physicalFolderName = path.basename(template.path);
+                const physicalFolderName = path.basename(templateDir);
+                const parentDir = path.dirname(templateDir).replace(/\\/g, '/');
 
                 const apacheBaseUrl = (process.env.APACHE_BASE_URL || 'http://localhost').replace(/\/$/, '');
                 
-                // Let's first check if an explicit Apache URL path prefix is provided in env
+                // Check if an explicit Apache URL path prefix is provided in env
                 let apacheUrlPath = process.env.APACHE_TEMPLATES_PATH;
-                if (apacheUrlPath) {
-                    if (!hasStartedApacheConnectionLog) {
-                        console.log(`[Template Proxy] Using configured APACHE_TEMPLATES_PATH: "${apacheUrlPath}"`);
-                    }
-                } else {
-                    // Fallback to dynamic detection
-                    const baseTemplatesNormalized = BASE_TEMPLATES_DIR.replace(/\\/g, '/');
-                    const htdocsMatch = baseTemplatesNormalized.match(/\/htdocs\/(.+)$/i) || 
-                                        baseTemplatesNormalized.match(/\/html\/(.+)$/i) || 
-                                        baseTemplatesNormalized.match(/\/www\/(.+)$/i);
-                    
-                    if (htdocsMatch) {
-                        apacheUrlPath = '/' + htdocsMatch[1];
+                if (!apacheUrlPath) {
+                    const clientDistApachePrefix = await detectApacheTemplatesPath(apacheBaseUrl);
+                    if (clientDistApachePrefix) {
+                        const isUserTemplate = parentDir.includes('User Templates');
+                        apacheUrlPath = clientDistApachePrefix + (isUserTemplate ? '/User Templates' : '/Templates');
                     } else {
-                        const normalizedPath = baseTemplatesNormalized.toLowerCase();
-                        const myBookingsIndex = normalizedPath.indexOf('my_bookings');
-                        if (myBookingsIndex !== -1) {
-                            // Extract exact case-sensitive parent folder name (e.g. "My_Bookings") from file system path
-                            const folderPrefix = baseTemplatesNormalized.substring(0, myBookingsIndex + 'my_bookings'.length);
-                            const actualFolderName = folderPrefix.split('/').pop() || 'My_Bookings';
-                            const subPath = baseTemplatesNormalized.substring(myBookingsIndex + 'my_bookings'.length);
-                            apacheUrlPath = '/' + actualFolderName + subPath;
+                        // Fallback to legacy regex detection if detector failed
+                        const htdocsMatch = parentDir.match(/\/htdocs\/(.+)$/i) || 
+                                             parentDir.match(/\/html\/(.+)$/i) || 
+                                             parentDir.match(/\/www\/(.+)$/i);
+                        
+                        if (htdocsMatch) {
+                            apacheUrlPath = '/' + htdocsMatch[1];
                         } else {
-                            apacheUrlPath = '/My_Bookings/server/Templates';
+                            const normalizedPath = parentDir.toLowerCase();
+                            const myBookingsIndex = normalizedPath.indexOf('my_bookings');
+                            if (myBookingsIndex !== -1) {
+                                // Extract exact case-sensitive parent folder name (e.g. "My_Bookings") from file system path
+                                const folderPrefix = parentDir.substring(0, myBookingsIndex + 'my_bookings'.length);
+                                const actualFolderName = folderPrefix.split('/').pop() || 'My_Bookings';
+                                const subPath = parentDir.substring(myBookingsIndex + 'my_bookings'.length);
+                                apacheUrlPath = '/' + actualFolderName + subPath;
+                            } else {
+                                apacheUrlPath = '/My_Bookings/client/dist/Templates';
+                            }
                         }
                     }
                 }
 
                 // Ensure fileSubPath has no leading slash when appending
                 const cleanSubPath = fileSubPath.replace(/^\//, '');
-                const apacheUrl = `${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`;
+                const apacheUrl = encodeURI(`${apacheBaseUrl}${apacheUrlPath}/${physicalFolderName}/${cleanSubPath}`);
                 
                 const logThisRequest = !hasStartedApacheConnectionLog;
                 if (logThisRequest) {
@@ -351,17 +531,41 @@ const templateController = {
                 
                 try {
                     const headers = { ...req.headers };
-                    delete headers['content-length'];
                     delete headers['connection'];
                     headers['X-Business-ID'] = businessId;
                     headers['host'] = req.headers['host'] || new URL(apacheBaseUrl).host;
+
+                    // Forward raw request stream for unparsed body types (like multipart/form-data with images/files),
+                    // or the parsed rawBody/body for parsed types (only for POST/PUT/PATCH methods).
+                    let proxyData = undefined;
+                    const uppercaseMethod = req.method.toUpperCase();
+                    if (['POST', 'PUT', 'PATCH'].includes(uppercaseMethod)) {
+                        proxyData = req;
+                        if (req.rawBody) {
+                            proxyData = req.rawBody;
+                            headers['content-length'] = Buffer.byteLength(req.rawBody);
+                        } else if (req.body && Object.keys(req.body).length > 0) {
+                            // Fallback for pre-parsed standard JSON or urlencoded data if rawBody is somehow missing
+                            if (headers['content-type'] && headers['content-type'].includes('application/json')) {
+                                proxyData = JSON.stringify(req.body);
+                                headers['content-length'] = Buffer.byteLength(proxyData);
+                            } else {
+                                const querystring = require('querystring');
+                                proxyData = querystring.stringify(req.body);
+                                headers['content-length'] = Buffer.byteLength(proxyData);
+                            }
+                        }
+                    }
 
                     const response = await axios({
                         method: req.method,
                         url: apacheUrl,
                         headers: headers,
                         params: req.query,
-                        data: req.body,
+                        data: proxyData,
+                        responseType: 'arraybuffer',
+                        maxContentLength: Infinity,
+                        maxBodyLength: Infinity,
                         validateStatus: () => true
                     });
                     
@@ -377,7 +581,10 @@ const templateController = {
                     
                     res.status(response.status);
                     Object.entries(response.headers).forEach(([key, val]) => {
-                        res.setHeader(key, val);
+                        const lowerKey = key.toLowerCase();
+                        if (lowerKey !== 'transfer-encoding' && lowerKey !== 'content-encoding' && lowerKey !== 'connection') {
+                            res.setHeader(key, val);
+                        }
                     });
                     return res.send(response.data);
                 } catch (proxyError) {
@@ -388,32 +595,59 @@ const templateController = {
                 }
             }
 
-            // Fetch template from the database
-            let template = await TemplateProject.findOne({ where: { templateId } });
-            if (!template) {
-                return res.status(404).send("Template not found");
+            // Dynamically resolve static entry directory if client/dist exists (supporting built templates)
+            let staticDir = templateDir;
+            if (fs.existsSync(path.join(templateDir, 'client', 'dist'))) {
+                staticDir = path.join(templateDir, 'client', 'dist');
             }
 
-            const templateDir = template.path;
-            let targetFilePath = path.join(templateDir, fileSubPath);
+            let targetFilePath = path.join(staticDir, fileSubPath);
 
             // Security: Prevent directory traversal
             const resolvedPath = path.resolve(targetFilePath);
-            if (!resolvedPath.startsWith(path.resolve(templateDir))) {
+            if (!resolvedPath.startsWith(path.resolve(staticDir))) {
                 return res.status(403).send("Access denied");
             }
 
             // Fallback for subpages (SPA support)
             if (!fs.existsSync(targetFilePath)) {
-                if (fileSubPath.includes('.') && !fileSubPath.endsWith('.html') && !fileSubPath.endsWith('.php')) {
-                    return res.status(404).send("File not found");
+                let resolvedAsset = false;
+                // If it contains a known static folder in its path, try to strip the routing prefix (e.g. admin/assets/foo -> assets/foo)
+                const knownFolders = ['assets', 'icons', 'images', 'js', 'css', 'fonts', 'favicon'];
+                for (const folder of knownFolders) {
+                    const index = fileSubPath.indexOf(`${folder}/`);
+                    if (index !== -1) {
+                        const strippedPath = fileSubPath.substring(index);
+                        const testPath = path.join(staticDir, strippedPath);
+                        if (fs.existsSync(testPath)) {
+                            targetFilePath = testPath;
+                            resolvedAsset = true;
+                            break;
+                        }
+                    }
                 }
-                targetFilePath = path.join(templateDir, 'index.html');
-                if (!fs.existsSync(targetFilePath)) {
-                    targetFilePath = path.join(templateDir, 'index.php');
+                
+                // Try resolving direct files in the root (like favicon.svg, logo.png) requested relatively from subpaths
+                if (!resolvedAsset) {
+                    const basename = path.basename(fileSubPath);
+                    const testPath = path.join(staticDir, basename);
+                    if (fs.existsSync(testPath)) {
+                        targetFilePath = testPath;
+                        resolvedAsset = true;
+                    }
                 }
-                if (!fs.existsSync(targetFilePath)) {
-                    return res.status(404).send("Template entry file not found");
+
+                if (!resolvedAsset) {
+                    if (fileSubPath.includes('.') && !fileSubPath.endsWith('.html') && !fileSubPath.endsWith('.php')) {
+                        return res.status(404).send("File not found");
+                    }
+                    targetFilePath = path.join(staticDir, 'index.html');
+                    if (!fs.existsSync(targetFilePath)) {
+                        targetFilePath = path.join(staticDir, 'index.php');
+                    }
+                    if (!fs.existsSync(targetFilePath)) {
+                        return res.status(404).send("Template entry file not found");
+                    }
                 }
                 fileSubPath = path.basename(targetFilePath);
             }
@@ -435,7 +669,8 @@ const templateController = {
             const textExtensions = [".html", ".php", ".js", ".css", ".json", ".xml", ".svg"];
 
             if (textExtensions.includes(ext)) {
-                let content = fs.readFileSync(targetFilePath, "utf8");
+                // Non-blocking async file read
+                let content = await fs.promises.readFile(targetFilePath, "utf8");
 
                 // Inject widget script if this is the entry page
                 const isEntryFile = path.basename(targetFilePath) === 'index.html' || path.basename(targetFilePath) === 'index.php';
@@ -473,39 +708,47 @@ const templateController = {
                     }
                 }
 
-                // Detect and rewrite absolute asset URL prefixes
-                const templatePrefixes = ["DRP_Doctor", templateId];
-
-                // Dynamically discover the template's base prefix (e.g. gym_trainer_portfolio) by scanning the entry file.
-                // This ensures assets referenced in JS/CSS files also get rewritten correctly.
-                const entryHtmlPath = path.join(templateDir, 'index.html');
-                const entryPhpPath = path.join(templateDir, 'index.php');
-                let entryContent = "";
-                if (fs.existsSync(entryHtmlPath)) {
-                    entryContent = fs.readFileSync(entryHtmlPath, "utf8");
-                } else if (fs.existsSync(entryPhpPath)) {
-                    entryContent = fs.readFileSync(entryPhpPath, "utf8");
+                // In-memory cache for dynamic prefix scanner (avoids reading entry HTML from disk recursively!)
+                if (!global.templatePrefixesCache) {
+                    global.templatePrefixesCache = {};
                 }
 
-                if (entryContent) {
-                    const match = entryContent.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
-                    if (match && match[1] && !templatePrefixes.includes(match[1])) {
-                        templatePrefixes.push(match[1]);
+                let templatePrefixes = global.templatePrefixesCache[templateId];
+                if (!templatePrefixes) {
+                    templatePrefixes = ["DRP_Doctor", templateId];
+
+                    const entryHtmlPath = path.join(templateDir, 'index.html');
+                    const entryPhpPath = path.join(templateDir, 'index.php');
+                    let entryContent = "";
+                    try {
+                        if (fs.existsSync(entryHtmlPath)) {
+                            entryContent = await fs.promises.readFile(entryHtmlPath, "utf8");
+                        } else if (fs.existsSync(entryPhpPath)) {
+                            entryContent = await fs.promises.readFile(entryPhpPath, "utf8");
+                        }
+                    } catch (e) {
+                        console.error("[Template Cache Loader] Error reading entry file for prefix discovery:", e);
                     }
+
+                    if (entryContent) {
+                        const match = entryContent.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
+                        if (match && match[1] && !templatePrefixes.includes(match[1])) {
+                            templatePrefixes.push(match[1]);
+                        }
+                    }
+
+                    if (!isEntryFile) {
+                        const fileMatch = content.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
+                        if (fileMatch && fileMatch[1] && !templatePrefixes.includes(fileMatch[1])) {
+                            templatePrefixes.push(fileMatch[1]);
+                        }
+                    }
+
+                    templatePrefixes.sort((a, b) => b.length - a.length);
+                    global.templatePrefixesCache[templateId] = templatePrefixes;
                 }
 
-                // Also check the current file content itself for self-contained declarations
-                const fileMatch = content.match(/(?:href|src)=["']\/([a-zA-Z0-9_-]+)\/(?:assets|favicon|logo|icons|js|css)/i);
-                if (fileMatch && fileMatch[1] && !templatePrefixes.includes(fileMatch[1])) {
-                    templatePrefixes.push(fileMatch[1]);
-                }
-
-                // Sort prefixes by length descending
-                templatePrefixes.sort((a, b) => b.length - a.length);
-
-                // Build a combined regex to do a single-pass rewrite to the Express render route.
-                // We use a negative lookbehind (?<!\/mybookings\/templates\/render) to prevent rewriting
-                // any prefix that is already part of the target replacement path.
+                // Rewrite prefixes
                 templatePrefixes.forEach((prefix) => {
                     const regex = new RegExp('(?<!\\/mybookings\\/templates\\/render)\\/' + prefix + '(?=[\\/"\'])', 'g');
                     content = content.replace(regex, `/mybookings/templates/render/${templateId}/${businessId}`);
@@ -585,11 +828,9 @@ const templateController = {
                 return res.status(400).json({ success: false, message: "Template display name and category are required." });
             }
 
-            // Generate template ID slug
-            const templateId = displayName
-                .toLowerCase()
-                .replace(/[^a-z0-9]+/g, "_")
-                .replace(/(^_+|_+$)/g, "");
+            // Get original zip file name (without extension) as templateId
+            const zipBaseName = path.parse(req.file.originalname).name;
+            const templateId = zipBaseName;
 
             // Verify if template already exists
             const existing = await TemplateProject.findOne({ where: { templateId } });
@@ -597,7 +838,7 @@ const templateController = {
                 if (req.file.path && fs.existsSync(req.file.path)) {
                     fs.unlinkSync(req.file.path);
                 }
-                return res.status(400).json({ success: false, message: `A template with ID '${templateId}' (derived from '${displayName}') already exists.` });
+                return res.status(400).json({ success: false, message: `A template with ID '${templateId}' (derived from ZIP name '${req.file.originalname}') already exists.` });
             }
 
             const extractPath = path.join(BASE_TEMPLATES_DIR, templateId);
@@ -626,12 +867,11 @@ const templateController = {
 
             // Create template entry in MySQL
             const template = await TemplateProject.create({
-                id: templateId,
                 templateId: templateId,
                 displayName,
                 category,
                 type: type || 'website',
-                path: extractPath,
+                path: `dist/Templates/${templateId}`,
                 icon: iconUrlPath,
                 isActive: true
             });

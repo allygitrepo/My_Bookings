@@ -194,6 +194,24 @@ const WebsiteGenerator = () => {
         }
     };
 
+    const currentBiz = businesses.find(b => String(b.id) === String(selectedBusinessId));
+    const hasUnsavedChanges = currentBiz && (
+        settings.selected_template !== (currentBiz.selected_template || '') ||
+        settings.slug !== (currentBiz.slug || '') ||
+        settings.website_enabled !== (currentBiz.website_enabled || false) ||
+        settings.website_type !== (currentBiz.website_type || 'website') ||
+        settings.description !== (currentBiz.description || '')
+    );
+
+    const handleVisitLiveWebsite = (e) => {
+        if (hasUnsavedChanges) {
+            e.preventDefault();
+            toast.error("Please click 'Save Changes' before viewing the live website!");
+            return;
+        }
+        window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank');
+    };
+
     const renderTemplatePreview = () => {
         if (!previewData) return null;
 
@@ -639,7 +657,7 @@ const WebsiteGenerator = () => {
                                                 <Tooltip title="Visit Live Website">
                                                     <IconButton
                                                         size="small"
-                                                        onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                        onClick={handleVisitLiveWebsite}
                                                         sx={{ p: 0.5, color: 'primary.main' }}
                                                     >
                                                         <OpenIcon sx={{ fontSize: '1.1rem' }} />
@@ -664,7 +682,7 @@ const WebsiteGenerator = () => {
                                                             bgcolor: 'rgba(99,102,241,0.05)'
                                                         }
                                                     }}
-                                                    onClick={() => window.open(`/${encodeBusinessId(selectedBusinessId)}`, '_blank')}
+                                                    onClick={handleVisitLiveWebsite}
                                                 >
                                                     {window.location.origin}/{encodeBusinessId(selectedBusinessId)}
                                                 </Typography>

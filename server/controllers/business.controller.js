@@ -221,6 +221,90 @@ const businessController = {
 
             await row.update(safeBody);
 
+            // Replicate template folder if custom template is chosen/updated
+            if (safeBody.selected_template) {
+                // Execute replication asynchronously to prevent blocking the Node event loop
+                (async () => {
+                    try {
+                        const TemplateProject = require("../models/templateProject.model");
+                        const BusinessTemplate = require("../models/businessTemplate.model");
+                        const fs = require("fs").promises;
+                        const path = require("path");
+
+                        const template = await TemplateProject.findOne({ where: { templateId: safeBody.selected_template } });
+                        if (template) {
+                            const businessId = row.id;
+                            const businessKey = Buffer.from(`MYB-${businessId}-777`).toString('base64').replace(/=/g, '');
+                            const numericId = template.id;
+                            const templateId = template.templateId;
+
+                            const clientDistPath = path.resolve(__dirname, "../../client/dist");
+                            const srcPath = path.isAbsolute(template.path)
+                                ? template.path
+                                : path.resolve(__dirname, "../../client", template.path);
+
+                            const destFolderName = `${businessKey}_${numericId}`;
+                            const destPath = path.join(clientDistPath, "User Templates", destFolderName);
+
+                            // Check source existence asynchronously
+                            const srcExists = await fs.stat(srcPath).then(() => true).catch(() => false);
+                            if (srcExists) {
+                                // Ensure destination parent directory exists
+                                const userTemplatesParentDir = path.join(clientDistPath, "User Templates");
+                                await fs.mkdir(userTemplatesParentDir, { recursive: true });
+
+                                // Remove existing folder if it exists asynchronously
+                                const destExists = await fs.stat(destPath).then(() => true).catch(() => false);
+                                if (destExists) {
+                                    await fs.rm(destPath, { recursive: true, force: true });
+                                }
+
+                                // Async non-blocking directory copy
+                                await fs.cp(srcPath, destPath, { recursive: true });
+
+                                // Patch SQLite config on replicated templates
+                                try {
+                                    const templateController = require("./template.controller");
+                                    if (templateController && typeof templateController.patchTemplateDatabaseConfig === 'function') {
+                                        templateController.patchTemplateDatabaseConfig(destPath);
+                                    }
+                                } catch (patchErr) {
+                                    console.error("[Replication Patch Error] Failed to patch isolated SQLite:", patchErr);
+                                }
+
+                                // Save relative path to DB
+                                const tempPathDb = `dist/User Templates/${destFolderName}`;
+                                
+                                let bizTemplateRecord = await BusinessTemplate.findOne({
+                                    where: { business_id: businessId }
+                                });
+
+                                if (bizTemplateRecord) {
+                                    await bizTemplateRecord.update({
+                                        temp_id: numericId.toString(),
+                                        business_key: businessKey,
+                                        temp_path: tempPathDb,
+                                        updated_at: new Date()
+                                    });
+                                } else {
+                                    await BusinessTemplate.create({
+                                        temp_id: numericId.toString(),
+                                        business_id: businessId,
+                                        business_key: businessKey,
+                                        temp_path: tempPathDb
+                                    });
+                                }
+                                console.log(`[Replication Success] Template successfully replicated asynchronously to ${destPath}`);
+                            } else {
+                                console.warn(`[Replication Warning] Source template path does not exist: ${srcPath}`);
+                            }
+                        }
+                    } catch (repErr) {
+                        console.error("[Replication Error] Failed to replicate template folder asynchronously:", repErr);
+                    }
+                })();
+            }
+
             // If it's single location, sync the location record
             if (!row.has_multiple_locations && (safeBody.address || safeBody.city || safeBody.state || safeBody.business_name)) {
                 const mainLoc = await Location.findOne({ where: { business_id: row.id, status: true } });

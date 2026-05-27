@@ -18,8 +18,19 @@ const connectDB = async () => {
         await sequelize.authenticate();
         console.log('✅ Database connected successfully');
 
-        await sequelize.sync({ alter: true });
-        console.log('Tables are created successfully');
+        try {
+            await sequelize.sync({ alter: true });
+            console.log('Tables are created successfully');
+        } catch (syncErr) {
+            console.warn('⚠️ Standard DB sync failed due to legacy table limits. Syncing BusinessTemplate targetedly...');
+            try {
+                const BusinessTemplate = require("../models/businessTemplate.model");
+                await BusinessTemplate.sync({ alter: true });
+                console.log('✅ Targeted business_templates table sync completed successfully');
+            } catch (targetErr) {
+                console.error('❌ Targeted sync failed:', targetErr);
+            }
+        }
     } catch (error) {
         console.error('Unable to connect to the database:', error);
     }

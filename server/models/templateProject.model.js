@@ -5,8 +5,9 @@ const TemplateProject = sequelize.define(
     "template_projects",
     {
         id: {
-            type: DataTypes.STRING,
+            type: DataTypes.INTEGER,
             primaryKey: true,
+            autoIncrement: true,
             allowNull: false
         },
         templateId: {

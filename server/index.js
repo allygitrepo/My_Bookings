@@ -47,7 +47,7 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-app.use('/My_Bookings_Templates', express.static(path.join(__dirname, 'Templates')));
+app.use('/My_Bookings_Templates', express.static(path.join(__dirname, '../client/dist/Templates')));
 
 // Serve the local widget.js for development
 app.get('/widget.js', (req, res) => {
