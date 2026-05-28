@@ -503,7 +503,7 @@ const templateController = {
                     }
                     const widgetKey = apiKeyRecord.api_key;
                     const widgetUrl = getWidgetScriptUrl(req);
-                    
+
                     let scriptTag = `\n<!-- Platform Booking Widget Script Injected -->\n<script src="${widgetUrl}" data-business-id="${widgetKey}" data-theme="light" async></script>\n`;
                     if (req.query.preview === 'true') {
                         scriptTag += `<style>button[aria-label="book-now"], .MuiFab-root, #booking-widget-root button.MuiFab-root { display: none !important; }</style>\n`;
@@ -654,15 +654,14 @@ const templateController = {
             }
 
             const discoveredIcon = response.data.icon || null;
-            const iconUrlPath = discoveredIcon ? `/My_Bookings_Templates/${templateId}/${discoveredIcon}` : null;
+            const iconUrlPath = discoveredIcon ? `/Templates/${templateId}/${discoveredIcon}` : null;
 
-            // Create template entry in MySQL
             const template = await TemplateProject.create({
                 templateId: templateId,
                 displayName,
                 category,
                 type: type || 'website',
-                path: `dist/Templates/${templateId}`,
+                path: `Templates/${templateId}`,
                 icon: iconUrlPath,
                 isActive: true
             });
