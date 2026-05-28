@@ -238,7 +238,7 @@ const businessController = {
                             const numericId = template.id;
                             const templateId = template.templateId;
 
-                            const destFolderName = `${businessKey}_${numericId}`;
+                            const destFolderName = `${businessKey}`;
 
                             const godaddyUploadUrl = process.env.GODADDY_UPLOAD_URL || "https://mybookings.allysoftsolutions.com/extractor.php";
                             const godaddyUploadToken = process.env.GODADDY_UPLOAD_TOKEN || "mybookings_secret_upload_token_2026";

@@ -359,36 +359,8 @@ const templateController = {
                             await bt.update({ temp_id: template.id.toString() });
                         }
 
-                        // If folderName contains templateId slug format instead of numeric ID
-                        if (folderName && folderName.includes('_')) {
-                            const lastPart = folderName.split('_').pop();
-                            if (isNaN(lastPart)) {
-                                console.log(`[Migration] Legacy business template physical folder format found: ${bt.temp_path}`);
-                                const correctFolderName = `${bt.business_key}_${template.id}`;
-                                const correctPath = `dist/User_Templates/${correctFolderName}`;
-
-                                const clientDistPath = path.resolve(__dirname, "../../client/dist");
-                                const legacyFolderFullPath = path.join(clientDistPath, "User_Templates", folderName);
-                                const correctFolderFullPath = path.join(clientDistPath, "User_Templates", correctFolderName);
-
-                                if (fs.existsSync(legacyFolderFullPath)) {
-                                    try {
-                                        if (fs.existsSync(correctFolderFullPath)) {
-                                            fs.rmSync(correctFolderFullPath, { recursive: true, force: true });
-                                        }
-                                        fs.renameSync(legacyFolderFullPath, correctFolderFullPath);
-                                        console.log(`[Migration] Successfully renamed physical folder from ${folderName} to ${correctFolderName}`);
-                                    } catch (renameErr) {
-                                        console.error(`[Migration Error] Failed to rename physical folder:`, renameErr);
-                                    }
-                                }
-
-                                await bt.update({
-                                    temp_path: correctPath
-                                });
-                                console.log(`[Migration] Updated DB business_templates ID ${bt.id} path to ${correctPath}`);
-                            }
-                        }
+                        // Migration logic to rename legacy folders has been removed
+                        // as per the requirement to keep User_Templates/<business_key>
                     }
                 }
             } catch (migError) {
