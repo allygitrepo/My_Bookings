@@ -378,15 +378,29 @@ const DOC_DATA = [
         icon: <Layout size={20} />,
         sections: [
             {
-                subtitle: "Choosing a Template",
+                subtitle: "How to Use the Website Builder Module",
                 content: (
-                    <p>Don't have a website yet? No problem! Go to the <strong>Website Builder</strong> section. Here, you can select from beautiful, pre-designed templates tailored for service businesses. Just click "Apply", and your business instantly has a professional website where customers can book you.</p>
-                )
-            },
-            {
-                subtitle: "Embedding on Your Own Site",
-                content: (
-                    <p>Already have a WordPress, Wix, or custom website? We provide a simple line of code (a "Widget"). Just copy and paste it into your website, and our seamless booking calendar will appear right on your own page!</p>
+                    <>
+                        <p>Our powerful <strong>Website Builder</strong> lets you design, customize, and launch a stunning public booking website for your business in less than a minute — with absolutely zero coding required!</p>
+                        
+                        <p>Follow this simple step-by-step flow to get your website up and running:</p>
+                        
+                        <ol className="doc-list">
+                            <li><strong>Select Your Business:</strong> If you manage multiple business profiles, select the one you want to customize from the select dropdown.</li>
+                            <li><strong>Choose Site Mode:</strong> 
+                                <ul>
+                                    <li>Select <strong>Website Mode</strong> for standard businesses (ideal for multiple service categories and multiple locations).</li>
+                                    <li>Select <strong>Portfolio Mode</strong> if you are a solo provider or showcase an artist portfolio.</li>
+                                </ul>
+                            </li>
+                            <li><strong>Add a Professional Bio:</strong> Write a welcoming introduction paragraph. This will be beautifully displayed as the primary bio/summary on your homepage.</li>
+                            <li><strong>Choose a Template:</strong> Browse the carousel of pre-designed templates matching your business category. Click on any template thumbnail to select it.</li>
+                            <li><strong>Live Interactive Preview:</strong> The bottom panel renders a fully-functional <strong>Live Preview</strong> of your site. Switch between the <strong>Desktop</strong> and <strong>Mobile</strong> toggle views to see exactly how your site adapts to different screens.</li>
+                            <li><strong>Publish Your Site:</strong> Toggle the <strong>Live/Draft Switch</strong> to "Live" to publish it, or "Draft" to keep it hidden while editing. Your website is instantly accessible at your unique public link!</li>
+                            <li><strong>Save Changes:</strong> Click the primary <strong>Save Changes</strong> button at the bottom right to apply all updates to your live site in real-time.</li>
+                            <li><strong>Accessing Your Customizer Panel (/admin):</strong> To manage your reservations or customize your active sections (such as updating the hero slider, adding new treatments, managing team members, or changing business details), simply append <strong>/admin</strong> to the end of your public website URL (e.g. <code>https://yourdomain.com/your-business-key/admin</code>). Log in using your admin credentials to launch the live-edit dashboard!</li>
+                        </ol>
+                    </>
                 )
             }
         ]
@@ -492,8 +506,23 @@ const DOC_DATA = [
 const Documentation = () => {
     const [activeId, setActiveId] = useState(DOC_DATA[0].id);
 
+    const scrollToSection = (id) => {
+        setActiveId(id); // Instantly highlight the button
+        const element = document.getElementById(id);
+        if (element) {
+            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    };
+
     useEffect(() => {
-        window.scrollTo(0, 0);
+        const hash = window.location.hash ? window.location.hash.substring(1) : '';
+        if (hash) {
+            setTimeout(() => {
+                scrollToSection(hash);
+            }, 300);
+        } else {
+            window.scrollTo(0, 0);
+        }
 
         const observerOptions = {
             root: null, // Use the viewport as the root
@@ -521,14 +550,6 @@ const Documentation = () => {
             observer.disconnect();
         };
     }, []);
-
-    const scrollToSection = (id) => {
-        setActiveId(id); // Instantly highlight the button
-        const element = document.getElementById(id);
-        if (element) {
-            element.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    };
 
     return (
         <div style={{
