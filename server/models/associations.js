@@ -12,7 +12,6 @@ const Customer = require("./customer.model");
 const BookingService = require("./bookingService.model");
 const Package = require("./package.model");
 const UserSubscription = require("./userSubscription.model");
-const TemplateProject = require("./templateProject.model");
 
 // Staff <-> Business (Many-to-One)
 Staff.belongsTo(Business, { foreignKey: 'business_id' });
@@ -89,5 +88,5 @@ UserSubscription.belongsTo(Package, { foreignKey: 'package_id', as: 'package' })
 module.exports = { 
     Staff, Location, StaffLocation, StaffAvailability, 
     Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService,
-    Package, UserSubscription, TemplateProject
+    Package, UserSubscription
 };

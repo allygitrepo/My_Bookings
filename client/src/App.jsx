@@ -11,7 +11,6 @@ import { SearchProvider } from './context/SearchContext';
 import { BusinessProvider } from './context/BusinessContext';
 import { SubscriptionProvider } from './context/SubscriptionContext';
 import axiosInstance from './api/axiosInstance';
-
 import Dashboard from './pages/Dashboard';
 import Businesses from './pages/Businesses';
 import Locations from './pages/Locations';
@@ -46,8 +45,6 @@ import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
 import PortalPackages from './pages/portal/PortalPackages';
 import AdminPayments from './pages/portal/AdminPayments';
-import PortalTemplates from './pages/portal/PortalTemplates';
-import PortalSettlements from './pages/portal/PortalSettlements';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -135,7 +132,6 @@ function App() {
                         <Route path="/portal/create-admin" element={<CreateAdmin />} />
                         <Route path="/portal/packages" element={<PortalPackages />} />
                         <Route path="/portal/payments" element={<AdminPayments />} />
-                        <Route path="/portal/templates" element={<PortalTemplates />} />
                         <Route path="/portal/settlements" element={<PortalSettlements />} />
                     </Route>
 

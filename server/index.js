@@ -1,7 +1,5 @@
 const express = require("express");
 const { connectDB } = require("./config/db");
-// Ensure database associations and all models are registered prior to DB sync
-require("./models/associations");
 const cors = require("cors");
 const path = require("path");
 const fs = require("fs");
@@ -21,13 +19,6 @@ if (!fs.existsSync(uploadsDir)) {
 // Connect Database and Sync Models
 connectDB().then(() => {
     createDefaultAdmin();
-    // Auto-flatten and update existing template pools on server boot
-    try {
-        const templateController = require("./controllers/template.controller");
-        templateController.initTemplates();
-    } catch (err) {
-        console.error("Failed to initialize templates on startup:", err);
-    }
 });
 
 // Middlewares
