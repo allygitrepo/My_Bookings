@@ -13,3 +13,14 @@ export const uploadTemplateZip = async (formData) => {
     });
     return response.data;
 };
+
+export const deleteTemplate = async (templateId) => {
+    const response = await axiosInstance.delete(`/templates/${templateId}`);
+    return response.data;
+};
+
+export const updateTemplate = async (templateId, data) => {
+    const response = await axiosInstance.put(`/templates/${templateId}`, data);
+    return response.data;
+};
+

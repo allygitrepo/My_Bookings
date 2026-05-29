@@ -6,7 +6,7 @@ import {
     Tooltip, Chip, useTheme, createTheme, ThemeProvider, Avatar, Divider,
     CircularProgress
 } from '@mui/material';
-import { getTemplates, uploadTemplateZip } from '../../api/template.api';
+import { getTemplates, uploadTemplateZip, deleteTemplate, updateTemplate } from '../../api/template.api';
 import {
     Palette as TemplateIcon,
     Close as CloseIcon,
@@ -88,6 +88,10 @@ const PortalTemplates = () => {
         fetchTemplatesList();
     }, []);
 
+    // Loading states for async operations
+    const [deletingId, setDeletingId] = useState(null);
+    const [updatingTemplate, setUpdatingTemplate] = useState(false);
+
     // Cards inline form edit state (to simulate modification)
     const [cardEdits, setCardEdits] = useState({});
 
@@ -132,21 +136,30 @@ const PortalTemplates = () => {
         setEditModalOpen(true);
     };
 
-    const handleUpdateTemplate = (e) => {
+    const handleUpdateTemplate = async (e) => {
         e.preventDefault();
-        setTemplates(prev => prev.map(tmpl => {
-            if (tmpl.id === editingTemplate.id) {
-                return {
-                    ...tmpl,
-                    name: editingTemplate.name,
-                    category: editingTemplate.category,
-                    bizCategory: editingTemplate.bizCategory
-                };
+        setUpdatingTemplate(true);
+        try {
+            const response = await updateTemplate(editingTemplate.id, {
+                name: editingTemplate.name,
+                category: editingTemplate.category
+            });
+            if (response.success) {
+                setTemplates(prev => prev.map(tmpl =>
+                    tmpl.id === editingTemplate.id
+                        ? { ...tmpl, ...response.data }
+                        : tmpl
+                ));
+                toast.success('Template updated successfully!');
+                setEditModalOpen(false);
+            } else {
+                toast.error(response.message || 'Failed to update template.');
             }
-            return tmpl;
-        }));
-        toast.success(`Template details updated successfully!`);
-        setEditModalOpen(false);
+        } catch (error) {
+            toast.error(error.response?.data?.message || error.message || 'Error updating template.');
+        } finally {
+            setUpdatingTemplate(false);
+        }
     };
 
     // Delete Template Confirmation State
@@ -223,10 +236,21 @@ const PortalTemplates = () => {
     };
 
     // Confirm Delete Action
-    const confirmDelete = () => {
-        if (templateToDelete) {
-            setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
-            toast.error(`Template ${templateToDelete.name} has been deleted.`);
+    const confirmDelete = async () => {
+        if (!templateToDelete) return;
+        setDeletingId(templateToDelete.id);
+        try {
+            const response = await deleteTemplate(templateToDelete.id);
+            if (response.success) {
+                setTemplates(prev => prev.filter(t => t.id !== templateToDelete.id));
+                toast.success(`Template "${templateToDelete.name}" deleted successfully.`);
+            } else {
+                toast.error(response.message || 'Failed to delete template.');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || error.message || 'Error deleting template.');
+        } finally {
+            setDeletingId(null);
             setDeleteConfirmOpen(false);
             setTemplateToDelete(null);
         }
@@ -891,8 +915,17 @@ const PortalTemplates = () => {
                         </Typography>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setDeleteConfirmOpen(false)} sx={{ color: 'text.secondary' }}>Cancel</Button>
-                        <Button variant="contained" color="error" onClick={confirmDelete} sx={{ borderRadius: '10px', fontWeight: 700 }}>Delete</Button>
+                        <Button onClick={() => setDeleteConfirmOpen(false)} disabled={!!deletingId} sx={{ color: 'text.secondary' }}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            onClick={confirmDelete}
+                            disabled={!!deletingId}
+                            startIcon={deletingId ? <CircularProgress size={16} color="inherit" /> : null}
+                            sx={{ borderRadius: '10px', fontWeight: 700 }}
+                        >
+                            {deletingId ? 'Deleting...' : 'Delete'}
+                        </Button>
                     </DialogActions>
                 </Dialog>
 
@@ -1063,6 +1096,8 @@ const PortalTemplates = () => {
                             <Button
                                 type="submit"
                                 variant="contained"
+                                disabled={updatingTemplate}
+                                startIcon={updatingTemplate ? <CircularProgress size={16} color="inherit" /> : null}
                                 sx={{
                                     borderRadius: '10px',
                                     fontWeight: 800,
@@ -1075,7 +1110,7 @@ const PortalTemplates = () => {
                                     '&:hover': { bgcolor: '#1d4ed8', boxShadow: 'none' }
                                 }}
                             >
-                                Save Changes
+                                {updatingTemplate ? 'Saving...' : 'Save Changes'}
                             </Button>
                         </DialogActions>
                     </form>

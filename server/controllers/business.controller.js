@@ -2,8 +2,10 @@ const { Op } = require("sequelize");
 const Business = require("../models/business.model");
 const User = require("../models/user.model");
 const Location = require("../models/location.model");
+const Template = require("../models/template.model");
 const slugify = require("../uttils/slugify");
 const whatsappService = require("../services/whatsapp.service");
+const axios = require("axios");
 
 
 // Helper to ensure slug uniqueness
@@ -217,6 +219,52 @@ const businessController = {
             // Regenerate slug if name changed or if it was null
             if (safeBody.business_name && (safeBody.business_name !== row.business_name || !row.slug)) {
                 safeBody.slug = await generateUniqueSlug(safeBody.business_name, row.id);
+            }
+
+            // Check if template changed and if the new selected template is external
+            if (safeBody.selected_template && (safeBody.selected_template !== row.selected_template || !row.business_key)) {
+                const targetTemplate = await Template.findOne({ where: { template_id: safeBody.selected_template } });
+                if (targetTemplate && targetTemplate.is_external) {
+                    // Generate unique business_key if not already set
+                    let businessKey = row.business_key;
+                    if (!businessKey) {
+                        const randomSuffix = Math.floor(100000 + Math.random() * 900000);
+                        const cleanSlug = row.slug || safeBody.slug || slugify(safeBody.business_name || row.business_name);
+                        businessKey = `${cleanSlug}_${randomSuffix}`;
+                        safeBody.business_key = businessKey;
+                    }
+                    safeBody.is_external_template = true;
+
+                    // Trigger GoDaddy replication
+                    const EXTRACTOR_URL = process.env.EXTRACTOR_URL || "http://localhost/My_Bookings/server/public/extractor.php";
+                    const EXTRACTOR_TOKEN = process.env.WA_MITRA_MASTER_TOKEN || "mitra_6fdfa3eee71f09da3943de949f6e138746325f10ddded706";
+
+                    const params = new URLSearchParams();
+                    params.append("action", "replicate");
+                    params.append("template_id", targetTemplate.template_id);
+                    params.append("business_key", businessKey);
+                    params.append("business_id", row.id);
+                    
+                    // Database credentials
+                    params.append("db_host", process.env.DB_HOST || "localhost");
+                    params.append("db_user", process.env.DB_USER || "root");
+                    params.append("db_password", process.env.DB_PASSWORD || "");
+                    params.append("db_name", process.env.DB_NAME || "mybookings");
+                    params.append("db_port", process.env.DB_PORT || "3306");
+
+                    const repResponse = await axios.post(EXTRACTOR_URL, params, {
+                        headers: {
+                            "X-Extractor-Token": EXTRACTOR_TOKEN,
+                            "Content-Type": "application/x-www-form-urlencoded"
+                        }
+                    });
+
+                    if (!repResponse.data || !repResponse.data.success) {
+                        throw new Error(repResponse.data?.message || "Failed to replicate template on shared hosting.");
+                    }
+                } else {
+                    safeBody.is_external_template = false;
+                }
             }
 
             await row.update(safeBody);

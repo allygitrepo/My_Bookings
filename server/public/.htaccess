@@ -1,0 +1,8 @@
+# Enable URL Rewriting
+RewriteEngine On
+
+# Rewrite requests for site/<business_key>/<assets_or_files> to user_templates/<business_key>/<assets_or_files>
+RewriteRule ^site/([a-zA-Z0-9_-]+)/(.*)$ user_templates/$1/$2 [L,QSA]
+
+# Rewrite requests for site/<business_key> or site/<business_key>/ to user_templates/<business_key>/
+RewriteRule ^site/([a-zA-Z0-9_-]+)/?$ user_templates/$1/ [L,QSA]

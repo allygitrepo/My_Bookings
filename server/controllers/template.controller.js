@@ -114,6 +114,59 @@ const templateController = {
                 }
             }
         }
+    },
+
+    deleteTemplate: async (req, res) => {
+        const { templateId } = req.params;
+        try {
+            const template = await Template.findOne({ where: { template_id: templateId } });
+            if (!template) {
+                return res.status(404).json({ success: false, message: 'Template not found.' });
+            }
+
+            // Tell the extractor to delete the folder (best-effort, not blocking)
+            try {
+                const formData = new FormData();
+                formData.append('action', 'delete');
+                formData.append('template_id', templateId);
+                await axios.post(EXTRACTOR_URL, formData, {
+                    headers: { 'X-Extractor-Token': EXTRACTOR_TOKEN }
+                });
+            } catch (extractErr) {
+                console.warn('Extractor delete warning (non-fatal):', extractErr.message);
+            }
+
+            // Delete DB record
+            await template.destroy();
+
+            res.json({ success: true, message: `Template '${templateId}' deleted successfully.` });
+        } catch (error) {
+            console.error('Delete Template Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    updateTemplate: async (req, res) => {
+        const { templateId } = req.params;
+        const { name, category, version } = req.body;
+        try {
+            const template = await Template.findOne({ where: { template_id: templateId } });
+            if (!template) {
+                return res.status(404).json({ success: false, message: 'Template not found.' });
+            }
+
+            if (name !== undefined) template.name = name;
+            if (category !== undefined) template.category = category;
+            if (version !== undefined) template.version = version;
+            template.updated_at = new Date();
+            await template.save();
+
+            const data = template.toJSON();
+            res.json({ success: true, message: 'Template updated successfully.', data: { ...data, id: data.template_id } });
+        } catch (error) {
+            console.error('Update Template Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
 

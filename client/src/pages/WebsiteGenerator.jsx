@@ -17,6 +17,8 @@ import {
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
 import { getBusinesses, updateBusiness, getBusinessById } from '../api/business.api';
+import { getTemplates } from '../api/template.api';
+import { Chip } from '@mui/material';
 import TemplateMinimal from '../templates/TemplateMinimal';
 import TemplatePremium from '../templates/TemplatePremium';
 import TemplateModern from '../templates/TemplateModern';
@@ -41,12 +43,14 @@ const WebsiteGenerator = () => {
         selected_template: 'template1',
         website_enabled: false,
         website_type: 'website',
-        description: ''
+        description: '',
+        business_key: ''
     });
 
     // Preview Data State (Full business data including services/locations)
     const [previewData, setPreviewData] = useState(null);
     const [viewMode, setViewMode] = useState('desktop');
+    const [templates, setTemplates] = useState([]);
 
     const fetchBusinesses = async () => {
         setLoading(true);
@@ -67,7 +71,8 @@ const WebsiteGenerator = () => {
                         selected_template: currentBiz.selected_template || 'template1',
                         website_enabled: currentBiz.website_enabled || false,
                         website_type: currentBiz.website_type || 'website',
-                        description: currentBiz.description || ''
+                        description: currentBiz.description || '',
+                        business_key: currentBiz.business_key || ''
                     });
                 }
             }
@@ -102,6 +107,20 @@ const WebsiteGenerator = () => {
     }, []);
 
     useEffect(() => {
+        const fetchTemplatesList = async () => {
+            try {
+                const response = await getTemplates();
+                if (response.success) {
+                    setTemplates(response.data);
+                }
+            } catch (error) {
+                console.error('Failed to load templates', error);
+            }
+        };
+        fetchTemplatesList();
+    }, []);
+
+    useEffect(() => {
         if (selectedBusinessId && businesses.length > 0) {
             fetchPreviewData(selectedBusinessId);
         }
@@ -117,7 +136,8 @@ const WebsiteGenerator = () => {
                 selected_template: biz.selected_template || 'template1',
                 website_enabled: biz.website_enabled || false,
                 website_type: biz.website_type || 'website',
-                description: biz.description || ''
+                description: biz.description || '',
+                business_key: biz.business_key || ''
             });
         }
     };
@@ -160,6 +180,47 @@ const WebsiteGenerator = () => {
             isPreview: true,
             viewMode: viewMode
         };
+
+        const isExternal = !['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'].includes(settings.selected_template);
+        if (isExternal) {
+            const biz = businesses.find(b => String(b.id) === String(selectedBusinessId));
+            const businessKey = biz ? biz.business_key : settings.business_key;
+            const siteUrl = businessKey 
+                ? `http://localhost/My_Bookings/server/public/site/${businessKey}`
+                : null;
+
+            return (
+                <Box sx={{ p: 5, textAlign: 'center', color: 'text.secondary', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100%', gap: 2 }}>
+                    <WebsiteIcon sx={{ fontSize: 80, color: 'primary.main', opacity: 0.8, mb: 1 }} />
+                    <Typography variant="h5" fontWeight={900} color="text.primary">
+                        External Custom Template Active
+                    </Typography>
+                    <Typography variant="body2" sx={{ maxWidth: 450, mx: 'auto', mb: 2 }}>
+                        Your website is running as an isolated PHP template. All booking widgets, services, and locations sync dynamically.
+                    </Typography>
+                    {siteUrl ? (
+                        <Button
+                            variant="contained"
+                            startIcon={<OpenIcon />}
+                            onClick={() => window.open(siteUrl, '_blank')}
+                            sx={{
+                                borderRadius: '10px',
+                                textTransform: 'none',
+                                fontWeight: 800,
+                                px: 3,
+                                py: 1
+                            }}
+                        >
+                            Open Live Site
+                        </Button>
+                    ) : (
+                        <Typography variant="caption" color="warning.main" fontWeight={700}>
+                            ⚠️ Publish changes to generate your live site URL.
+                        </Typography>
+                    )}
+                </Box>
+            );
+        }
 
         switch (settings.selected_template) {
             case 'template1': return <TemplateMinimal data={displayData} />;
@@ -319,14 +380,27 @@ const WebsiteGenerator = () => {
                                         5. Choose Template
                                     </Typography>
                                     <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 1.5 }}>
-                                        {(settings.website_type === 'portfolio' ? [
-                                            { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png' },
-                                            { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png' },
-                                            { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png' },
-                                        ] : [
-                                            { id: 'template1', name: 'Minimal', img: '/templates/minimal.png' },
-                                            { id: 'template2', name: 'Premium', img: '/templates/premium.png' },
-                                            { id: 'template3', name: 'Modern', img: '/templates/modern.png' },
+                                        {([
+                                            // Built-in templates
+                                            ...(settings.website_type === 'portfolio' ? [
+                                                { id: 'portfolio1', name: 'Studio', img: '/templates/studio.png', category: 'portfolio', is_external: false },
+                                                { id: 'portfolio2', name: 'Grid', img: '/templates/grid.png', category: 'portfolio', is_external: false },
+                                                { id: 'portfolio3', name: 'Creative', img: '/templates/creative.png', category: 'portfolio', is_external: false },
+                                            ] : [
+                                                { id: 'template1', name: 'Minimal', img: '/templates/minimal.png', category: 'website', is_external: false },
+                                                { id: 'template2', name: 'Premium', img: '/templates/premium.png', category: 'website', is_external: false },
+                                                { id: 'template3', name: 'Modern', img: '/templates/modern.png', category: 'website', is_external: false },
+                                            ]),
+                                            // Dynamic templates from DB
+                                            ...templates
+                                                .filter(t => t.category === settings.website_type)
+                                                .map(t => ({
+                                                    id: t.id,
+                                                    name: t.name,
+                                                    img: t.img || null,
+                                                    category: t.category,
+                                                    is_external: true
+                                                }))
                                         ]).map((tmpl) => {
                                             const isSelected = settings.selected_template === tmpl.id;
                                             return (
@@ -352,11 +426,12 @@ const WebsiteGenerator = () => {
                                                         borderRadius: 1.5,
                                                         overflow: 'hidden',
                                                         aspectRatio: '1/1',
-                                                        boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none'
+                                                        boxShadow: isSelected ? '0 8px 16px rgba(99,102,241,0.15)' : 'none',
+                                                        position: 'relative'
                                                     }}>
                                                         <CardMedia
                                                             component="img"
-                                                            image={tmpl.img}
+                                                            image={tmpl.img || (tmpl.category === 'portfolio' ? '/templates/studio.png' : '/templates/minimal.png')}
                                                             sx={{
                                                                 width: '100%',
                                                                 height: '100%',
@@ -367,6 +442,22 @@ const WebsiteGenerator = () => {
                                                                 transition: 'all 0.3s'
                                                             }}
                                                         />
+                                                        {tmpl.is_external && (
+                                                            <Chip 
+                                                                label="Custom" 
+                                                                size="small" 
+                                                                color="primary" 
+                                                                sx={{ 
+                                                                    position: 'absolute', 
+                                                                    top: 6, 
+                                                                    left: 6, 
+                                                                    height: 18, 
+                                                                    fontSize: '0.6rem', 
+                                                                    fontWeight: 800,
+                                                                    borderRadius: '4px'
+                                                                }} 
+                                                            />
+                                                        )}
                                                     </Box>
                                                     {isSelected && (
                                                         <Box sx={{

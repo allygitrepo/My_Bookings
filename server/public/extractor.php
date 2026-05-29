@@ -271,6 +271,49 @@ if ($action === 'replicate') {
     exit;
 }
 
+if ($action === 'delete') {
+    $templateId = isset($_POST['template_id']) ? trim($_POST['template_id']) : '';
+    if (empty($templateId)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Missing template_id parameter.'
+        ]);
+        exit;
+    }
+
+    // Safety regex check to avoid directory traversal
+    if (!preg_match('/^[a-zA-Z0-9_-]+$/', $templateId)) {
+        http_response_code(400);
+        echo json_encode([
+            'success' => false,
+            'message' => 'Invalid template_id format.'
+        ]);
+        exit;
+    }
+
+    $targetDir = $templatesDir . '/' . $templateId;
+
+    if (!file_exists($targetDir)) {
+        // Directory doesn't exist - still success (idempotent)
+        echo json_encode([
+            'success' => true,
+            'message' => 'Template directory did not exist, nothing to delete.',
+            'template_id' => $templateId
+        ]);
+        exit;
+    }
+
+    rrmdir($targetDir);
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Template directory deleted successfully.',
+        'template_id' => $templateId
+    ]);
+    exit;
+}
+
 // Fallback for unknown action
 http_response_code(400);
 echo json_encode([

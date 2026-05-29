@@ -37,5 +37,7 @@ const upload = multer({
 
 router.get("/all", authMiddleware, templateController.getAll);
 router.post("/upload", authMiddleware, portalAdminMiddleware, upload.single("templateZip"), templateController.uploadZip);
+router.put("/:templateId", authMiddleware, portalAdminMiddleware, templateController.updateTemplate);
+router.delete("/:templateId", authMiddleware, portalAdminMiddleware, templateController.deleteTemplate);
 
 module.exports = router;
