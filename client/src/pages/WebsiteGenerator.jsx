@@ -276,10 +276,35 @@ const WebsiteGenerator = () => {
     return (
         <PageTransition>
             <Box sx={{ px: 3, pb: 3 }}>
-                <PageHeader
-                    title="Website Builder"
-                    subtitle="Design and launch your professional booking website in seconds."
-                />
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2, flexWrap: 'wrap', gap: 2 }}>
+                    <PageHeader
+                        title="Website Builder"
+                        subtitle="Design and launch your professional booking website in seconds."
+                        sx={{ m: 0 }}
+                    />
+                    <Button
+                        variant="outlined"
+                        color="secondary"
+                        onClick={() => window.open('/docs#website', '_blank')}
+                        startIcon={<WebsiteIcon />}
+                        sx={{
+                            borderRadius: '12px',
+                            fontWeight: 800,
+                            textTransform: 'none',
+                            py: 1,
+                            px: 2.5,
+                            borderWidth: '1.5px',
+                            borderColor: 'secondary.main',
+                            color: 'secondary.main',
+                            '&:hover': {
+                                borderWidth: '1.5px',
+                                background: 'rgba(156, 39, 176, 0.08)',
+                            }
+                        }}
+                    >
+                        Read User Guide
+                    </Button>
+                </Box>
 
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
                     {/* Top Panel: Configuration Settings */}
