@@ -16,6 +16,7 @@ const authRoutes = require("./auth.routes");
 const packageRoutes = require("./package.routes");
 const subscriptionRoutes = require("./subscription.routes");
 const uploadRoutes = require("./upload.routes");
+const templateRoutes = require("./template.routes");
 
 const preventDuplicate = require("../middleware/preventDuplicate.middleware");
 
@@ -39,6 +40,7 @@ const routes = (app) => {
     app.use(`${prefix}/service-locations`, serviceLocationRoutes);
     app.use(`${prefix}/google`, googleAuthRoutes);
     app.use(`${prefix}/portal`, portalRoutes);
+    app.use(`${prefix}/templates`, templateRoutes);
 
     // Auth routes
     app.use(`${prefix}/auth`, authRoutes);

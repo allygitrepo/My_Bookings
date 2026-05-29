@@ -3,8 +3,10 @@ import {
     Box, Typography, Grid, Card, CardContent, Button, TextField,
     InputAdornment, IconButton, Switch, Dialog, DialogTitle,
     DialogContent, DialogActions, FormControlLabel, MenuItem,
-    Tooltip, Chip, useTheme, createTheme, ThemeProvider, Avatar, Divider
+    Tooltip, Chip, useTheme, createTheme, ThemeProvider, Avatar, Divider,
+    CircularProgress
 } from '@mui/material';
+import { getTemplates } from '../../api/template.api';
 import {
     Palette as TemplateIcon,
     Close as CloseIcon,
@@ -67,14 +69,24 @@ const PortalTemplates = () => {
     const theme = useTheme();
 
     // Template Master State
-    const [templates, setTemplates] = useState(() => {
-        const saved = localStorage.getItem('custom_zip_templates');
-        return saved ? JSON.parse(saved) : [];
-    });
+    const [templates, setTemplates] = useState([]);
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        localStorage.setItem('custom_zip_templates', JSON.stringify(templates));
-    }, [templates]);
+        const fetchTemplatesList = async () => {
+            try {
+                const response = await getTemplates();
+                if (response.success) {
+                    setTemplates(response.data);
+                }
+            } catch (error) {
+                toast.error('Failed to load templates.');
+            } finally {
+                setLoading(false);
+            }
+        };
+        fetchTemplatesList();
+    }, []);
 
     // Cards inline form edit state (to simulate modification)
     const [cardEdits, setCardEdits] = useState({});
@@ -422,7 +434,12 @@ const PortalTemplates = () => {
                 </Box>
 
                 {/* Templates Cards Grid */}
-                <Grid container spacing={3.5}>
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', py: 10 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <Grid container spacing={3.5}>
                     {filteredTemplates.map((tmpl) => {
                         return (
                             <Grid item xs={12} sm={6} md={3} key={tmpl.id}>
@@ -570,6 +587,7 @@ const PortalTemplates = () => {
                         );
                     })}
                 </Grid>
+                )}
 
                 {/* Empty State */}
                 {filteredTemplates.length === 0 && (

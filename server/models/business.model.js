@@ -106,6 +106,15 @@ const Business = sequelize.define(
             type: DataTypes.ENUM('website', 'portfolio'),
             defaultValue: 'website'
         },
+        is_external_template: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        business_key: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            unique: true
+        },
         description: {
             type: DataTypes.TEXT,
             allowNull: true
