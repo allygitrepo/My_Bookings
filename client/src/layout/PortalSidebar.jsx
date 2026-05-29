@@ -12,7 +12,8 @@ import {
     Logout as LogoutIcon,
     ArrowBack as BackIcon,
     Inventory as PackageIcon,
-    Payments as PaymentsIcon
+    Payments as PaymentsIcon,
+    AccountBalance as SettlementsIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import logoImg from '../assets/logo.png';

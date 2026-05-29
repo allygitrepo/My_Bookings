@@ -45,45 +45,46 @@ import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
 import PortalPackages from './pages/portal/PortalPackages';
 import AdminPayments from './pages/portal/AdminPayments';
+import PortalSettlements from './pages/portal/PortalSettlements';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function App() {
   // Auto-refresh JWT when user is logged in but business_id is missing.
   // This handles users who logged in before tenant isolation was implemented.
-    useEffect(() => {
-        // Skip migration check on auth pages and landing page to prevent loops
-        const isPublicPage = ['/', '/login', '/register'].includes(window.location.pathname);
-        if (isPublicPage) return;
+  useEffect(() => {
+    // Skip migration check on auth pages and landing page to prevent loops
+    const isPublicPage = ['/', '/login', '/register'].includes(window.location.pathname);
+    if (isPublicPage) return;
 
-        const stored = localStorage.getItem('currentUser');
-        if (!stored) return;
-        try {
-            const user = JSON.parse(stored);
-            // Only refresh if token is present, business_id is missing, and it's NOT a portal admin
-            const needsRefresh = user?.token && !user?.business_id && user?.role !== 'PORTAL_ADMIN';
+    const stored = localStorage.getItem('currentUser');
+    if (!stored) return;
+    try {
+      const user = JSON.parse(stored);
+      // Only refresh if token is present, business_id is missing, and it's NOT a portal admin
+      const needsRefresh = user?.token && !user?.business_id && user?.role !== 'PORTAL_ADMIN';
 
-            if (needsRefresh) {
-                axiosInstance.post('/users/refresh-token')
-                    .then(res => {
-                        if (res.data?.success) {
-                            const { token, user: refreshedUser } = res.data.data;
-                            const updatedUser = { ...user, ...refreshedUser, token };
-                            localStorage.setItem('currentUser', JSON.stringify(updatedUser));
-                            localStorage.setItem('role', refreshedUser.role);
-                            localStorage.setItem('isPortalAdmin', refreshedUser.role === 'PORTAL_ADMIN');
+      if (needsRefresh) {
+        axiosInstance.post('/users/refresh-token')
+          .then(res => {
+            if (res.data?.success) {
+              const { token, user: refreshedUser } = res.data.data;
+              const updatedUser = { ...user, ...refreshedUser, token };
+              localStorage.setItem('currentUser', JSON.stringify(updatedUser));
+              localStorage.setItem('role', refreshedUser.role);
+              localStorage.setItem('isPortalAdmin', refreshedUser.role === 'PORTAL_ADMIN');
 
-                            // ONLY reload if we actually found a business_id now.
-                            // If it's still null, we stop here to prevent an infinite reload loop.
-                            if (refreshedUser.business_id) {
-                                window.location.reload();
-                            }
-                        }
-                    })
-                    .catch(() => {/* silent fail */ });
+              // ONLY reload if we actually found a business_id now.
+              // If it's still null, we stop here to prevent an infinite reload loop.
+              if (refreshedUser.business_id) {
+                window.location.reload();
+              }
             }
-        } catch (_) { /* ignore parse errors */ }
-    }, []);
+          })
+          .catch(() => {/* silent fail */ });
+      }
+    } catch (_) { /* ignore parse errors */ }
+  }, []);
 
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
@@ -96,48 +97,48 @@ function App() {
                 <SubscriptionProvider>
                   <Toaster position="top-right" />
                   <Routes>
-                  {/* Public Routes */}
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                    {/* Public Routes */}
+                    <Route path="/" element={<LandingPage />} />
+                    <Route path="/login" element={<Login />} />
+                    <Route path="/register" element={<Register />} />
 
-                  {/* Protected Dashboard Routes */}
+                    {/* Protected Dashboard Routes */}
                     <Route element={<AuthGuard><MainLayout /></AuthGuard>}>
-                        <Route path="/dashboard" element={<Dashboard />} />
-                        <Route path="/businesses" element={<Businesses />} />
-                        <Route path="/locations" element={<Locations />} />
-                        <Route path="/staff" element={<Staff />} />
-                        <Route path="/services" element={<Services />} />
-                        <Route path="/staff-services" element={<StaffServices />} />
-                        <Route path="/availability" element={<Availability />} />
-                        <Route path="/customers" element={<Customers />} />
-                        <Route path="/bookings" element={<Bookings />} />
-                        <Route path="/payments" element={<Payments />} />
-                        <Route path="/reports" element={<Reports />} />
-                        <Route path="/api-keys" element={<ApiKeys />} />
-                        <Route path="/widget-script" element={<WidgetScript />} />
-                        <Route path="/website-builder" element={<WebsiteGenerator />} />
-                        <Route path="/profile" element={<Profile />} />
-                        <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/whatsapp" element={<WhatsApp />} />
+                      <Route path="/dashboard" element={<Dashboard />} />
+                      <Route path="/businesses" element={<Businesses />} />
+                      <Route path="/locations" element={<Locations />} />
+                      <Route path="/staff" element={<Staff />} />
+                      <Route path="/services" element={<Services />} />
+                      <Route path="/staff-services" element={<StaffServices />} />
+                      <Route path="/availability" element={<Availability />} />
+                      <Route path="/customers" element={<Customers />} />
+                      <Route path="/bookings" element={<Bookings />} />
+                      <Route path="/payments" element={<Payments />} />
+                      <Route path="/reports" element={<Reports />} />
+                      <Route path="/api-keys" element={<ApiKeys />} />
+                      <Route path="/widget-script" element={<WidgetScript />} />
+                      <Route path="/website-builder" element={<WebsiteGenerator />} />
+                      <Route path="/profile" element={<Profile />} />
+                      <Route path="/checkout" element={<Checkout />} />
+                      <Route path="/whatsapp" element={<WhatsApp />} />
 
                     </Route>
 
                     {/* Portal Admin Routes */}
                     <Route element={<AuthGuard><PortalLayout /></AuthGuard>}>
-                        <Route path="/portal/dashboard" element={<PortalDashboard />} />
-                        <Route path="/portal/businesses" element={<PortalBusinesses />} />
-                        <Route path="/portal/bookings" element={<PortalBookings />} />
-                        <Route path="/portal/users" element={<PortalUsers />} />
-                        <Route path="/portal/create-admin" element={<CreateAdmin />} />
-                        <Route path="/portal/packages" element={<PortalPackages />} />
-                        <Route path="/portal/payments" element={<AdminPayments />} />
-                        <Route path="/portal/settlements" element={<PortalSettlements />} />
+                      <Route path="/portal/dashboard" element={<PortalDashboard />} />
+                      <Route path="/portal/businesses" element={<PortalBusinesses />} />
+                      <Route path="/portal/bookings" element={<PortalBookings />} />
+                      <Route path="/portal/users" element={<PortalUsers />} />
+                      <Route path="/portal/create-admin" element={<CreateAdmin />} />
+                      <Route path="/portal/packages" element={<PortalPackages />} />
+                      <Route path="/portal/payments" element={<AdminPayments />} />
+                      <Route path="/portal/settlements" element={<PortalSettlements />} />
                     </Route>
 
-                  <Route path="/:id" element={<PublicBusinessWebsite />} />
-                  <Route path="*" element={<Navigate to="/login" replace />} />
-                </Routes>
+                    <Route path="/:id" element={<PublicBusinessWebsite />} />
+                    <Route path="*" element={<Navigate to="/login" replace />} />
+                  </Routes>
                 </SubscriptionProvider>
               </Router>
             </BusinessProvider>
