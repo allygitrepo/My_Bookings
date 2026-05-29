@@ -6,7 +6,7 @@ import {
     Tooltip, Chip, useTheme, createTheme, ThemeProvider, Avatar, Divider,
     CircularProgress
 } from '@mui/material';
-import { getTemplates } from '../../api/template.api';
+import { getTemplates, uploadTemplateZip } from '../../api/template.api';
 import {
     Palette as TemplateIcon,
     Close as CloseIcon,
@@ -627,7 +627,7 @@ const PortalTemplates = () => {
                             <CloseIcon />
                         </IconButton>
                     </DialogTitle>
-                    <form onSubmit={(e) => {
+                    <form onSubmit={async (e) => {
                         e.preventDefault();
                         if (!newTemplate.name) {
                             toast.error('Please enter a Template Name.');
@@ -638,34 +638,37 @@ const PortalTemplates = () => {
                             return;
                         }
 
-                        // Simulate deployment
                         const toastId = toast.loading('Extracting and deploying ZIP archive...');
-                        setTimeout(() => {
-                            const newTmpl = {
-                                id: 'custom_' + Math.random().toString(36).substr(2, 5),
-                                name: newTemplate.name,
-                                category: newTemplate.category,
-                                slug: 'demo-' + newTemplate.name.toLowerCase().replace(/[^a-z0-9]/g, '-'),
-                                token: 'CONFIG_' + Math.random().toString(36).substr(2, 8).toUpperCase(),
-                                activeInstalls: 0,
-                                status: true,
-                                version: 'v1.0.0'
-                            };
-                            setTemplates(prev => [...prev, newTmpl]);
-                            toast.success(`Template "${newTemplate.name}" deployed and extracted!`, { id: toastId });
-                            setAddModalOpen(false);
-                            // Reset
-                            setNewTemplate({
-                                name: '',
-                                id: '',
-                                category: 'website',
-                                slug: '',
-                                token: '',
-                                version: 'v1.0.0',
-                                status: true
-                            });
-                            setZipFile(null);
-                        }, 2000);
+                        try {
+                            const formData = new FormData();
+                            formData.append('name', newTemplate.name);
+                            formData.append('category', newTemplate.category);
+                            formData.append('version', newTemplate.version || '1.0.0');
+                            formData.append('templateZip', zipFile);
+
+                            const response = await uploadTemplateZip(formData);
+                            if (response.success) {
+                                setTemplates(prev => [response.data, ...prev]);
+                                toast.success(`Template "${newTemplate.name}" deployed and extracted!`, { id: toastId });
+                                setAddModalOpen(false);
+                                // Reset form states
+                                setNewTemplate({
+                                    name: '',
+                                    id: '',
+                                    category: 'website',
+                                    slug: '',
+                                    token: '',
+                                    version: 'v1.0.0',
+                                    status: true
+                                });
+                                setZipFile(null);
+                            } else {
+                                toast.error(response.message || 'Failed to deploy template.', { id: toastId });
+                            }
+                        } catch (error) {
+                            console.error('Error deploying template:', error);
+                            toast.error(error.response?.data?.message || error.message || 'Error deploying template.', { id: toastId });
+                        }
                     }}>
                         <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 1 }}>
                             {/* Template Name Input */}
@@ -781,7 +784,7 @@ const PortalTemplates = () => {
                                     style={{ display: 'none' }}
                                     onChange={(e) => {
                                         if (e.target.files[0]) {
-                                            setZipFile(e.target.files[0].name);
+                                            setZipFile(e.target.files[0]);
                                         }
                                     }}
                                 />
@@ -831,7 +834,7 @@ const PortalTemplates = () => {
                                         justifyContent: 'space-between'
                                     }}>
                                         <Typography variant="caption" fontWeight={700} color="success.light" sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            📦 {zipFile}
+                                            📦 {zipFile.name}
                                         </Typography>
                                         <IconButton size="small" onClick={(e) => { e.stopPropagation(); setZipFile(null); }} sx={{ color: 'error.light', p: 0.2 }}>
                                             <CloseIcon sx={{ fontSize: '1rem' }} />
