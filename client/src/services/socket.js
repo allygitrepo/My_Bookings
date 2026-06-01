@@ -1,6 +1,7 @@
 import { io } from 'socket.io-client';
 
-const SOCKET_URL = import.meta.env.VITE_API_BASE_URL.replace('/mybookings', '');
+const envBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
+const SOCKET_URL = envBaseURL.replace('/mybookings', '');
 
 let socket;
 

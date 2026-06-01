@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const envBaseURL = import.meta.env.VITE_API_BASE_URL;
+const envBaseURL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
 // Dynamically replace localhost with the current hostname to support local network access (e.g. 192.168.1.9)
 const baseURL = envBaseURL.includes('localhost') 
     ? envBaseURL.replace('localhost', window.location.hostname)

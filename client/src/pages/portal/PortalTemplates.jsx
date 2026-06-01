@@ -199,10 +199,6 @@ const PortalTemplates = () => {
     };
 
     const handleDelete = async (id) => {
-        if (!window.confirm("Are you sure you want to permanently delete and purge this template? This cannot be undone.")) {
-            return;
-        }
-
         try {
             const response = await axiosInstance.delete(`/templates/portal/${id}`);
             if (response.data.success) {
