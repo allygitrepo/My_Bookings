@@ -21,7 +21,7 @@ import { getStaffServices } from '../api/staffService.api';
 import { getStaffAvailability } from '../api/staffAvailability.api';
 import { getCustomers, createCustomer } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
-import { getBookings, createBooking } from '../api/booking.api';
+import { getBookings, createBooking, deleteBooking } from '../api/booking.api';
 import { createPayment, createRazorpayOrder, verifyRazorpayPayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
 import axiosInstance from '../api/axiosInstance';
@@ -445,6 +445,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const bookingRes = await createBooking(bookingPayload);
             if (!bookingRes.success) throw new Error(bookingRes.message);
             const bookingId = bookingRes.data.id;
+            let createdBookingId = bookingId;
 
             // 3. Razorpay Order Creation
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
@@ -457,13 +458,17 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 business_id: resolvedBusinessId
             });
 
-            if (!orderRes.success) throw new Error(orderRes.message);
+            if (!orderRes.success) {
+                if (createdBookingId) await deleteBooking(createdBookingId);
+                throw new Error(orderRes.message);
+            }
 
             // 4. Load SDK and Open Checkout
             const isLoaded = await loadRazorpayScript();
             if (!isLoaded) {
                 toast.error("Razorpay SDK failed to load. Are you online?");
                 setLoading(false);
+                if (createdBookingId) await deleteBooking(createdBookingId);
                 return;
             }
 
@@ -495,6 +500,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         }
                     } catch (err) {
                         toast.error(err.message || "Payment verification failed");
+                        if (createdBookingId) {
+                            await deleteBooking(createdBookingId);
+                            createdBookingId = null;
+                        }
                     } finally {
                         setLoading(false);
                     }
@@ -523,13 +532,33 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     }
                 },
                 modal: {
-                    ondismiss: () => {
+                    ondismiss: async () => {
                         setLoading(false);
+                        if (createdBookingId) {
+                            try {
+                                await deleteBooking(createdBookingId);
+                                createdBookingId = null;
+                            } catch (e) {
+                                console.error('Failed to delete booking on dismiss', e);
+                            }
+                        }
                     }
                 }
             };
 
             const rzp = new window.Razorpay(options);
+            
+            rzp.on('payment.failed', async function (response) {
+                if (createdBookingId) {
+                    try {
+                        await deleteBooking(createdBookingId);
+                        createdBookingId = null;
+                    } catch (e) {
+                        console.error('Failed to delete booking on payment fail', e);
+                    }
+                }
+            });
+
             rzp.open();
 
         } catch (error) {
