@@ -608,7 +608,18 @@ const WebsiteGenerator = () => {
 
                             <Divider sx={{ borderColor: 'divider' }} />
 
-                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: -1 }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mt: -1 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 600 }}>
+                                        Demo Admin Panel Credentials:
+                                    </Typography>
+                                    <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800, fontFamily: 'monospace', bgcolor: 'rgba(99,102,241,0.05)', px: 1, py: 0.5, borderRadius: 1, border: '1px dashed rgba(99,102,241,0.2)' }}>
+                                        admin@gmail.com &nbsp;|&nbsp; admin123
+                                    </Typography>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: "12px" }}>
+                                        Please Change the password with Forgot Password options
+                                    </Typography>
+                                </Box>
                                 <Button
                                     variant="contained"
                                     startIcon={saving ? <CircularProgress size={20} color="inherit" /> : <SaveIcon />}
@@ -660,7 +671,7 @@ const WebsiteGenerator = () => {
                                                 if (isSuspended) return;
                                                 const newEnabled = e.target.checked;
                                                 setSettings(prev => ({ ...prev, website_enabled: newEnabled }));
- 
+
                                                 setSaving(true);
                                                 try {
                                                     const response = await updateBusiness(selectedBusinessId, { ...settings, website_enabled: newEnabled });
@@ -688,14 +699,14 @@ const WebsiteGenerator = () => {
                                                         <OpenIcon sx={{ fontSize: '1.1rem' }} />
                                                     </IconButton>
                                                 </Tooltip>
-                                                <Typography 
-                                                    variant="caption" 
-                                                    sx={{ 
-                                                        color: 'text.secondary', 
-                                                        fontFamily: 'monospace', 
-                                                        bgcolor: 'rgba(255,255,255,0.05)', 
-                                                        px: 1.2, 
-                                                        py: 0.5, 
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: 'text.secondary',
+                                                        fontFamily: 'monospace',
+                                                        bgcolor: 'rgba(255,255,255,0.05)',
+                                                        px: 1.2,
+                                                        py: 0.5,
                                                         borderRadius: 1,
                                                         border: '1px dashed rgba(255,255,255,0.1)',
                                                         fontSize: '0.75rem',
