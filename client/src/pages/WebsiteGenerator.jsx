@@ -616,7 +616,7 @@ const WebsiteGenerator = () => {
                                     <Typography variant="caption" color="primary.main" sx={{ fontWeight: 800, fontFamily: 'monospace', bgcolor: 'rgba(99,102,241,0.05)', px: 1, py: 0.5, borderRadius: 1, border: '1px dashed rgba(99,102,241,0.2)' }}>
                                         admin@gmail.com &nbsp;|&nbsp; admin123
                                     </Typography>
-                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: "12px" }}>
+                                    <Typography variant="body2" color="text.secondary" sx={{ fontWeight: 500, fontSize: "12px", }}>
                                         Please Change the password with Forgot Password options
                                     </Typography>
                                 </Box>
