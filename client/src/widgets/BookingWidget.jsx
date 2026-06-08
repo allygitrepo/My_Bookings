@@ -825,6 +825,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     if (selected < today) return;
                     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                     setBookingData(prev => ({ ...prev, date: iso, slots: [] }));
+                    setTimeout(() => {
+                        const el = document.getElementById('timing-slots-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 150);
                 };
 
                 const prevMonth = () => setCalendarMonth(prev => {
@@ -939,7 +943,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
                         {/* Time slots */}
                         {bookingData.date && (
-                            <>
+                            <Box id="timing-slots-section" sx={{ mt: 1 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#6366f1' }}>
                                         Available Slots — {getDayNameDisplay(bookingData.date)}
@@ -1009,7 +1013,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 >
                                     {isDurationMet ? 'Continue' : `Selected ${formatDuration(selectedDuration)} of ${formatDuration(totalDuration)}`}
                                 </Button>
-                            </>
+                            </Box>
                         )}
                     </Box>
                 );
@@ -1247,7 +1251,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             <Dialog
                 open={open}
-                onClose={resetBooking}
+                onClose={(event, reason) => {
+                    if (reason && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+                        return;
+                    }
+                    resetBooking();
+                }}
                 maxWidth="xs"
                 fullWidth
                 fullScreen={isMobile}
