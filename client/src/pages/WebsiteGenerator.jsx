@@ -539,7 +539,7 @@ const WebsiteGenerator = () => {
                                                             alignItems: 'center',
                                                             justifyContent: 'center',
                                                         }}>
-                                                            {tmpl.isCustom && (failedTemplateIcons[tmpl.id] || !tmpl.img) ? (
+                                                            {tmpl.isCustom && failedTemplateIcons[tmpl.id] ? (
                                                                 <Avatar
                                                                     sx={{
                                                                         width: '60%',
@@ -555,17 +555,26 @@ const WebsiteGenerator = () => {
                                                             ) : (
                                                                 <CardMedia
                                                                     component="img"
-                                                                    image={tmpl.img}
-                                                                    onError={() => {
+                                                                    image={tmpl.isCustom ? `https://mybookings.allysoftsolutions.com/Templates/${tmpl.templateId || tmpl.id}/favicon.${tmpl._iconExt || 'svg'}` : tmpl.img}
+                                                                    onError={(e) => {
                                                                         if (tmpl.isCustom) {
-                                                                            setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
+                                                                            const currentExt = tmpl._iconExt || 'svg';
+                                                                            if (currentExt === 'svg') {
+                                                                                tmpl._iconExt = 'png';
+                                                                                e.target.src = `https://mybookings.allysoftsolutions.com/Templates/${tmpl.templateId || tmpl.id}/favicon.png`;
+                                                                            } else if (currentExt === 'png') {
+                                                                                tmpl._iconExt = 'ico';
+                                                                                e.target.src = `https://mybookings.allysoftsolutions.com/Templates/${tmpl.templateId || tmpl.id}/favicon.ico`;
+                                                                            } else {
+                                                                                setFailedTemplateIcons((prev) => ({ ...prev, [tmpl.id]: true }));
+                                                                            }
                                                                         }
                                                                     }}
                                                                     sx={{
                                                                         width: tmpl.isCustom ? '60%' : '100%',
                                                                         height: tmpl.isCustom ? '60%' : '100%',
                                                                         objectFit: tmpl.isCustom ? 'contain' : 'cover',
-                                                                        objectPosition: 'top',
+                                                                        objectPosition: 'center',
                                                                         filter: isSelected ? 'none' : 'grayscale(15%)',
                                                                         opacity: isSelected ? 1 : 0.75,
                                                                         transition: 'all 0.3s'

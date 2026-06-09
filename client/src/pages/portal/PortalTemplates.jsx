@@ -44,7 +44,7 @@ import {
 import axiosInstance from "../../api/axiosInstance";
 import PageTransition from "../../components/PageTransition";
 import toast from "react-hot-toast";
-import { getTemplateIconUrl } from "../../utils/templateIcon";
+import { getTemplateIconUrl, getApiOrigin } from "../../utils/templateIcon";
 
 const INDUSTRY_OPTIONS = [
     { label: "Healthcare / Hospital", value: "Healthcare / Hospital", icon: "🏥" },
@@ -80,6 +80,11 @@ const PortalTemplates = () => {
     const [editWebsite, setEditWebsite] = useState(true);
     const [editPortfolio, setEditPortfolio] = useState(false);
     const [savingEdit, setSavingEdit] = useState(false);
+
+    // Delete Modal State
+    const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+    const [templateToDelete, setTemplateToDelete] = useState(null);
+    const [deleting, setDeleting] = useState(false);
 
     const fetchTemplates = async () => {
         setLoading(true);
@@ -125,12 +130,12 @@ const PortalTemplates = () => {
         const formData = new FormData();
         formData.append("displayName", displayName);
         formData.append("category", category);
-        
+
         const selectedTypes = [];
         if (deployWebsite) selectedTypes.push("website");
         if (deployPortfolio) selectedTypes.push("portfolio");
         formData.append("type", selectedTypes.length > 0 ? selectedTypes.join(",") : "website");
-        
+
         formData.append("zipFile", zipFile);
 
         try {
@@ -201,15 +206,26 @@ const PortalTemplates = () => {
         }
     };
 
-    const handleDelete = async (id) => {
+    const handleDeleteClick = (template) => {
+        setTemplateToDelete(template);
+        setDeleteDialogOpen(true);
+    };
+
+    const confirmDelete = async () => {
+        if (!templateToDelete) return;
+        setDeleting(true);
         try {
-            const response = await axiosInstance.delete(`/templates/portal/${id}`);
+            const response = await axiosInstance.delete(`/templates/portal/${templateToDelete.id}`);
             if (response.data.success) {
                 toast.success("Template purged completely.");
+                setDeleteDialogOpen(false);
+                setTemplateToDelete(null);
                 fetchTemplates();
             }
         } catch (error) {
             toast.error("Failed to delete template");
+        } finally {
+            setDeleting(false);
         }
     };
 
@@ -265,7 +281,7 @@ const PortalTemplates = () => {
         <PageTransition>
             <Box sx={{ p: 4, minHeight: "100vh" }}>
                 {/* Header Section */}
-                <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
+                <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2} mb={4}>
                     <Box>
                         <Typography variant="h4" fontWeight={800} color="text.primary" id="templates-title">
                             Custom ZIP Templates
@@ -280,16 +296,11 @@ const PortalTemplates = () => {
                         startIcon={<UploadIcon />}
                         onClick={() => setOpenDialog(true)}
                         sx={{
-                            borderRadius: "12px",
-                            py: 1.5,
-                            px: 3,
+                            borderRadius: '100px',
+                            textTransform: 'none',
                             fontWeight: 700,
-                            textTransform: "none",
-                            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-                            boxShadow: "0px 8px 24px rgba(16, 185, 129, 0.2)",
-                            "&:hover": {
-                                background: "linear-gradient(135deg, #059669 0%, #047857 100%)"
-                            }
+                            height: 36,
+                            px: 3
                         }}
                     >
                         Deploy New ZIP
@@ -396,7 +407,7 @@ const PortalTemplates = () => {
                                         background: "rgba(15, 23, 42, 0.7)",
                                         backdropFilter: "blur(16px)",
                                         border: "1px solid rgba(255, 255, 255, 0.07)",
-                                        borderRadius: "16px",
+                                        borderRadius: "12px",
                                         height: "100%",
                                         display: "flex",
                                         flexDirection: "column",
@@ -409,135 +420,209 @@ const PortalTemplates = () => {
                                         }
                                     }}
                                 >
-                                    {/* Color accent top bar */}
+                                    {/* Thumbnail Image Area */}
                                     <Box sx={{
-                                        height: "4px",
-                                        background: "linear-gradient(90deg, #6366F1 0%, #10B981 100%)",
-                                    }} />
-
-                                    <CardContent sx={{ flexGrow: 1, p: 2.5 }}>
-                                        {/* Header row: Avatar + Name + Slug */}
-                                        <Box display="flex" alignItems="center" gap={2} mb={2}>
-                                            <Avatar
-                                                src={getTemplateIconUrl(t) || undefined}
-                                                sx={{
-                                                    width: 52,
-                                                    height: 52,
-                                                    borderRadius: "14px",
-                                                    bgcolor: "rgba(99,102,241,0.15)",
-                                                    border: "1px solid rgba(99,102,241,0.25)",
-                                                    fontSize: "1.3rem",
-                                                    fontWeight: 800,
-                                                    color: "#818CF8",
-                                                    flexShrink: 0,
-                                                    '& img': { objectFit: 'contain', p: '6px' },
-                                                }}
-                                            >
-                                                {t.displayName?.charAt(0)?.toUpperCase() || "T"}
-                                            </Avatar>
-                                            <Box sx={{ minWidth: 0 }}>
-                                                <Typography
-                                                    variant="h6"
-                                                    fontWeight={800}
-                                                    color="text.primary"
-                                                    sx={{ fontSize: "1rem", lineHeight: 1.3, mb: 0.3, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
-                                                >
-                                                    {t.displayName}
-                                                </Typography>
-                                                <Box display="flex" alignItems="center" gap={0.5}>
-                                                    <FolderIcon sx={{ fontSize: "0.75rem", color: "text.disabled" }} />
-                                                    <Typography variant="caption" color="text.disabled" sx={{ fontFamily: "monospace", fontSize: "0.72rem" }}>
-                                                        {t.templateId || t.id}
-                                                    </Typography>
-                                                </Box>
-                                            </Box>
+                                        position: "relative",
+                                        height: "200px",
+                                        background: "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(16,185,129,0.1) 100%)",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
+                                        overflow: "hidden"
+                                    }}>
+                                        {/* Top-Left Category Badge */}
+                                        <Box sx={{
+                                            position: "absolute",
+                                            top: 0,
+                                            left: 0,
+                                            bgcolor: "#10B981",
+                                            color: "#fff",
+                                            px: 1.5,
+                                            py: 0.5,
+                                            borderBottomRightRadius: "12px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            gap: 0.5,
+                                            fontWeight: 800,
+                                            fontSize: "0.75rem",
+                                            zIndex: 2,
+                                            boxShadow: "2px 2px 8px rgba(0,0,0,0.2)"
+                                        }}>
+                                            <TemplatesIcon sx={{ fontSize: "1rem" }} />
+                                            {t.category.split('/')[0].trim()}
                                         </Box>
 
-                                        {/* Tags row */}
-                                        <Box display="flex" flexWrap="wrap" gap={0.75}>
-                                            <Chip
-                                                label={t.category}
-                                                size="small"
-                                                sx={{
-                                                    bgcolor: "rgba(16,185,129,0.1)",
-                                                    color: "#34D399",
-                                                    fontWeight: 700,
-                                                    fontSize: "0.68rem",
-                                                    border: "1px solid rgba(16,185,129,0.2)",
-                                                    height: 22,
-                                                    borderRadius: "6px",
+                                        {/* Live Preview iframe Thumbnail */}
+                                        <Box sx={{
+                                            width: "100%",
+                                            height: "100%",
+                                            position: "absolute",
+                                            top: 0,
+                                            left: 0,
+                                            zIndex: 1,
+                                            pointerEvents: "none", // Prevent interaction
+                                            overflow: "hidden"
+                                        }}>
+                                            <iframe
+                                                src={`https://mybookings.allysoftsolutions.com/Templates/${t.templateId || t.id}/`}
+                                                title={`Preview of ${t.displayName}`}
+                                                style={{
+                                                    position: "absolute",
+                                                    top: 0,
+                                                    left: 0,
+                                                    display: "block",
+                                                    width: "400%",
+                                                    height: "400%",
+                                                    maxWidth: "none",
+                                                    maxHeight: "none",
+                                                    transform: "scale(0.25)",
+                                                    transformOrigin: "top left",
+                                                    border: "none",
+                                                    background: "#fff",
+                                                    margin: 0,
+                                                    padding: 0
                                                 }}
+                                                onLoad={(e) => {
+                                                    try {
+                                                        const iframe = e.target;
+                                                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                                                        if (doc) {
+                                                            const style = doc.createElement('style');
+                                                            style.innerHTML = `
+                                                                [data-aos] { opacity: 1 !important; transform: none !important; }
+                                                                .wow { visibility: visible !important; animation: none !important; }
+                                                                #preloader, .preloader, .loader, .spinner { display: none !important; opacity: 0 !important; z-index: -1 !important; }
+                                                            `;
+                                                            doc.head.appendChild(style);
+                                                        }
+                                                    } catch (err) {
+                                                        // Cross-origin or other error, ignore
+                                                    }
+                                                }}
+                                                scrolling="no"
                                             />
+                                        </Box>
+                                    </Box>
+
+                                    <CardContent sx={{ flexGrow: 1, p: 2.5, pb: 1, minWidth: 0 }}>
+                                        {/* Title */}
+                                        <Typography
+                                            variant="h6"
+                                            fontWeight={800}
+                                            color="text.primary"
+                                            sx={{ 
+                                                fontSize: "1.1rem", 
+                                                lineHeight: 1.3, 
+                                                mb: 0.5, 
+                                                overflow: "hidden", 
+                                                textOverflow: "ellipsis", 
+                                                display: "-webkit-box", 
+                                                WebkitLineClamp: 2, 
+                                                WebkitBoxOrient: "vertical",
+                                                wordBreak: "break-word" 
+                                            }}
+                                        >
+                                            {t.displayName}
+                                        </Typography>
+                                        {/* Byline */}
+                                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", mb: 2 }}>
+                                            by Admin in {t.category}
+                                        </Typography>
+
+                                        {/* Pricing / Type tags area */}
+                                        <Box display="flex" flexWrap="wrap" gap={1}>
                                             {(t.type || "website").split(",").map((typeVal) => {
                                                 const type = typeVal.trim();
                                                 return (
-                                                    <Chip
+                                                    <Typography
                                                         key={type}
-                                                        label={type === "portfolio" ? "Portfolio" : "Website"}
-                                                        size="small"
-                                                        sx={{
-                                                            bgcolor: type === "portfolio" ? "rgba(99,102,241,0.12)" : "rgba(59,130,246,0.12)",
-                                                            color: type === "portfolio" ? "#818CF8" : "#60A5FA",
-                                                            fontWeight: 700,
-                                                            fontSize: "0.68rem",
-                                                            border: type === "portfolio" ? "1px solid rgba(99,102,241,0.2)" : "1px solid rgba(59,130,246,0.2)",
-                                                            height: 22,
-                                                            borderRadius: "6px",
-                                                        }}
-                                                    />
+                                                        variant="h6"
+                                                        fontWeight={800}
+                                                        sx={{ color: type === "portfolio" ? "#818CF8" : "#34D399", fontSize: "1.1rem" }}
+                                                    >
+                                                        {type === "portfolio" ? "Portfolio" : "Website"}
+                                                    </Typography>
                                                 );
                                             })}
                                         </Box>
                                     </CardContent>
 
+                                    <Box sx={{ px: 2.5 }}>
+                                        <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.05)" }} />
+                                    </Box>
+
                                     {/* Footer Actions */}
                                     <Box sx={{
-                                        borderTop: "1px solid rgba(255,255,255,0.05)",
+                                        p: 2,
+                                        px: 2.5,
                                         display: "flex",
-                                        overflow: "hidden",
-                                        borderRadius: "0 0 16px 16px",
+                                        justifyContent: "space-between",
+                                        alignItems: "center"
                                     }}>
-                                        <Tooltip title="Edit Details" arrow>
+                                        <Typography 
+                                            variant="caption" 
+                                            color="text.secondary" 
+                                            sx={{ 
+                                                fontWeight: 600, 
+                                                overflow: "hidden", 
+                                                textOverflow: "ellipsis", 
+                                                whiteSpace: "nowrap",
+                                                maxWidth: "100px" 
+                                            }}
+                                            title={t.templateId || t.id || "N/A"}
+                                        >
+                                            ID: {t.templateId || t.id || "N/A"}
+                                        </Typography>
+
+                                        <Box display="flex" gap={1}>
+                                            <Tooltip title="Delete Template" arrow>
+                                                <IconButton
+                                                    onClick={() => handleDeleteClick(t)}
+                                                    size="small"
+                                                    sx={{
+                                                        border: "1px solid rgba(255,255,255,0.12)",
+                                                        borderRadius: "4px",
+                                                        color: "text.secondary",
+                                                        "&:hover": { color: "#F87171", borderColor: "#F87171" }
+                                                    }}
+                                                >
+                                                    <DeleteIcon fontSize="small" />
+                                                </IconButton>
+                                            </Tooltip>
                                             <Button
-                                                id={`btn-edit-template-${t.id}`}
-                                                startIcon={<EditIcon sx={{ fontSize: "0.85rem" }} />}
+                                                variant="outlined"
+                                                onClick={() => {
+                                                    const url = `https://mybookings.allysoftsolutions.com/Templates/${t.templateId || t.id}/`;
+                                                    window.open(url, '_blank');
+                                                }}
+                                                sx={{
+                                                    borderRadius: "4px",
+                                                    textTransform: "none",
+                                                    fontWeight: 700,
+                                                    fontSize: "0.8rem",
+                                                    borderColor: "rgba(255,255,255,0.12)",
+                                                    color: "text.primary",
+                                                    px: 2,
+                                                    "&:hover": { borderColor: "primary.main", bgcolor: "rgba(59,130,246,0.08)", color: "primary.main" }
+                                                }}
+                                            >
+                                                Live Preview
+                                            </Button>
+                                            <Button
+                                                variant="contained"
                                                 onClick={() => handleOpenEditDialog(t)}
                                                 sx={{
-                                                    flex: 1,
-                                                    bgcolor: "rgba(59,130,246,0.08)",
-                                                    color: "#60A5FA",
-                                                    borderRadius: 0,
-                                                    fontSize: "0.78rem",
-                                                    fontWeight: 700,
+                                                    borderRadius: "4px",
                                                     textTransform: "none",
-                                                    py: 1.2,
-                                                    borderRight: "1px solid rgba(255,255,255,0.05)",
-                                                    "&:hover": { bgcolor: "rgba(59,130,246,0.18)" }
+                                                    fontWeight: 700,
+                                                    fontSize: "0.8rem",
+                                                    px: 2
                                                 }}
                                             >
                                                 Edit
                                             </Button>
-                                        </Tooltip>
-                                        <Tooltip title="Delete & Purge" arrow>
-                                            <Button
-                                                id={`btn-delete-template-${t.id}`}
-                                                startIcon={<DeleteIcon sx={{ fontSize: "0.85rem" }} />}
-                                                onClick={() => handleDelete(t.id)}
-                                                sx={{
-                                                    flex: 1,
-                                                    bgcolor: "rgba(239,68,68,0.08)",
-                                                    color: "#F87171",
-                                                    borderRadius: 0,
-                                                    fontSize: "0.78rem",
-                                                    fontWeight: 700,
-                                                    textTransform: "none",
-                                                    py: 1.2,
-                                                    "&:hover": { bgcolor: "rgba(239,68,68,0.18)" }
-                                                }}
-                                            >
-                                                Delete
-                                            </Button>
-                                        </Tooltip>
+                                        </Box>
                                     </Box>
                                 </Card>
                             </Grid>
@@ -921,14 +1006,66 @@ const PortalTemplates = () => {
                                 px: 3,
                                 py: 1.2,
                                 fontWeight: 700,
-                                textTransform: "none",
-                                background: "linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%)",
-                                "&:hover": {
-                                    background: "linear-gradient(135deg, #1D4ED8 0%, #1E40AF 100%)"
-                                }
+                                textTransform: "none"
                             }}
                         >
                             {savingEdit ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Save Changes"}
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+
+                {/* Delete Confirmation Modal */}
+                <Dialog
+                    open={deleteDialogOpen}
+                    onClose={() => !deleting && setDeleteDialogOpen(false)}
+                    PaperProps={{
+                        sx: {
+                            background: "rgba(15, 23, 42, 0.95)",
+                            backdropFilter: "blur(24px)",
+                            border: "1px solid rgba(255, 255, 255, 0.08)",
+                            borderRadius: "24px",
+                            color: "text.primary",
+                            maxWidth: "400px",
+                            width: "100%"
+                        }
+                    }}
+                >
+                    <DialogTitle sx={{ p: 3, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
+                        <DeleteIcon color="error" />
+                        <Typography variant="h5" fontWeight={800}>
+                            Delete Template
+                        </Typography>
+                    </DialogTitle>
+                    <DialogContent sx={{ p: 3, pt: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Are you sure you want to permanently delete the <strong>{templateToDelete?.displayName}</strong> template?
+                        </Typography>
+                        <Typography variant="caption" color="error.light" sx={{ display: 'block', mt: 1, fontWeight: 700 }}>
+                            This action cannot be undone and will remove all associated files.
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>
+                        <Button
+                            onClick={() => setDeleteDialogOpen(false)}
+                            disabled={deleting}
+                            sx={{ color: "text.secondary", fontWeight: 600 }}
+                        >
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            onClick={confirmDelete}
+                            disabled={deleting}
+                            sx={{
+                                borderRadius: "10px",
+                                px: 3,
+                                py: 1,
+                                fontWeight: 700,
+                                textTransform: "none"
+                            }}
+                        >
+                            {deleting ? <CircularProgress size={20} color="inherit" /> : "Yes, Delete"}
                         </Button>
                     </DialogActions>
                 </Dialog>
