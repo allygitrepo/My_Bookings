@@ -53,12 +53,25 @@ export const SubscriptionProvider = ({ children }) => {
             return usage.flags[flagMap[resource]] !== false;
         },
         isFeatureAllowed: (feature) => {
-            if (!usage) return true;
+            const storedUser = localStorage.getItem('currentUser');
+            const user = storedUser ? JSON.parse(storedUser) : null;
+            
+            // Portal Admins always see all features
+            if (user?.role === 'PORTAL_ADMIN') return true;
+            
+            if (!usage || !usage.flags) return false; 
+            
             const featureMap = {
                 website: 'isWebsiteAllowed',
-                api: 'isApiAllowed'
+                api: 'isApiAllowed',
+                whatsapp: 'isWhatsappAllowed'
             };
-            return usage.flags[featureMap[feature]] !== false;
+
+            const flagKey = featureMap[feature];
+            const isAllowed = Boolean(usage.flags[flagKey]);
+            
+            // console.log(`[Subscription] Feature: ${feature}, Allowed: ${isAllowed}`);
+            return isAllowed;
         }
     };
 

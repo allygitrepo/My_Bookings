@@ -30,7 +30,8 @@ const subscriptionGuard = {
                     canAddService: false,
                     canAcceptBooking: false,
                     isWebsiteAllowed: false,
-                    isApiAllowed: false
+                    isApiAllowed: false,
+                    isWhatsappAllowed: false
                 }
             };
         }
@@ -88,7 +89,8 @@ const subscriptionGuard = {
             canAddService: pkg.max_services === -1 || serviceCount < pkg.max_services,
             canAcceptBooking: pkg.max_bookings === -1 || bookingCount < pkg.max_bookings,
             isWebsiteAllowed: pkg.allow_website_builder,
-            isApiAllowed: pkg.allow_api
+            isApiAllowed: pkg.allow_api,
+            isWhatsappAllowed: pkg.allow_whatsapp
         };
 
         // If expired, override all action flags to false
@@ -107,7 +109,8 @@ const subscriptionGuard = {
                 services: pkg.max_services,
                 bookings: pkg.max_bookings,
                 websiteBuilder: pkg.allow_website_builder,
-                apiAccess: pkg.allow_api
+                apiAccess: pkg.allow_api,
+                whatsappEnabled: pkg.allow_whatsapp
             },
             usage: {
                 businesses: businesses.length,

@@ -14,7 +14,7 @@ const portalController = {
 
             const bookingRevenue = (payments || [])
                 .filter(p => p.payment_status === true || p.payment_status === 1)
-                .reduce((sum, p) => sum + parseFloat(p.paid_amount || 0), 0);
+                .reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
 
             const subscriptionRevenue = (subscriptions || [])
                 .reduce((sum, s) => sum + parseFloat(s.amount || 0), 0);
@@ -160,11 +160,7 @@ const portalController = {
             await user.update({ status, suspended_reason: status ? null : suspended_reason });
 
             // Mock Notification
-            if (!status) {
-                console.log(`[NOTIFICATION] Sending suspension notice to user ${user.email}. Reason: ${suspended_reason}`);
-            } else {
-                console.log(`[NOTIFICATION] Sending activation notice to user ${user.email}.`);
-            }
+
 
             res.json({ 
                 success: true, 
@@ -186,17 +182,270 @@ const portalController = {
             await biz.update({ status, suspended_reason: status ? null : suspended_reason });
 
             // Mock Notification
-            const owner = await User.findByPk(biz.owner_id);
-            if (owner) {
-                if (!status) {
-                    console.log(`[NOTIFICATION] Sending suspension notice to business owner ${owner.email} for business ${biz.business_name}. Reason: ${suspended_reason}`);
-                } else {
-                    console.log(`[NOTIFICATION] Sending activation notice to business owner ${owner.email} for business ${biz.business_name}.`);
-                }
-            }
+
 
             res.json({ success: true, message: `Business ${status ? 'activated' : 'suspended'} successfully` });
         } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getAnalytics: async (req, res) => {
+        try {
+            const { type, startDate, endDate } = req.query;
+            const { sequelize } = require("../config/db");
+            const { Op } = require("sequelize");
+
+            let whereCondition = {};
+            if (startDate && endDate) {
+                // Ensure dates cover the full day
+                whereCondition.created_at = {
+                    [Op.between]: [
+                        new Date(new Date(startDate).setHours(0, 0, 0, 0)),
+                        new Date(new Date(endDate).setHours(23, 59, 59, 999))
+                    ]
+                };
+            }
+
+            if (type === 'interaction') {
+                const users = await User.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('COUNT', sequelize.col('id')), 'count']
+                    ],
+                    where: { ...whereCondition, role: 'OWNER' },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                const bookings = await Booking.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('bookings.created_at')), 'date'],
+                        [sequelize.fn('COUNT', sequelize.fn('DISTINCT', sequelize.col('business.user_id'))), 'count']
+                    ],
+                    include: [{
+                        model: Business,
+                        attributes: [],
+                        required: true
+                    }],
+                    where: {
+                        'created_at': whereCondition.created_at || { [Op.ne]: null }
+                    },
+                    group: [sequelize.fn('DATE', sequelize.col('bookings.created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('bookings.created_at')), 'ASC']]
+                });
+
+                return res.json({ success: true, data: { users, bookings } });
+            } else if (type === 'revenue') {
+                const payments = await Payment.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('SUM', sequelize.col('platform_fees')), 'amount']
+                    ],
+                    where: {
+                        ...whereCondition,
+                        [Op.or]: [{ payment_status: true }, { payment_status: 1 }]
+                    },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                const subscriptions = await UserSubscription.findAll({
+                    attributes: [
+                        [sequelize.fn('DATE', sequelize.col('created_at')), 'date'],
+                        [sequelize.fn('SUM', sequelize.col('amount')), 'amount']
+                    ],
+                    where: { ...whereCondition, status: 'active' },
+                    group: [sequelize.fn('DATE', sequelize.col('created_at'))],
+                    order: [[sequelize.fn('DATE', sequelize.col('created_at')), 'ASC']]
+                });
+
+                return res.json({ success: true, data: { payments, subscriptions } });
+            }
+
+            res.status(400).json({ success: false, message: "Invalid analytics type" });
+        } catch (error) {
+            console.error('Portal Analytics Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getSettlements: async (req, res) => {
+        try {
+            const businesses = await Business.findAll({
+                include: [
+                    { model: User, as: 'owner', attributes: ['name', 'email'] }
+                ],
+                order: [['business_name', 'ASC']]
+            });
+
+            const data = await Promise.all(businesses.map(async (biz) => {
+                const totalBookings = await Booking.count({ where: { business_id: biz.id } });
+
+                 const payments = await Payment.findAll({
+                    where: { business_id: biz.id, payment_status: true }
+                });
+
+                const portalPayment = payments.reduce((sum, p) => sum + parseFloat(p.paid_amount || p.amount || 0), 0);
+                const commission = payments.reduce((sum, p) => sum + parseFloat(p.platform_fees || 0), 0);
+                const payToCustomer = payments.reduce((sum, p) => sum + parseFloat(p.final_amount || 0), 0);
+
+                let status = 'no_payments';
+                if (payments.length > 0) {
+                    const hasUnpaid = payments.some(p => p.settlement_status === 'unpaid');
+                    status = hasUnpaid ? 'unpaid' : 'paid';
+                }
+
+                return {
+                    id: biz.id,
+                    business_name: biz.business_name,
+                    business_type: biz.business_type,
+                    owner: biz.owner,
+                    totalBookings,
+                    portalPayment,
+                    commission,
+                    payToCustomer,
+                    status,
+                    account_details: {
+                        upi_id: biz.upi_id,
+                        account_holder_name: biz.account_holder_name,
+                        account_number: biz.account_number,
+                        ifsc_code: biz.ifsc_code,
+                        bank_name: biz.bank_name
+                    },
+                    payments: payments.map(p => ({
+                        id: p.id,
+                        booking_id: p.booking_id,
+                        amount: p.amount,
+                        paid_amount: p.paid_amount,
+                        platform_fees: p.platform_fees,
+                        final_amount: p.final_amount,
+                        payment_method: p.payment_method,
+                        transaction_id: p.transaction_id,
+                        payment_status: p.payment_status,
+                        settlement_status: p.settlement_status,
+                        created_at: p.created_at
+                    }))
+                };
+            }));
+
+            res.json({ success: true, data });
+        } catch (error) {
+            console.error('Portal Settlements Error:', error);
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    markSettlementsPaid: async (req, res) => {
+        try {
+            const { paymentIds, businessId } = req.body;
+            const emailService = require("../utils/emailService");
+            const { Op } = require("sequelize");
+
+            let affectedPayments = [];
+
+            if (businessId) {
+                // Fetch unpaid payments for this business before marking them
+                affectedPayments = await Payment.findAll({
+                    where: { business_id: businessId, payment_status: true, settlement_status: 'unpaid' }
+                });
+
+                await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { business_id: businessId, payment_status: true, settlement_status: 'unpaid' } }
+                );
+            } else if (Array.isArray(paymentIds) && paymentIds.length > 0) {
+                // Fetch the specific payments being settled
+                affectedPayments = await Payment.findAll({
+                    where: { id: { [Op.in]: paymentIds }, payment_status: true, settlement_status: 'unpaid' }
+                });
+
+                await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { id: { [Op.in]: paymentIds }, payment_status: true } }
+                );
+            } else {
+                return res.status(400).json({ success: false, message: "Invalid parameters" });
+            }
+
+            // Send settlement emails grouped by business
+            if (affectedPayments.length > 0) {
+                console.log(`[Settlement Email] ${affectedPayments.length} payment(s) settled. Preparing email notifications...`);
+
+                // Group payments by business_id
+                const paymentsByBusiness = {};
+                for (const p of affectedPayments) {
+                    const bizId = p.business_id;
+                    if (!paymentsByBusiness[bizId]) {
+                        paymentsByBusiness[bizId] = [];
+                    }
+                    paymentsByBusiness[bizId].push(p);
+                }
+
+                console.log(`[Settlement Email] Grouped into ${Object.keys(paymentsByBusiness).length} business(es)`);
+
+                // Send one email per business owner (non-blocking)
+                for (const [bizId, payments] of Object.entries(paymentsByBusiness)) {
+                    (async () => {
+                        try {
+                            const business = await Business.findByPk(bizId, {
+                                include: [{ model: User, as: 'owner', attributes: ['name', 'email'] }]
+                            });
+
+                            if (!business) {
+                                console.warn(`[Settlement Email] Business ID ${bizId} not found. Skipping email.`);
+                                return;
+                            }
+                            if (!business.owner?.email) {
+                                console.warn(`[Settlement Email] No owner email for business "${business.business_name}" (ID: ${bizId}). Skipping email.`);
+                                return;
+                            }
+
+                            // Calculate total payout: paid_amount - platform_fees for each payment
+                            const totalAmount = payments.reduce((sum, p) => {
+                                return sum + (parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0));
+                            }, 0);
+
+                            const accountDetails = {
+                                upi_id: business.upi_id,
+                                account_holder_name: business.account_holder_name,
+                                account_number: business.account_number,
+                                ifsc_code: business.ifsc_code,
+                                bank_name: business.bank_name
+                            };
+
+                            console.log(`[Settlement Email] Sending to ${business.owner.email} | Business: "${business.business_name}" | Amount: ₹${totalAmount.toFixed(2)} | Payments: ${payments.length}`);
+
+                            const result = await emailService.sendSettlementEmail(
+                                business.owner.email,
+                                business.owner.name,
+                                business.business_name,
+                                totalAmount,
+                                payments.length,
+                                accountDetails
+                            );
+
+                            if (result.success) {
+                                console.log(`[Settlement Email] ✅ Sent successfully to ${business.owner.email} (Message ID: ${result.messageId})`);
+                            } else {
+                                console.error(`[Settlement Email] ❌ Failed to send to ${business.owner.email}: ${result.error}`);
+                            }
+                        } catch (emailError) {
+                            console.error(`[Settlement Email] ❌ Error sending email for business ${bizId}:`, emailError.message);
+                        }
+                    })();
+                }
+            } else {
+                console.log('[Settlement Email] No unpaid payments were affected. No emails to send.');
+            }
+
+            const message = businessId
+                ? "All settlements for this business marked as paid"
+                : "Selected settlements marked as paid";
+
+            res.json({ success: true, message });
+        } catch (error) {
+            console.error('Portal Mark Settlements Paid Error:', error);
             res.status(500).json({ success: false, message: error.message });
         }
     }

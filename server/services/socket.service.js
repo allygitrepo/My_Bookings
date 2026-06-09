@@ -47,7 +47,6 @@ const emitToBusiness = (businessId, event, data) => {
     if (io && businessId) {
         const roomName = `business_${businessId}`;
         io.to(roomName).emit(event, data);
-        console.log(`Emitted ${event} to room: ${roomName}`);
     }
 };
 

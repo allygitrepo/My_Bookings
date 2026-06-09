@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import {
-    Container, Box, Typography, Button, Grid, Card, CardContent,
+    Container, Box, Typography, Button, Card, CardContent,
     Avatar, Chip, Divider, IconButton, Stack
 } from '@mui/material';
 import {
@@ -33,7 +33,7 @@ const TemplatePremium = ({ data }) => {
     }, [business.api_key, data.hideScript]);
 
     return (
-        <Box sx={{ bgcolor: '#020617', minHeight: '100vh', color: '#fff', fontFamily: "'Outfit', sans-serif" }}>
+        <Box sx={{ position: 'relative', bgcolor: '#020617', minHeight: '100vh', color: '#fff', fontFamily: "'Outfit', sans-serif" }}>
             {/* Hero Section */}
             <Box sx={{
                 height: '85vh',
@@ -67,7 +67,7 @@ const TemplatePremium = ({ data }) => {
                                     fontSize: '0.65rem'
                                 }}
                             />
-                            <Typography variant="h1" fontWeight={900} sx={{ fontSize: { xs: '3.5rem', md: '5.5rem' }, mb: 3, lineHeight: 1, color: '#fff', letterSpacing: -2 }}>
+                            <Typography variant="h1" fontWeight={900} sx={{ fontSize: 'clamp(2.5rem, 15cqw, 5.5rem)', mb: 3, lineHeight: 1, color: '#fff', letterSpacing: -2 }}>
                                 {business.business_name}
                             </Typography>
                             <Typography variant="h6" sx={{ color: '#94a3b8', mb: 6, fontWeight: 400, fontSize: '1.1rem', lineHeight: 1.7, maxWidth: 600 }}>
@@ -103,8 +103,12 @@ const TemplatePremium = ({ data }) => {
 
             {/* Content Section */}
             <Container maxWidth="lg" sx={{ py: 15 }}>
-                <Grid container spacing={10}>
-                    <Grid item xs={12} md={8}>
+                <Box sx={{ 
+                    display: 'flex', 
+                    flexWrap: 'wrap', 
+                    gap: 10 
+                }}>
+                    <Box sx={{ flex: { xs: '1 1 100%', md: '1 1 0' } }}>
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             whileInView={{ opacity: 1, y: 0 }}
@@ -114,9 +118,13 @@ const TemplatePremium = ({ data }) => {
                             <Typography variant="h4" fontWeight={900} gutterBottom sx={{ mb: 6, letterSpacing: -1 }}>
                                 Our Specialized Services
                             </Typography>
-                            <Grid container spacing={4}>
+                            <Box sx={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                                gap: 4 
+                            }}>
                                 {services.map((svc, idx) => (
-                                    <Grid item xs={12} sm={6} key={svc.id}>
+                                    <Box key={svc.id}>
                                         <motion.div
                                             initial={{ opacity: 0, y: 20 }}
                                             whileInView={{ opacity: 1, y: 0 }}
@@ -163,13 +171,13 @@ const TemplatePremium = ({ data }) => {
                                                 </CardContent>
                                             </Card>
                                         </motion.div>
-                                    </Grid>
+                                    </Box>
                                 ))}
-                            </Grid>
+                            </Box>
                         </motion.div>
-                    </Grid>
+                    </Box>
 
-                    <Grid item xs={12} md={4}>
+                    <Box sx={{ flex: { xs: '1 1 100%', md: '0 1 320px' } }}>
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             whileInView={{ opacity: 1, x: 0 }}
@@ -223,8 +231,8 @@ const TemplatePremium = ({ data }) => {
                                 </Stack>
                             </Box>
                         </motion.div>
-                    </Grid>
-                </Grid>
+                    </Box>
+                </Box>
             </Container>
 
         </Box>

@@ -3,6 +3,8 @@ const Business = require("../models/business.model");
 const User = require("../models/user.model");
 const Location = require("../models/location.model");
 const slugify = require("../uttils/slugify");
+const whatsappService = require("../services/whatsapp.service");
+
 
 // Helper to ensure slug uniqueness
 const generateUniqueSlug = async (name, excludeId = null) => {
@@ -109,7 +111,7 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ 
+            const row = await Business.findOne({
                 where: whereClause,
                 include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
@@ -204,7 +206,7 @@ const businessController = {
                 }
             }
 
-            const row = await Business.findOne({ 
+            const row = await Business.findOne({
                 where: whereClause,
                 include: [{ model: User, as: 'owner', attributes: ['name', 'email', 'profile_picture'] }]
             });
@@ -218,6 +220,78 @@ const businessController = {
             }
 
             await row.update(safeBody);
+
+            // Replicate template folder if custom template is chosen/updated
+            if (safeBody.selected_template) {
+                // Execute replication asynchronously to prevent blocking the Node event loop
+                (async () => {
+                    try {
+                        const TemplateProject = require("../models/templateProject.model");
+                        const BusinessTemplate = require("../models/businessTemplate.model");
+                        const fs = require("fs").promises;
+                        const path = require("path");
+
+                        const template = await TemplateProject.findOne({ where: { templateId: safeBody.selected_template } });
+                        if (template) {
+                            const businessId = row.id;
+                            const businessKey = Buffer.from(`MYB-${businessId}-777`).toString('base64').replace(/=/g, '');
+                            const numericId = template.id;
+                            const templateId = template.templateId;
+
+                            const destFolderName = `${businessKey}`;
+
+                            const godaddyUploadUrl = process.env.GODADDY_UPLOAD_URL || "https://mybookings.allysoftsolutions.com/extractor.php";
+                            const godaddyUploadToken = process.env.GODADDY_UPLOAD_TOKEN || "mybookings_secret_upload_token_2026";
+
+                            console.log(`[GoDaddy Replicate] Requesting replication for business ${businessId} to ${godaddyUploadUrl}...`);
+                            
+                            const axios = require('axios');
+                            const response = await axios.post(godaddyUploadUrl, {
+                                action: 'replicate',
+                                template_id: templateId,
+                                business_id: businessId,
+                                business_key: businessKey,
+                                numeric_id: numericId
+                            }, {
+                                headers: {
+                                    'Authorization': `Bearer ${godaddyUploadToken}`,
+                                    'Content-Type': 'application/json'
+                                }
+                            });
+
+                            if (response.data && response.data.success) {
+                                // Save relative path to DB
+                                const tempPathDb = `dist/User_Templates/${destFolderName}`;
+                                
+                                let bizTemplateRecord = await BusinessTemplate.findOne({
+                                    where: { business_id: businessId }
+                                });
+
+                                if (bizTemplateRecord) {
+                                    await bizTemplateRecord.update({
+                                        temp_id: numericId.toString(),
+                                        business_key: businessKey,
+                                        temp_path: tempPathDb,
+                                        updated_at: new Date()
+                                    });
+                                } else {
+                                    await BusinessTemplate.create({
+                                        temp_id: numericId.toString(),
+                                        business_id: businessId,
+                                        business_key: businessKey,
+                                        temp_path: tempPathDb
+                                    });
+                                }
+                                console.log(`[Replication Success] Template successfully replicated on GoDaddy: ${destFolderName}`);
+                            } else {
+                                throw new Error(response.data ? response.data.message : "GoDaddy replication endpoint returned failure");
+                            }
+                        }
+                    } catch (repErr) {
+                        console.error("[Replication Error] Failed to replicate template folder asynchronously:", repErr);
+                    }
+                })();
+            }
 
             // If it's single location, sync the location record
             if (!row.has_multiple_locations && (safeBody.address || safeBody.city || safeBody.state || safeBody.business_name)) {
@@ -266,7 +340,161 @@ const businessController = {
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    initiateWhatsApp: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+            // Check if package allows WhatsApp
+            const canUse = await whatsappService.canUseWhatsApp(id);
+            if (!canUse) return res.status(403).json({ success: false, message: "Your current package does not support WhatsApp notifications." });
+
+            // Ignore old manual keys (starting with Mybookings_) to trigger a fresh server-generated handshake
+            let keyToPass = business.whatsapp_instance_key;
+            if (keyToPass && keyToPass.startsWith('Mybookings_')) {
+                keyToPass = null;
+            }
+
+            let data;
+            try {
+                data = await whatsappService.initiateInstance(keyToPass, business.business_name);
+
+                // Trigger catch if gateway returned success=false with "Instance not found"
+                if (data && data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found'))) {
+                    throw new Error('Instance not found');
+                }
+            } catch (initError) {
+                const errorMsg = initError.response?.data?.message || initError.message;
+                const isNotFound = errorMsg === 'Instance not found' || errorMsg?.includes('not found') || errorMsg?.includes('Instance not found');
+
+                if (isNotFound && keyToPass) {
+                    console.log(`[WhatsApp] Instance ${keyToPass} not found on gateway. Purging key and requesting a new one...`);
+                    // Update model state
+                    await business.update({ whatsapp_instance_key: null });
+                    // Request a new fresh instance
+                    data = await whatsappService.initiateInstance(null, business.business_name);
+                } else {
+                    throw initError;
+                }
+            }
+
+            // Save instanceKey if it's new (Step 1 returned it)
+            if (data.success && data.instanceKey && data.instanceKey !== business.whatsapp_instance_key) {
+                await business.update({ whatsapp_instance_key: data.instanceKey });
+            }
+
+            // If status is connected, update DB
+            if (data.status === 'connected') {
+                await business.update({ whatsapp_connected: true });
+            } else {
+                await business.update({ whatsapp_connected: false });
+            }
+
+            // Explicitly pass through profile data if available
+            res.json({
+                ...data,
+                profileImage: data.profileImage || data.profile_picture || null,
+                name: data.name || data.pushname || null,
+                phone: data.phone || data.phonenumber || null,
+                whatsapp_send_staff: business.whatsapp_send_staff,
+                whatsapp_send_customer: business.whatsapp_send_customer
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    getWhatsAppStatus: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const { force } = req.query; // Check if the client requested a forced remote check
+
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business || !business.whatsapp_instance_key) {
+                return res.json({ success: false, status: 'disconnected', message: "WhatsApp not linked" });
+            }
+
+            // If NOT forced, respond instantly using our fast cached database values!
+            if (force !== 'true') {
+                return res.json({
+                    success: true,
+                    status: business.whatsapp_connected ? 'connected' : 'disconnected',
+                    whatsapp_send_staff: business.whatsapp_send_staff,
+                    whatsapp_send_customer: business.whatsapp_send_customer,
+                    isCached: true
+                });
+            }
+
+            const data = await whatsappService.getInstanceStatus(business.whatsapp_instance_key);
+
+            // Handle recovery if the gateway reports the instance does not exist
+            if (data.success === false && (data.message === 'Instance not found' || data.error?.includes('Instance not found') || data.message?.includes('not found'))) {
+                await business.update({
+                    whatsapp_instance_key: null,
+                    whatsapp_connected: false
+                });
+                return res.json({
+                    success: false,
+                    status: 'disconnected',
+                    message: "Instance not found. Wiped key.",
+                    whatsapp_send_staff: business.whatsapp_send_staff,
+                    whatsapp_send_customer: business.whatsapp_send_customer
+                });
+            }
+
+            // Sync DB status
+            if (data.success) {
+                const isConnected = data.status === 'connected';
+                if (isConnected !== business.whatsapp_connected) {
+                    await business.update({ whatsapp_connected: isConnected });
+                }
+            }
+
+            // Explicitly pass through profile data if available
+            res.json({
+                ...data,
+                profileImage: data.profileImage || data.profile_picture || null,
+                name: data.name || data.pushname || null,
+                phone: data.phone || data.phonenumber || null,
+                whatsapp_send_staff: business.whatsapp_send_staff,
+                whatsapp_send_customer: business.whatsapp_send_customer
+            });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    disconnectWhatsApp: async (req, res) => {
+        try {
+            const { id } = req.params;
+            const business = await Business.findOne({ where: { id, user_id: req.user.user_id } });
+            if (!business) return res.status(404).json({ success: false, message: "Business not found" });
+
+            // Delete from gateway if key exists
+            if (business.whatsapp_instance_key) {
+                try {
+                    await whatsappService.deleteInstance(business.whatsapp_instance_key);
+                } catch (apiError) {
+                    console.error('[WhatsApp] Gateway deletion failed:', apiError.message);
+                    // Continue to clear local DB even if gateway call fails
+                }
+            }
+
+            // Clear the key from DB
+            await business.update({
+                whatsapp_instance_key: null,
+                whatsapp_connected: false
+            });
+
+            res.json({ success: true, message: "WhatsApp disconnected successfully." });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
+
 
 module.exports = businessController;

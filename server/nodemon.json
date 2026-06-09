@@ -1,0 +1,11 @@
+{
+  "watch": ["."],
+  "ext": "js,json",
+  "ignore": [
+    "Templates/**/*",
+    "uploads/**/*",
+    "deploy_error.log",
+    "scratch/**/*",
+    "*.log"
+  ]
+}

@@ -21,7 +21,7 @@ import { getStaffServices } from '../api/staffService.api';
 import { getStaffAvailability } from '../api/staffAvailability.api';
 import { getCustomers, createCustomer } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
-import { getBookings, createBooking } from '../api/booking.api';
+import { getBookings, createBooking, deleteBooking } from '../api/booking.api';
 import { createPayment, createRazorpayOrder, verifyRazorpayPayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
 import axiosInstance from '../api/axiosInstance';
@@ -134,6 +134,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
     // Sync externalOpen with internal open state
     useEffect(() => {
+        console.log("Widget Version 2 Loaded");
         if (externalOpen !== null) {
             setOpen(externalOpen);
         }
@@ -445,6 +446,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const bookingRes = await createBooking(bookingPayload);
             if (!bookingRes.success) throw new Error(bookingRes.message);
             const bookingId = bookingRes.data.id;
+            let createdBookingId = bookingId;
 
             // 3. Razorpay Order Creation
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
@@ -457,13 +459,17 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 business_id: resolvedBusinessId
             });
 
-            if (!orderRes.success) throw new Error(orderRes.message);
+            if (!orderRes.success) {
+                if (createdBookingId) await deleteBooking(createdBookingId);
+                throw new Error(orderRes.message);
+            }
 
             // 4. Load SDK and Open Checkout
             const isLoaded = await loadRazorpayScript();
             if (!isLoaded) {
                 toast.error("Razorpay SDK failed to load. Are you online?");
                 setLoading(false);
+                if (createdBookingId) await deleteBooking(createdBookingId);
                 return;
             }
 
@@ -495,6 +501,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         }
                     } catch (err) {
                         toast.error(err.message || "Payment verification failed");
+                        if (createdBookingId) {
+                            await deleteBooking(createdBookingId);
+                            createdBookingId = null;
+                        }
                     } finally {
                         setLoading(false);
                     }
@@ -523,13 +533,33 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     }
                 },
                 modal: {
-                    ondismiss: () => {
+                    ondismiss: async () => {
                         setLoading(false);
+                        if (createdBookingId) {
+                            try {
+                                await deleteBooking(createdBookingId);
+                                createdBookingId = null;
+                            } catch (e) {
+                                console.error('Failed to delete booking on dismiss', e);
+                            }
+                        }
                     }
                 }
             };
 
             const rzp = new window.Razorpay(options);
+            
+            rzp.on('payment.failed', async function (response) {
+                if (createdBookingId) {
+                    try {
+                        await deleteBooking(createdBookingId);
+                        createdBookingId = null;
+                    } catch (e) {
+                        console.error('Failed to delete booking on payment fail', e);
+                    }
+                }
+            });
+
             rzp.open();
 
         } catch (error) {
@@ -825,6 +855,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     if (selected < today) return;
                     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                     setBookingData(prev => ({ ...prev, date: iso, slots: [] }));
+                    setTimeout(() => {
+                        const el = document.getElementById('timing-slots-section');
+                        if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                    }, 150);
                 };
 
                 const prevMonth = () => setCalendarMonth(prev => {
@@ -939,7 +973,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
                         {/* Time slots */}
                         {bookingData.date && (
-                            <>
+                            <Box id="timing-slots-section" sx={{ mt: 1 }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1 }}>
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#6366f1' }}>
                                         Available Slots — {getDayNameDisplay(bookingData.date)}
@@ -1009,7 +1043,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 >
                                     {isDurationMet ? 'Continue' : `Selected ${formatDuration(selectedDuration)} of ${formatDuration(totalDuration)}`}
                                 </Button>
-                            </>
+                            </Box>
                         )}
                     </Box>
                 );
@@ -1247,7 +1281,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             <Dialog
                 open={open}
-                onClose={resetBooking}
+                onClose={(event, reason) => {
+                    if (reason && (reason === 'backdropClick' || reason === 'escapeKeyDown')) {
+                        return;
+                    }
+                    resetBooking();
+                }}
                 maxWidth="xs"
                 fullWidth
                 fullScreen={isMobile}

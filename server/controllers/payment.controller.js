@@ -4,6 +4,10 @@ const { Op } = require("sequelize");
 const crypto = require("crypto");
 const razorpayService = require("../services/razorpay.service");
 const { emitToBusiness } = require("../services/socket.service");
+const Business = require("../models/business.model");
+const User = require("../models/user.model");
+const Package = require("../models/package.model");
+const whatsappService = require("../services/whatsapp.service");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
@@ -181,12 +185,28 @@ const paymentController = {
                 return res.json({ success: true, message: "Payment already processed", data: existingPayment });
             }
 
+            // Calculate platform fees based on business package
+            const business = await Business.findByPk(booking.business_id, {
+                include: [{
+                    model: User,
+                    as: 'owner',
+                    include: [{ model: Package, as: 'package' }]
+                }]
+            });
+
+            const chargesPercent = parseFloat(business?.owner?.package?.portal_payment_charges || 0);
+            const calc_paid_amount = parseFloat(paid_amount || amount);
+            const platform_fees = (calc_paid_amount * chargesPercent) / 100;
+            const final_amount = calc_paid_amount - platform_fees;
+
             // Create payment record
             const paymentRecord = await Payment.create({
                 booking_id: booking_id,
                 business_id: booking.business_id,
                 amount: amount,
-                paid_amount: paid_amount || amount,
+                paid_amount: calc_paid_amount,
+                platform_fees: platform_fees,
+                final_amount: final_amount,
                 payment_method: 'Razorpay',
                 transaction_id: razorpay_payment_id,
                 payment_status: true
@@ -194,6 +214,9 @@ const paymentController = {
 
             // Update booking status
             await booking.update({ payment_status: true });
+
+            // Trigger WhatsApp Notifications
+            whatsappService.sendBookingNotification(booking_id);
 
             res.json({ 
                 success: true, 
@@ -249,16 +272,33 @@ const paymentController = {
                         // Check if payment already exists
                         const existingPayment = await Payment.findOne({ where: { transaction_id: paymentId } });
                         if (!existingPayment) {
+                            const business = await Business.findByPk(booking.business_id, {
+                                include: [{
+                                    model: User,
+                                    as: 'owner',
+                                    include: [{ model: Package, as: 'package' }]
+                                }]
+                            });
+
+                            const chargesPercent = parseFloat(business?.owner?.package?.portal_payment_charges || 0);
+                            const platform_fees = (amount * chargesPercent) / 100;
+                            const final_amount = amount - platform_fees;
+
                             const paymentRecord = await Payment.create({
                                 booking_id: bookingId,
                                 business_id: booking.business_id,
                                 amount: amount,
                                 paid_amount: amount,
+                                platform_fees: platform_fees,
+                                final_amount: final_amount,
                                 payment_method: 'Razorpay_Webhook',
                                 transaction_id: paymentId,
                                 payment_status: true
                             });
                             await booking.update({ payment_status: true });
+
+                            // Trigger WhatsApp Notifications
+                            whatsappService.sendBookingNotification(bookingId);
                         } else {
                         }
                     }

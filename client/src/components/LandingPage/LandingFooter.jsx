@@ -6,6 +6,7 @@ const QUICK_LINKS = [
     { label: 'Features', href: '#features' },
     { label: 'Pricing', href: '#pricing' },
     { label: 'FAQ', href: '#faq' },
+    { label: 'Documentation', to: '/docs' },
     { label: 'Sign In', to: '/login' },
     { label: 'Register', to: '/register' },
 ];

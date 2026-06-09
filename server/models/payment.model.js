@@ -29,6 +29,16 @@ const Payment = sequelize.define(
             type: DataTypes.STRING,
             allowNull: true
         },
+        platform_fees: {
+            type: DataTypes.DOUBLE,
+            allowNull: true,
+            defaultValue: 0
+        },
+        final_amount: {
+            type: DataTypes.DOUBLE,
+            allowNull: true,
+            defaultValue: 0
+        },
         transaction_id: {
             type: DataTypes.TEXT,
             allowNull: true
@@ -36,6 +46,11 @@ const Payment = sequelize.define(
         payment_status: {
             type: DataTypes.BOOLEAN,
             defaultValue: false
+        },
+        settlement_status: {
+            type: DataTypes.ENUM('paid', 'unpaid'),
+            defaultValue: 'unpaid',
+            allowNull: false
         },
         status: {
             type: DataTypes.BOOLEAN,

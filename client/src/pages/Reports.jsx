@@ -242,7 +242,7 @@ const Reports = () => {
             ]);
 
         } else if (reportType === 'payments') {
-            headers = [['Date', 'Customer', 'Method', 'Paid Amt', 'Charges', 'Income', 'Status']];
+            headers = [['Date', 'Customer', 'Method', 'Paid Amt', 'Platform Fees', 'Final Income', 'Status']];
 
             let totalPaid = 0;
             let totalCharges = 0;
@@ -252,8 +252,8 @@ const Reports = () => {
                 const booking = bookings.find(b => b.id === p.booking_id);
                 const customer = customers.find(c => c.id === booking?.customer_id);
                 const paidAmt = Number(p.paid_amount || 0);
-                const charge = paidAmt * (chargesPercent / 100);
-                const income = paidAmt - charge;
+                const charge = Number(p.platform_fees || 0);
+                const income = Number(p.final_amount || 0);
 
                 totalPaid += paidAmt;
                 totalCharges += charge;
@@ -585,8 +585,8 @@ const Reports = () => {
                                         <TableCell sx={{ fontWeight: 700 }}>Transaction ID</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Method</TableCell>
                                         <TableCell align="right" sx={{ fontWeight: 700 }}>Paid</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Charges</TableCell>
-                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Income</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Platform Fees</TableCell>
+                                        <TableCell align="right" sx={{ fontWeight: 700 }}>Final Income</TableCell>
                                         <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
                                     </TableRow>
                                 </TableHead>
@@ -598,10 +598,9 @@ const Reports = () => {
                                     ) : filteredPayments.map((p) => {
                                         const booking = bookings.find(b => b.id === p.booking_id);
                                         const customer = customers.find(c => c.id === booking?.customer_id);
-                                        const chargesPercent = usage?.portal_payment_charges || 0;
                                         const paidAmt = Number(p.paid_amount || 0);
-                                        const charge = paidAmt * (chargesPercent / 100);
-                                        const income = paidAmt - charge;
+                                        const charge = Number(p.platform_fees || 0);
+                                        const income = Number(p.final_amount || 0);
 
                                         return (
                                             <TableRow key={p.id} hover>
@@ -613,8 +612,8 @@ const Reports = () => {
                                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
                                                 <TableCell sx={{ fontWeight: 500 }}>{p.payment_method}</TableCell>
                                                 <TableCell align="right" sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmt.toFixed(2)}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>₹{charge.toFixed(2)}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>₹{income.toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>₹{Number(p.platform_fees || 0).toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>₹{Number(p.final_amount || 0).toFixed(2)}</TableCell>
                                                 <TableCell>
                                                     <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                                                 </TableCell>

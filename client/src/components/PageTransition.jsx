@@ -14,7 +14,7 @@ const PageTransition = ({ children }) => (
         initial="hidden"
         animate="visible"
         variants={variants}
-        style={{ display: 'contents' }}
+        style={{ width: '100%', display: 'block' }}
     >
         {children}
     </motion.div>

@@ -1,14 +1,10 @@
-const Booking = require("../models/booking.model");
-const Business = require("../models/business.model");
-const Customer = require("../models/customer.model");
-const Service = require("../models/service.model");
-const Staff = require("../models/staff.model");
-const Location = require("../models/location.model");
-const BookingService = require("../models/bookingService.model");
+const { Booking, Business, Customer, Service, Staff, Location, BookingService } = require("../models/associations");
 const { Op } = require("sequelize");
 const { emitToBusiness } = require("../services/socket.service");
 const fcmService = require("../services/fcm.service");
 const User = require("../models/user.model");
+const whatsappService = require("../services/whatsapp.service");
+
 
 const getBusinessId = (req) => {
     if (req.body?.business_id) return req.body.business_id;
@@ -33,10 +29,40 @@ const bookingController = {
                 });
             }
 
-            // Extract service_ids from body if present
+            // Extract service_ids and other data
             const { service_ids, ...bookingData } = req.body;
 
             const row = await Booking.create({ ...bookingData, business_id });
+            // --- Handle Customer (Find or Create) ---
+            let customer_id = bookingData.customer_id;
+            if (!customer_id && (bookingData.phone || bookingData.email)) {
+                const [customer] = await Customer.findOrCreate({
+                    where: {
+                        business_id,
+                        [Op.or]: [
+                            bookingData.phone ? { phone: bookingData.phone } : null,
+                            bookingData.email ? { email: bookingData.email } : null
+                        ].filter(Boolean)
+                    },
+                    defaults: {
+                        name: bookingData.name || 'New Customer',
+                        phone: bookingData.phone,
+                        email: bookingData.email,
+                        business_id
+                    }
+                });
+                customer_id = customer.id;
+            }
+
+            if (!customer_id) {
+                return res.status(400).json({ success: false, message: "Customer identification (ID, Phone, or Email) is required." });
+            }
+
+            const row = await Booking.create({
+                ...bookingData,
+                customer_id,
+                business_id
+            });
 
             // Store multiple services if provided
             if (service_ids && Array.isArray(service_ids) && service_ids.length > 0) {
@@ -45,7 +71,6 @@ const bookingController = {
                     service_id: service_id
                 }));
                 await BookingService.bulkCreate(bookingServices);
-                console.log(`[BookingController] Stored ${service_ids.length} services for booking ${row.id}`);
             } else if (req.body.service_id) {
                 // Fallback for single service if service_ids array is not provided
                 await BookingService.create({
@@ -90,8 +115,19 @@ const bookingController = {
                     { model: Customer, as: 'customer' },
                     { model: Staff, as: 'staff' },
                     { model: Service, as: 'services', through: { attributes: [] } }
+                    { model: Service, as: 'services', through: { attributes: [] } },
+                    { model: Staff, as: 'staff' },
+                    { model: Location, as: 'location' },
+                    { model: Business, as: 'business' }
                 ]
             });
+
+            // --- WhatsApp Notifications ---
+            if (fullBooking && fullBooking.payment_status) {
+                whatsappService.sendBookingNotification(row.id);
+            }
+            // ------------------------------
+
 
             res.status(201).json({ success: true, message: "Booking created successfully", data: fullBooking || row });
 

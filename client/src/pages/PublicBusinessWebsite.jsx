@@ -12,7 +12,7 @@ import BookingWidget from '../widgets/BookingWidget';
 import PageTransition from '../components/PageTransition';
 import { decodeBusinessId } from '../utils/obfuscation';
 
-const PublicBusinessWebsite = () => {
+const PublicBusinessWebsite = ({ subPath }) => {
     // ... existing state ...
     const { id } = useParams();
     const navigate = useNavigate();
@@ -106,6 +106,27 @@ const PublicBusinessWebsite = () => {
 
         const displayData = { ...businessData, hideScript: true };
 
+        const standardTemplates = ['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'];
+        if (!standardTemplates.includes(template)) {
+            const apiBase = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000/mybookings';
+            const templatePath = subPath
+                ? `${apiBase}/templates/${template}/${businessData.business.id}/${subPath}/`
+                : `${apiBase}/templates/${template}/${businessData.business.id}/`;
+            return (
+                <iframe
+                    src={templatePath}
+                    style={{
+                        width: '100%',
+                        height: '100vh',
+                        border: 'none',
+                        background: '#ffffff',
+                        display: 'block'
+                    }}
+                    title={subPath ? 'Template Admin' : 'Business Website'}
+                />
+            );
+        }
+
         switch (template) {
             case 'template1': return <TemplateMinimal data={displayData} />;
             case 'template2': return <TemplatePremium data={displayData} />;
@@ -117,10 +138,14 @@ const PublicBusinessWebsite = () => {
         }
     };
 
+    const isCustomTemplate = !['template1', 'template2', 'template3', 'portfolio1', 'portfolio2', 'portfolio3'].includes(businessData?.business?.selected_template || 'template1');
+
     return (
         <PageTransition>
             {renderTemplate()}
-            <BookingWidget businessId={businessData.business.api_key || businessData.business.id} />
+            {!isCustomTemplate && (
+                <BookingWidget businessId={businessData.business.api_key || businessData.business.id} />
+            )}
         </PageTransition>
     );
 };

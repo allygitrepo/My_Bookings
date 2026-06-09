@@ -1,6 +1,6 @@
 import React from 'react';
 import {
-    Box, Container, Typography, Grid, Chip, Avatar,
+    Box, Container, Typography, Chip, Avatar,
     Button, IconButton, Divider, useTheme, useMediaQuery
 } from '@mui/material';
 import {
@@ -35,7 +35,7 @@ const glowBox = `0 0 28px ${TEAL_GLOW}, 0 0 6px ${TEAL_DIM}`;
 /* ─── Component ────────────────────────────────────────────────────────── */
 const TemplatePortfolioStudio = ({ data }) => {
     const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down('sm'));
+    const isMobile = useMediaQuery(theme.breakpoints.down('sm')) || data.viewMode === 'mobile';
     const { business = {}, services = [], locations = [] } = data || {};
 
     const displayName = business.owner?.name || business.business_name || "Professional Studio";
@@ -68,6 +68,7 @@ const TemplatePortfolioStudio = ({ data }) => {
 
     return (
         <Box sx={{
+            position: 'relative',
             bgcolor: BG,
             color: WHITE,
             minHeight: '100vh',
@@ -82,7 +83,7 @@ const TemplatePortfolioStudio = ({ data }) => {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.8 }}
                 sx={{
-                    position: 'fixed', top: 0, width: '100%', zIndex: 100,
+                    position: data.isPreview ? 'absolute' : 'fixed', top: 0, width: '100%', zIndex: 100,
                     borderBottom: `1px solid ${BORDER}`,
                     backdropFilter: 'blur(16px)',
                     bgcolor: 'rgba(5,10,10,0.72)',
@@ -137,23 +138,22 @@ const TemplatePortfolioStudio = ({ data }) => {
                 }} />
 
                 <Container maxWidth="xl" sx={{ zIndex: 2, position: 'relative' }}>
-                    <Grid
-                        container
-                        spacing={{ xs: 6, md: 10 }}
-                        alignItems="center"
-                        justifyContent="space-between"
+                    <Box
                         sx={{
+                            display: 'flex',
+                            flexWrap: 'wrap',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
                             minHeight: '80vh',
                             maxWidth: '1200px',
-                            mx: 'auto'
+                            mx: 'auto',
+                            gap: { xs: 6, md: 10 }
                         }}
                     >
                         {/* LEFT ── text */}
-                        <Grid
-                            item
-                            xs={12}
-                            md={6}
+                        <Box
                             sx={{
+                                flex: { xs: '1 1 100%', md: '1 1 0' },
                                 display: 'flex',
                                 justifyContent: 'center',
                                 flexDirection: 'column'
@@ -182,7 +182,7 @@ const TemplatePortfolioStudio = ({ data }) => {
                                         key={`${word}-${i}`}
                                         variant="h1"
                                         sx={{
-                                            fontSize: { xs: '3.5rem', md: '5.5rem', lg: '6.5rem' },
+                                            fontSize: 'clamp(1.8rem, 10cqw, 6.5rem)',
                                             fontWeight: 900,
                                             lineHeight: 0.95,
                                             letterSpacing: '-0.04em',
@@ -236,14 +236,12 @@ const TemplatePortfolioStudio = ({ data }) => {
                                     </Button>
                                 </Box>
                             </motion.div>
-                        </Grid>
+                        </Box>
 
                         {/* RIGHT ── image with neon frame */}
-                        <Grid
-                            item
-                            xs={12}
-                            md={6}
+                        <Box
                             sx={{
+                                flex: { xs: '1 1 100%', md: '0 1 auto' },
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center'
@@ -309,8 +307,8 @@ const TemplatePortfolioStudio = ({ data }) => {
                                     background: `linear-gradient(135deg, ${TEAL_DIM} 0%, transparent 55%)`,
                                 }} />
                             </motion.div>
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
 
                     {/* Stats row */}
                     <Box
@@ -319,8 +317,8 @@ const TemplatePortfolioStudio = ({ data }) => {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8, delay: 0.6 }}
                         sx={{
-                            display: 'flex', gap: { xs: 4, md: 8 },
-                            mt: { xs: 8, md: 10 }, pt: 4,
+                            display: 'flex', gap: { xs: 3, md: 8 },
+                            mt: { xs: 6, md: 10 }, pt: 4,
                             borderTop: `1px solid ${BORDER}`,
                             flexWrap: 'wrap',
                         }}
@@ -351,8 +349,12 @@ const TemplatePortfolioStudio = ({ data }) => {
             {/* ══ INFO ═════════════════════════════════════════════════════ */}
             <Box sx={{ py: 15, borderTop: `1px solid ${BORDER}`, bgcolor: BG2 }}>
                 <Container maxWidth="lg">
-                    <Grid container spacing={8}>
-                        <Grid item xs={12} md={6}>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+                        gap: 8
+                    }}>
+                        <Box>
                             <motion.div initial={{ opacity: 0, x: -30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
                                 <Typography sx={{
                                     color: TEAL, textTransform: 'uppercase',
@@ -369,11 +371,15 @@ const TemplatePortfolioStudio = ({ data }) => {
                                     Curated precision.<br />Meticulous attention<br />to detail.
                                 </Typography>
                             </motion.div>
-                        </Grid>
-                        <Grid item xs={12} md={6}>
+                        </Box>
+                        <Box>
                             <motion.div initial={{ opacity: 0, x: 30 }} whileInView={{ opacity: 1, x: 0 }} viewport={{ once: true }}>
-                                <Grid container spacing={3}>
-                                    <Grid item xs={12} sm={6}>
+                                <Box sx={{
+                                    display: 'grid',
+                                    gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' },
+                                    gap: 3
+                                }}>
+                                    <Box>
                                         <Box sx={{
                                             p: 4, height: '100%', bgcolor: BG3,
                                             border: `1px solid ${BORDER}`, borderRadius: '4px',
@@ -389,8 +395,8 @@ const TemplatePortfolioStudio = ({ data }) => {
                                                 {locations?.[0]?.city || business.city}
                                             </Typography>
                                         </Box>
-                                    </Grid>
-                                    <Grid item xs={12} sm={6}>
+                                    </Box>
+                                    <Box>
                                         <Box sx={{
                                             p: 4, height: '100%', bgcolor: BG3,
                                             border: `1px solid ${BORDER}`, borderRadius: '4px',
@@ -404,11 +410,11 @@ const TemplatePortfolioStudio = ({ data }) => {
                                                 Email Me →
                                             </Button>
                                         </Box>
-                                    </Grid>
-                                </Grid>
+                                    </Box>
+                                </Box>
                             </motion.div>
-                        </Grid>
-                    </Grid>
+                        </Box>
+                    </Box>
                 </Container>
             </Box>
 
@@ -441,9 +447,13 @@ const TemplatePortfolioStudio = ({ data }) => {
                         </motion.div>
                     </Box>
 
-                    <Grid container spacing={3}>
+                    <Box sx={{
+                        display: 'grid',
+                        gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr', md: 'repeat(3, 1fr)' },
+                        gap: 3
+                    }}>
                         {services.map((service, index) => (
-                            <Grid item xs={12} md={4} key={service.id}>
+                            <Box key={service.id}>
                                 <motion.div
                                     initial={{ opacity: 0, y: 30 }}
                                     whileInView={{ opacity: 1, y: 0 }}
@@ -500,9 +510,9 @@ const TemplatePortfolioStudio = ({ data }) => {
                                         </Box>
                                     </Box>
                                 </motion.div>
-                            </Grid>
+                            </Box>
                         ))}
-                    </Grid>
+                    </Box>
                 </Container>
             </Box>
 

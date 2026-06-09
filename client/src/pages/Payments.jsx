@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
-    Paper, Chip, Typography, TablePagination, Box, Grid, Card, Divider, CircularProgress,
+    Paper, Chip, Typography, TablePagination, Box, Grid, Card, Divider, CircularProgress, Button,
 } from '@mui/material';
 import { Payments as PayIcon } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
@@ -13,6 +13,10 @@ import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
+import { formatDate } from '../utils/date';
+import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import dayjs from 'dayjs';
 
 const statusColors = { Completed: 'success', Pending: 'warning', Failed: 'error', Refunded: 'default' };
 
@@ -27,19 +31,36 @@ const Payments = () => {
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
 
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
+
     useEffect(() => {
         setPage(0);
-    }, [searchQuery, selectedBusinessId]);
+    }, [searchQuery, selectedBusinessId, startDate, endDate]);
 
     const filteredPayments = payments.filter(p => {
         const matchesBusiness = selectedBusinessId === 'all' || String(p.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
+        // Date range filter
+        const paymentDate = dayjs(p.created_at);
+        const matchesStart = !startDate || paymentDate.isAfter(dayjs(startDate).startOf('day')) || paymentDate.isSame(dayjs(startDate).startOf('day'));
+        const matchesEnd = !endDate || paymentDate.isBefore(dayjs(endDate).endOf('day')) || paymentDate.isSame(dayjs(endDate).endOf('day'));
+        if (!matchesStart || !matchesEnd) return false;
+
         return p.amount?.toString().includes(searchQuery) ||
             p.paid_amount?.toString().includes(searchQuery) ||
-            p.payment_method?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             p.transaction_id?.toLowerCase().includes(searchQuery.toLowerCase());
-    }).sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+    }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Calculate total pending settlement amount for filtered list (Paid Amount - Platform Fees)
+    const totalPendingSettlement = filteredPayments.reduce((sum, p) => {
+        if (p.settlement_status === 'unpaid') {
+            const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+            return sum + finalPayout;
+        }
+        return sum;
+    }, 0);
 
     const fetchData = async () => {
         setLoading(true);
@@ -65,6 +86,55 @@ const Payments = () => {
                 title="Payments"
                 subtitle="Payment records are created automatically when a booking is completed via the widget."
             />
+            
+            <Box sx={{ mb: 4, display: 'flex', gap: 3, alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap' }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <LocalizationProvider dateAdapter={AdapterDayjs}>
+                        <DatePicker
+                            label="From"
+                            value={startDate}
+                            onChange={(val) => setStartDate(val)}
+                            format="DD/MM/YYYY"
+                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                        />
+                        <DatePicker
+                            label="To"
+                            value={endDate}
+                            onChange={(val) => setEndDate(val)}
+                            format="DD/MM/YYYY"
+                            slotProps={{ textField: { size: 'small', sx: { width: 150 } } }}
+                        />
+                    </LocalizationProvider>
+                    {(startDate || endDate) && (
+                        <Button
+                            variant="text"
+                            onClick={() => { setStartDate(null); setEndDate(null); }}
+                            sx={{ fontWeight: 700, textTransform: 'none' }}
+                        >
+                            Clear
+                        </Button>
+                    )}
+                </Box>
+
+                <Box sx={{ 
+                    height: 40, 
+                    px: 2.5, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    bgcolor: 'rgba(99, 102, 241, 0.05)', 
+                    borderRadius: 2.5, 
+                    border: '1px solid', 
+                    borderColor: 'divider',
+                    gap: 1.5
+                }}>
+                    <Typography variant="caption" color="text.secondary" fontWeight={700} sx={{ letterSpacing: 0.5 }}>
+                        PENDING SETTLEMENT AMOUNT:
+                    </Typography>
+                    <Typography variant="body2" fontWeight={900} color="warning.main">
+                        ₹{totalPendingSettlement.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                    </Typography>
+                </Box>
+            </Box>
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
@@ -74,8 +144,9 @@ const Payments = () => {
                             <TableCell sx={{ fontWeight: 600 }}>Total Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Paid Amount</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Remaining</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Platform Fee</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Income</TableCell>
-                            <TableCell sx={{ fontWeight: 600 }}>Method</TableCell>
+                            <TableCell sx={{ fontWeight: 600 }}>Settlement</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Transaction ID</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Status</TableCell>
                             <TableCell sx={{ fontWeight: 600 }}>Date</TableCell>
@@ -111,10 +182,20 @@ const Payments = () => {
                                 <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
                                     ₹{(Number(p.amount) - Number(p.paid_amount || p.amount)).toFixed(2)}
                                 </TableCell>
-                                <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>
-                                    ₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(2)}
+                                <TableCell sx={{ fontWeight: 700, color: 'error.main' }}>
+                                    ₹{Number(p.platform_fees || 0).toFixed(2)}
                                 </TableCell>
-                                <TableCell>{p.payment_method}</TableCell>
+                                 <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>
+                                     ₹{(parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0)).toFixed(2)}
+                                 </TableCell>
+                                <TableCell>
+                                    <Chip
+                                        label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
+                                        size="small"
+                                        color={p.settlement_status === 'paid' ? 'success' : 'warning'}
+                                        sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                                    />
+                                </TableCell>
                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>{p.transaction_id || '—'}</TableCell>
                                 <TableCell>
                                     <Chip
@@ -124,7 +205,7 @@ const Payments = () => {
                                         variant="outlined"
                                     />
                                 </TableCell>
-                                <TableCell>{p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}</TableCell>
+                                 <TableCell>{formatDate(p.created_at)}</TableCell>
                             </TableRow>
                         );})}
                     </TableBody>
@@ -151,7 +232,7 @@ const Payments = () => {
                                 <Box>
                                     <Typography variant="subtitle2" fontWeight={800}>{customer?.name || '—'}</Typography>
                                     <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                        {p.created_at ? new Date(p.created_at).toLocaleDateString() : '—'}
+                                         {formatDate(p.created_at)}
                                     </Typography>
                                 </Box>
                                 <Chip 
@@ -170,11 +251,18 @@ const Payments = () => {
                                 </Grid>
                                 <Grid item xs={4} sx={{ textAlign: 'center' }}>
                                     <Typography variant="caption" color="text.secondary" display="block">Income</Typography>
-                                    <Typography variant="body2" fontWeight={800} color="primary.main">₹{(Number(p.paid_amount || p.amount) * (1 - (usage?.portal_payment_charges || 0) / 100)).toFixed(0)}</Typography>
+                                      <Typography variant="body2" fontWeight={800} color="primary.main">
+                                          ₹{(parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0)).toFixed(2)}
+                                      </Typography>
                                 </Grid>
                                 <Grid item xs={4} sx={{ textAlign: 'right' }}>
-                                    <Typography variant="caption" color="text.secondary" display="block">Method</Typography>
-                                    <Typography variant="body2" fontWeight={700}>{p.payment_method}</Typography>
+                                    <Typography variant="caption" color="text.secondary" display="block">Settlement</Typography>
+                                    <Chip
+                                        label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
+                                        size="small"
+                                        color={p.settlement_status === 'paid' ? 'success' : 'warning'}
+                                        sx={{ fontWeight: 700, borderRadius: 1 }}
+                                    />
                                 </Grid>
                             </Grid>
 

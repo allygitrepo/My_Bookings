@@ -30,6 +30,9 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
+import WhatsApp from './pages/WhatsApp';
+import Documentation from './pages/Documentation';
+
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
 
@@ -44,6 +47,8 @@ import PortalUsers from './pages/portal/PortalUsers';
 import CreateAdmin from './pages/portal/CreateAdmin';
 import PortalPackages from './pages/portal/PortalPackages';
 import AdminPayments from './pages/portal/AdminPayments';
+import PortalTemplates from './pages/portal/PortalTemplates';
+import PortalSettlements from './pages/portal/PortalSettlements';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -97,6 +102,7 @@ function App() {
                   <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/docs" element={<Documentation />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
 
@@ -118,6 +124,8 @@ function App() {
                         <Route path="/website-builder" element={<WebsiteGenerator />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/checkout" element={<Checkout />} />
+                        <Route path="/whatsapp" element={<WhatsApp />} />
+
                     </Route>
 
                     {/* Portal Admin Routes */}
@@ -129,8 +137,12 @@ function App() {
                         <Route path="/portal/create-admin" element={<CreateAdmin />} />
                         <Route path="/portal/packages" element={<PortalPackages />} />
                         <Route path="/portal/payments" element={<AdminPayments />} />
+                        <Route path="/portal/templates" element={<PortalTemplates />} />
+                        <Route path="/portal/settlements" element={<PortalSettlements />} />
                     </Route>
 
+                  <Route path="/:id/admin" element={<PublicBusinessWebsite subPath="admin" />} />
+                  <Route path="/:id/*" element={<PublicBusinessWebsite />} />
                   <Route path="/:id" element={<PublicBusinessWebsite />} />
                   <Route path="*" element={<Navigate to="/login" replace />} />
                 </Routes>

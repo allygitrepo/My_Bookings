@@ -13,4 +13,9 @@ router.get("/:id", authMiddleware, businessController.getById);
 router.put("/update/:id", authMiddleware, businessController.update);
 router.delete("/delete/:id", authMiddleware, businessController.delete);
 
+// WhatsApp Integration Routes
+router.post("/whatsapp/initiate/:id", authMiddleware, businessController.initiateWhatsApp);
+router.get("/whatsapp/status/:id", authMiddleware, businessController.getWhatsAppStatus);
+router.post("/whatsapp/disconnect/:id", authMiddleware, businessController.disconnectWhatsApp);
+
 module.exports = router;

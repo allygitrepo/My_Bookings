@@ -9,6 +9,7 @@ import {
 } from '@mui/material';
 import PageHeader from '../components/PageHeader';
 import { updateUser, getUserById } from '../api/user.api';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
@@ -33,6 +34,8 @@ const Profile = () => {
         ? currentUser.name.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2)
         : 'AD';
 
+    const { refreshUsage } = useSubscription();
+
     useEffect(() => {
         const fetchUserData = async () => {
             if (!currentUser.id) return;
@@ -51,6 +54,9 @@ const Profile = () => {
                     // Sync localStorage
                     const updatedStorageUser = { ...currentUser, ...freshUser };
                     localStorage.setItem('currentUser', JSON.stringify(updatedStorageUser));
+                    
+                    // Refresh usage flags for sidebar
+                    refreshUsage();
                 }
             } catch (error) {
                 console.error('Failed to fetch fresh user data:', error);

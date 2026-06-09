@@ -135,6 +135,7 @@ const PortalBusinesses = () => {
                 <Table>
                     <TableHead >
                         <TableRow>
+                            <TableCell sx={{ fontWeight: 700, width: 60 }}>Sr. No</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Business Name</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Owner</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Created Date</TableCell>
@@ -153,12 +154,15 @@ const PortalBusinesses = () => {
                             </TableRow>
                         ) : businesses.length === 0 ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 10, color: 'text.secondary' }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 10, color: 'text.secondary' }}>
                                     No businesses found on the platform.
                                 </TableCell>
                             </TableRow>
-                        ) : businesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz) => (
+                        ) : businesses.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((biz, index) => (
                             <TableRow key={biz.id} hover>
+                                <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>
+                                    {page * rowsPerPage + index + 1}
+                                </TableCell>
                                 <TableCell>
                                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
                                         <Avatar sx={{ bgcolor: 'primary.light', color: 'primary.dark', fontWeight: 800 }}>
