@@ -67,6 +67,10 @@ const Users = sequelize.define(
             type: DataTypes.TEXT,
             allowNull: true,
             defaultValue: '[]'
+        },
+        fcm_token: {
+            type: DataTypes.TEXT,
+            allowNull: true
         }
     },
     {

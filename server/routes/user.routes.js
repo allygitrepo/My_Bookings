@@ -12,6 +12,7 @@ router.get("/all", authMiddleware, userController.getAll);
 router.get("/usage", authMiddleware, userController.getUsage);
 router.get("/:id", authMiddleware, userController.getById);
 router.put("/update/:id", authMiddleware, userController.update);
+router.put("/update-fcm-token", authMiddleware, userController.updateFcmToken);
 router.delete("/delete/:id", authMiddleware, userController.delete);
 
 module.exports = router;

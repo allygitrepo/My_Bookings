@@ -68,6 +68,7 @@ Service.belongsToMany(Booking, { through: BookingService, foreignKey: 'service_i
 Booking.belongsTo(Service, { foreignKey: 'service_id' });
 Service.hasMany(Booking, { foreignKey: 'service_id' });
 
+Booking.belongsTo(Staff, { foreignKey: 'staff_id', as: 'staff' });
 Staff.hasMany(Booking, { foreignKey: 'staff_id' });
 
 // User <-> Package (Many-to-One)

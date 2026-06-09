@@ -249,6 +249,21 @@ const userController = {
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    updateFcmToken: async (req, res) => {
+        try {
+            const { fcm_token } = req.body;
+            if (!fcm_token) return res.status(400).json({ success: false, message: "FCM Token is required" });
+
+            const user = await Users.findByPk(req.user.user_id);
+            if (!user) return res.status(404).json({ success: false, message: "User not found" });
+
+            await user.update({ fcm_token });
+            res.json({ success: true, message: "FCM Token updated successfully" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
     }
 };
 
