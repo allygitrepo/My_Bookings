@@ -134,6 +134,8 @@ const PortalTemplates = () => {
         formData.append("zipFile", zipFile);
 
         try {
+            console.log("[Deployment Log] zip uploaded to frontend form");
+            console.log("[Deployment Log] sending to backend...");
             const response = await axiosInstance.post("/templates/portal/deploy", formData, {
                 headers: {
                     "Content-Type": "multipart/form-data"
@@ -151,6 +153,7 @@ const PortalTemplates = () => {
                 fetchTemplates();
             }
         } catch (error) {
+            console.error("[Deployment Log] error:", error);
             const errMsg = error.response?.data?.message || "Failed to deploy template";
             toast.error(errMsg);
         } finally {

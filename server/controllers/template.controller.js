@@ -600,7 +600,9 @@ const templateController = {
             formData.append('template_zip', fs.createReadStream(req.file.path));
             formData.append('template_id', templateId);
 
-            console.log(`[GoDaddy Deploy] Forwarding ZIP template '${templateId}' to ${godaddyUploadUrl}...`);
+            console.log("[Deployment Log] backend reached");
+            console.log("[Deployment Log] sent to gdaddy");
+            console.log("[Deployment Log] extracting..");
 
             const response = await axios.post(godaddyUploadUrl, formData, {
                 headers: {
@@ -644,6 +646,7 @@ const templateController = {
                 data: template
             });
         } catch (error) {
+            console.error("[Deployment Log] error :", error.message);
             console.error("[Deploy Error] Full Stack Trace:", error);
             try {
                 fs.writeFileSync(

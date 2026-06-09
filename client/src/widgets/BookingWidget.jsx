@@ -134,6 +134,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
     // Sync externalOpen with internal open state
     useEffect(() => {
+        console.log("Widget Version 2 Loaded");
         if (externalOpen !== null) {
             setOpen(externalOpen);
         }
