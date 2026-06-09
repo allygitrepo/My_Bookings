@@ -31,8 +31,6 @@ const bookingController = {
 
             // Extract service_ids and other data
             const { service_ids, ...bookingData } = req.body;
-
-            const row = await Booking.create({ ...bookingData, business_id });
             // --- Handle Customer (Find or Create) ---
             let customer_id = bookingData.customer_id;
             if (!customer_id && (bookingData.phone || bookingData.email)) {
@@ -113,8 +111,6 @@ const bookingController = {
             const fullBooking = await Booking.findByPk(row.id, {
                 include: [
                     { model: Customer, as: 'customer' },
-                    { model: Staff, as: 'staff' },
-                    { model: Service, as: 'services', through: { attributes: [] } }
                     { model: Service, as: 'services', through: { attributes: [] } },
                     { model: Staff, as: 'staff' },
                     { model: Location, as: 'location' },
