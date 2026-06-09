@@ -15,7 +15,7 @@ import PageTransition from '../components/PageTransition';
 import { getApiKeys, createApiKey, updateApiKey, deleteApiKey } from '../api/apiKey.api';
 import { getBusinesses } from '../api/business.api';
 import { useBusiness } from '../context/BusinessContext';
-import { CopyToClipboard } from 'react-copy-to-clipboard';
+// import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
@@ -208,12 +208,12 @@ const ApiKeys = () => {
                 }}
             />
 
-            <FormDrawer 
-                open={open} 
-                onClose={() => setOpen(false)} 
-                title={editId ? "Edit API Key" : "Generate API Key"} 
-                subtitle="A unique API key will be generated for the selected business." 
-                onSave={handleSubmit(onSubmit)} 
+            <FormDrawer
+                open={open}
+                onClose={() => setOpen(false)}
+                title={editId ? "Edit API Key" : "Generate API Key"}
+                subtitle="A unique API key will be generated for the selected business."
+                onSave={handleSubmit(onSubmit)}
                 isLoading={isSubmitting}
                 saveLabel={isSubmitting ? 'Processing...' : (editId ? 'Update Key' : 'Generate Key')}
             >

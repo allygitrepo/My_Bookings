@@ -16,9 +16,15 @@ dependencies:
   get: ^4.7.3
   get_storage: ^2.1.1
   intl: ^0.20.2
-  flutter_launcher_icons: ^0.14.4
   image_picker: ^1.2.2
+  socket_io_client: ^3.0.0
+  firebase_core: ^4.9.0
+  firebase_messaging: ^16.2.2
+  flutter_local_notifications: ^21.0.0
+  logger: ^2.7.0
   path_provider: ^2.1.5
+  permission_handler: ^12.0.1
+  google_sign_in: ^7.2.0
 
 
 dev_dependencies:
@@ -41,27 +47,27 @@ flutter:
   fonts:
     - family: arimo
       fonts: 
-        - asset: assets/fonts/Arimo-Regular.ttf
+        - asset: assets/fonts/arimo/Arimo-Regular.ttf
           weight: 400
-        - asset: assets/fonts/Arimo-Bold.ttf
+        - asset: assets/fonts/arimo/Arimo-Bold.ttf
           weight: 700
-        - asset: assets/fonts/Arimo-Medium.ttf
+        - asset: assets/fonts/arimo/Arimo-Medium.ttf
           weight: 500  
-        - asset: assets/fonts/Arimo-SemiBold.ttf
+        - asset: assets/fonts/arimo/Arimo-SemiBold.ttf
           weight: 600  
-        - asset: assets/fonts/Arimo-Medium.ttf
+        - asset: assets/fonts/arimo/Arimo-Medium.ttf
           weight: 100    
     - family: roboto_slab
       fonts:
-        - asset: assets/fonts/RobotoSlab-Regular.ttf
+        - asset: assets/fonts/roboto_slab/RobotoSlab-Regular.ttf
           weight: 400
-        - asset: assets/fonts/RobotoSlab-Bold.ttf
+        - asset: assets/fonts/roboto_slab/RobotoSlab-Bold.ttf
           weight: 700
-        - asset: assets/fonts/RobotoSlab-Medium.ttf
+        - asset: assets/fonts/roboto_slab/RobotoSlab-Medium.ttf
           weight: 500  
-        - asset: assets/fonts/RobotoSlab-SemiBold.ttf
+        - asset: assets/fonts/roboto_slab/RobotoSlab-SemiBold.ttf
           weight: 600  
-        - asset: assets/fonts/RobotoSlab-Light.ttf
+        - asset: assets/fonts/roboto_slab/RobotoSlab-Light.ttf
           weight: 100      
 
 flutter_launcher_icons:

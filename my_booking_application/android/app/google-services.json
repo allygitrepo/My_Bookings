@@ -1,0 +1,54 @@
+{
+  "project_info": {
+    "project_number": "175183335539",
+    "project_id": "mybookings-cdcf5",
+    "storage_bucket": "mybookings-cdcf5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:175183335539:android:d69a11c508200c3cb09a06",
+        "android_client_info": {
+          "package_name": "com.allysoftsolutions.mybookings"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "175183335539-vg9oq1olf66jp64bvlal5ut1avebqu50.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.allysoftsolutions.mybookings",
+            "certificate_hash": "4a16891957f32f73cf56b3eb2ce3cc1cb4744326"
+          }
+        },
+        {
+          "client_id": "175183335539-98a7nuhghnanrlboa38dse512er3lgb7.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCFNeeA6CE0iTLG4JBTsY1Px3oirB7t2aQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "175183335539-98a7nuhghnanrlboa38dse512er3lgb7.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "175183335539-tr84od2u47a5up5ljcjh63v4qchn46ju.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.myBookingApplication"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
