@@ -85,18 +85,19 @@ const getApiBaseUrl = () =>
 
 const getWidgetScriptUrl = (req) => {
     const host = req ? (req.headers['host'] || '') : '';
+    const cacheBuster = `?v=${Date.now()}`;
     if (host) {
         if (host.includes("localhost") || host.includes("127.0.0.1") || host.includes("3000") || host.includes("5173")) {
-            return "http://localhost:3000/widget.js";
+            return `http://localhost:3000/widget.js${cacheBuster}`;
         }
-        return "https://mybookings.allysoftsolutions.com/widget.js";
+        return `https://mybookings.allysoftsolutions.com/widget.js${cacheBuster}`;
     }
 
     const apiBase = getApiBaseUrl();
     if (apiBase.includes("localhost") || apiBase.includes("127.0.0.1")) {
-        return "http://localhost:3000/widget.js";
+        return `http://localhost:3000/widget.js${cacheBuster}`;
     }
-    return "https://mybookings.allysoftsolutions.com/widget.js";
+    return `https://mybookings.allysoftsolutions.com/widget.js${cacheBuster}`;
 };
 
 const resolveTemplateIconUrl = (iconPath) => {
