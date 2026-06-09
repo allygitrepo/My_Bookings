@@ -15,9 +15,7 @@ import 'app/core/themes/dark_theme.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await GetStorage.init();
   await Get.putAsync(() => AuthService().init());
   await Get.putAsync(() => ApiClient().init());

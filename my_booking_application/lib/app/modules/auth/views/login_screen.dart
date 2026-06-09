@@ -233,44 +233,47 @@ class _LoginScreenState extends State<LoginScreen>
         const SizedBox(height: 24),
         OutlinedButton(
           onPressed: () {
-            // TODO: Implement Google Sign-In
+            controller.loginWithGoogle();
           },
           style: OutlinedButton.styleFrom(
             fixedSize: const Size(double.maxFinite, 56),
-            side: BorderSide(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-            ),
+            side: BorderSide.none,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(16),
+              borderRadius: BorderRadius.circular(28),
             ),
-            backgroundColor: isDark
-                ? AppColors.surfaceDark
-                : AppColors.surfaceLight,
+            backgroundColor: const Color(0xFF1A73E8),
+            padding: EdgeInsets.zero,
           ),
           child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Image.network(
-                'https://upload.wikimedia.org/wikipedia/commons/thumb/c/c1/Google_%22G%22_logo.svg/1200px-Google_%22G%22_logo.svg.png',
-                height: 20,
-                errorBuilder: (context, error, stackTrace) => const Icon(
-                  Icons.g_mobiledata_rounded,
-                  color: Colors.blue,
-                  size: 28,
+              const SizedBox(width: 4),
+              Container(
+                width: 48,
+                height: 48,
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
+                ),
+                padding: const EdgeInsets.all(10),
+                child: Image.asset(
+                  'assets/icons/google_logo.png',
+                  fit: BoxFit.contain,
                 ),
               ),
-              const SizedBox(width: 12),
-              Text(
-                'Sign in with Google',
-                style: TextStyle(
-                  color: isDark
-                      ? AppColors.textPrimaryDark
-                      : AppColors.textPrimaryLight,
-                  fontWeight: FontWeight.bold,
-                  fontSize: 15,
-                  fontFamily: 'Syne',
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Continue with Google',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 16,
+                      fontFamily: 'Syne',
+                    ),
+                  ),
                 ),
               ),
+              const SizedBox(width: 52),
             ],
           ),
         ),
