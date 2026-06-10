@@ -14,7 +14,10 @@ const FormDrawer = ({ open, onClose, title, subtitle, onSave, saveLabel = 'Save'
         <Drawer
             anchor="right"
             open={open}
-            onClose={onClose}
+            onClose={(event, reason) => {
+                if (reason === 'backdropClick' || reason === 'escapeKeyDown') return;
+                if (onClose) onClose(event, reason);
+            }}
             sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}
             PaperProps={{
                 sx: {
