@@ -12,6 +12,7 @@ import { useNavigate, Link } from 'react-router-dom';
 import { login } from '../api/user.api';
 import { googleLogin } from '../services/authService';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import { motion, AnimatePresence } from 'framer-motion';
 import logoImg from '../assets/logo.png';
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
@@ -34,6 +35,7 @@ const Login = () => {
     const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
 
     const { refreshBusinesses } = useBusiness();
+    const { refreshUsage } = useSubscription();
 
     const handleGoogleLogin = async (googleUser) => {
         setError('');
@@ -46,6 +48,7 @@ const Login = () => {
                 // Refresh businesses immediately
                 if (!user.isPortalAdmin) {
                     await refreshBusinesses();
+                    await refreshUsage();
                 }
 
                 if (user.isPortalAdmin) {
@@ -78,6 +81,7 @@ const Login = () => {
                 // Refresh businesses immediately so the context is populated before navigation
                 if (!user.isPortalAdmin) {
                     await refreshBusinesses();
+                    await refreshUsage();
                 }
 
                 if (response.data.user.isPortalAdmin) {
