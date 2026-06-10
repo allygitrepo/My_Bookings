@@ -39,7 +39,8 @@ import {
     Category as CategoryIcon,
     CheckCircle as ActiveIcon,
     Folder as FolderIcon,
-    Close as CloseIcon
+    Close as CloseIcon,
+    OpenInNew as OpenInNewIcon
 } from "@mui/icons-material";
 import axiosInstance from "../../api/axiosInstance";
 import PageTransition from "../../components/PageTransition";
@@ -56,6 +57,12 @@ const INDUSTRY_OPTIONS = [
     { label: "Professional Services", value: "Professional Services", icon: "💼" },
     { label: "Other", value: "Other", icon: "📁" }
 ];
+
+// Type badge config
+const TYPE_CONFIG = {
+    portfolio: { label: "Portfolio", color: "#818CF8", bg: "rgba(129,140,248,0.12)" },
+    website: { label: "Website", color: "#34D399", bg: "rgba(52,211,153,0.12)" }
+};
 
 const PortalTemplates = () => {
     const [templates, setTemplates] = useState([]);
@@ -135,16 +142,11 @@ const PortalTemplates = () => {
         if (deployWebsite) selectedTypes.push("website");
         if (deployPortfolio) selectedTypes.push("portfolio");
         formData.append("type", selectedTypes.length > 0 ? selectedTypes.join(",") : "website");
-
         formData.append("zipFile", zipFile);
 
         try {
-            console.log("[Deployment Log] zip uploaded to frontend form");
-            console.log("[Deployment Log] sending to backend...");
             const response = await axiosInstance.post("/templates/portal/deploy", formData, {
-                headers: {
-                    "Content-Type": "multipart/form-data"
-                }
+                headers: { "Content-Type": "multipart/form-data" }
             });
             if (response.data.success) {
                 toast.success("Template extracted & deployed successfully!");
@@ -158,7 +160,6 @@ const PortalTemplates = () => {
                 fetchTemplates();
             }
         } catch (error) {
-            console.error("[Deployment Log] error:", error);
             const errMsg = error.response?.data?.message || "Failed to deploy template";
             toast.error(errMsg);
         } finally {
@@ -167,43 +168,23 @@ const PortalTemplates = () => {
     };
 
     const handleDeployWebsiteChange = (checked) => {
-        if (checked) {
-            setDeployWebsite(true);
-            setDeployPortfolio(false);
-        } else {
-            setDeployWebsite(false);
-            setDeployPortfolio(true);
-        }
+        if (checked) { setDeployWebsite(true); setDeployPortfolio(false); }
+        else { setDeployWebsite(false); setDeployPortfolio(true); }
     };
 
     const handleDeployPortfolioChange = (checked) => {
-        if (checked) {
-            setDeployPortfolio(true);
-            setDeployWebsite(false);
-        } else {
-            setDeployPortfolio(false);
-            setDeployWebsite(true);
-        }
+        if (checked) { setDeployPortfolio(true); setDeployWebsite(false); }
+        else { setDeployPortfolio(false); setDeployWebsite(true); }
     };
 
     const handleEditWebsiteChange = (checked) => {
-        if (checked) {
-            setEditWebsite(true);
-            setEditPortfolio(false);
-        } else {
-            setEditWebsite(false);
-            setEditPortfolio(true);
-        }
+        if (checked) { setEditWebsite(true); setEditPortfolio(false); }
+        else { setEditWebsite(false); setEditPortfolio(true); }
     };
 
     const handleEditPortfolioChange = (checked) => {
-        if (checked) {
-            setEditPortfolio(true);
-            setEditWebsite(false);
-        } else {
-            setEditPortfolio(false);
-            setEditWebsite(true);
-        }
+        if (checked) { setEditPortfolio(true); setEditWebsite(false); }
+        else { setEditPortfolio(false); setEditWebsite(true); }
     };
 
     const handleDeleteClick = (template) => {
@@ -244,7 +225,6 @@ const PortalTemplates = () => {
             toast.error("Please provide a template name");
             return;
         }
-
         setSavingEdit(true);
         try {
             const selectedTypes = [];
@@ -268,26 +248,84 @@ const PortalTemplates = () => {
         }
     };
 
-    const handleTabChange = (event, newValue) => {
-        setCurrentTab(newValue);
-    };
-
     const filteredTemplates = templates.filter((t) => {
         if (currentTab === "All") return true;
         return t.category === currentTab;
     });
 
+    // ─── Shared dialog paper styles ───────────────────────────────────────────
+    const dialogPaperSx = {
+        background: "rgba(10, 16, 32, 0.97)",
+        backdropFilter: "blur(32px)",
+        border: "1px solid rgba(255, 255, 255, 0.08)",
+        borderRadius: "20px",
+        color: "text.primary",
+        maxWidth: "500px",
+        width: "100%"
+    };
+
+    // ─── Type selector card (reusable) ────────────────────────────────────────
+    const TypeCard = ({ id, checked, onChange, onClick, disabled, emoji, label, sublabel }) => (
+        <Box
+            onClick={onClick}
+            sx={{
+                flex: 1,
+                cursor: disabled ? "not-allowed" : "pointer",
+                p: 1.75,
+                borderRadius: "12px",
+                border: "1.5px solid",
+                borderColor: checked ? "primary.main" : "rgba(255,255,255,0.07)",
+                backgroundColor: checked ? "rgba(59,130,246,0.06)" : "rgba(255,255,255,0.015)",
+                display: "flex",
+                alignItems: "center",
+                gap: 1.25,
+                transition: "all 0.18s ease",
+                "&:hover": {
+                    borderColor: checked ? "primary.main" : "rgba(255,255,255,0.14)",
+                    backgroundColor: checked ? "rgba(59,130,246,0.09)" : "rgba(255,255,255,0.03)"
+                }
+            }}
+        >
+            <Checkbox
+                id={id}
+                checked={checked}
+                onChange={(e) => onChange(e.target.checked)}
+                onClick={(e) => e.stopPropagation()}
+                color="primary"
+                size="small"
+                sx={{ p: 0 }}
+                disabled={disabled}
+            />
+            <Box>
+                <Typography variant="body2" fontWeight={700} sx={{ display: "flex", alignItems: "center", gap: 0.5, fontSize: "0.82rem" }}>
+                    {emoji} {label}
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", fontSize: "0.72rem", mt: 0.15 }}>
+                    {sublabel}
+                </Typography>
+            </Box>
+        </Box>
+    );
+
     return (
         <PageTransition>
-            <Box sx={{ p: 4, minHeight: "100vh" }}>
-                {/* Header Section */}
-                <Box display="flex" flexDirection={{ xs: 'column', sm: 'row' }} justifyContent="space-between" alignItems={{ xs: 'flex-start', sm: 'center' }} gap={2} mb={4}>
+            <Box sx={{ p: { xs: 2, sm: 3, md: 4 }, minHeight: "100vh" }}>
+
+                {/* ── Header ─────────────────────────────────────────────── */}
+                <Box
+                    display="flex"
+                    flexDirection={{ xs: "column", sm: "row" }}
+                    justifyContent="space-between"
+                    alignItems={{ xs: "flex-start", sm: "center" }}
+                    gap={2}
+                    mb={3}
+                >
                     <Box>
-                        <Typography variant="h4" fontWeight={800} color="text.primary" id="templates-title">
-                            Custom ZIP Templates
+                        <Typography variant="h4" fontWeight={800} color="text.primary" letterSpacing="-0.5px">
+                            Template Catalog
                         </Typography>
-                        <Typography variant="subtitle2" color="text.secondary">
-                            Deploy self-contained HTML/PHP templates to XAMPP Apache for isolated multi-tenant booking sites.
+                        <Typography variant="body2" color="text.secondary" mt={0.4}>
+                            Self-contained HTML/PHP ZIP templates deployed to XAMPP Apache.
                         </Typography>
                     </Box>
                     <Button
@@ -296,23 +334,28 @@ const PortalTemplates = () => {
                         startIcon={<UploadIcon />}
                         onClick={() => setOpenDialog(true)}
                         sx={{
-                            borderRadius: '100px',
-                            textTransform: 'none',
+                            borderRadius: "10px",
+                            textTransform: "none",
                             fontWeight: 700,
-                            height: 36,
-                            px: 3
+                            px: 2.5,
+                            py: 1,
+                            whiteSpace: "nowrap",
+                            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+                            "&:hover": { background: "linear-gradient(135deg, #059669 0%, #047857 100%)" }
                         }}
                     >
-                        Deploy New ZIP
+                        Deploy ZIP
                     </Button>
                 </Box>
 
-                <Divider sx={{ mb: 4, borderColor: "rgba(255, 255, 255, 0.08)" }} />
+                <Divider sx={{ mb: 3, borderColor: "rgba(255,255,255,0.07)" }} />
 
-                {/* Categories Dropdown Filter with Counts */}
-                <Box display="flex" alignItems="center" gap={2} mb={4} flexWrap="wrap">
-                    <FormControl size="small" sx={{ minWidth: 300 }}>
-                        <InputLabel id="category-filter-label" sx={{ fontWeight: 700 }}>Filter by Category</InputLabel>
+                {/* ── Filter bar ─────────────────────────────────────────── */}
+                <Box display="flex" alignItems="center" gap={2} mb={3} flexWrap="wrap">
+                    <FormControl size="small" sx={{ minWidth: 260 }}>
+                        <InputLabel id="category-filter-label" sx={{ fontWeight: 600, fontSize: "0.85rem" }}>
+                            Filter by Category
+                        </InputLabel>
                         <Select
                             labelId="category-filter-label"
                             id="category-filter-select"
@@ -320,40 +363,39 @@ const PortalTemplates = () => {
                             label="Filter by Category"
                             onChange={(e) => setCurrentTab(e.target.value)}
                             sx={{
-                                borderRadius: '12px',
+                                borderRadius: "10px",
                                 fontWeight: 600,
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: 'rgba(255,255,255,0.12)'
-                                }
+                                fontSize: "0.85rem",
+                                "& .MuiOutlinedInput-notchedOutline": { borderColor: "rgba(255,255,255,0.1)" }
                             }}
                         >
                             <MenuItem value="All">
                                 <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
                                     <Box display="flex" alignItems="center" gap={1}>
                                         <span>📁</span>
-                                        <Typography fontWeight={600}>All Categories</Typography>
+                                        <Typography fontWeight={600} fontSize="0.85rem">All Categories</Typography>
                                     </Box>
                                     <Chip
                                         label={templates.length}
                                         size="small"
-                                        sx={{ bgcolor: 'primary.main', color: '#fff', fontWeight: 800, height: 20, fontSize: '0.7rem' }}
+                                        sx={{ bgcolor: "primary.main", color: "#fff", fontWeight: 800, height: 18, fontSize: "0.68rem" }}
                                     />
                                 </Box>
                             </MenuItem>
                             {INDUSTRY_OPTIONS.map((opt) => {
-                                const count = templates.filter(t => t.category === opt.value).length;
+                                const count = templates.filter((t) => t.category === opt.value).length;
                                 if (count === 0) return null;
                                 return (
                                     <MenuItem key={opt.value} value={opt.value}>
                                         <Box display="flex" alignItems="center" justifyContent="space-between" width="100%" gap={2}>
                                             <Box display="flex" alignItems="center" gap={1}>
                                                 <span>{opt.icon}</span>
-                                                <Typography fontWeight={600}>{opt.label}</Typography>
+                                                <Typography fontWeight={600} fontSize="0.85rem">{opt.label}</Typography>
                                             </Box>
                                             <Chip
                                                 label={count}
                                                 size="small"
-                                                sx={{ bgcolor: 'rgba(16,185,129,0.15)', color: '#34D399', fontWeight: 800, height: 20, fontSize: '0.7rem', border: '1px solid rgba(16,185,129,0.2)' }}
+                                                sx={{ bgcolor: "rgba(16,185,129,0.15)", color: "#34D399", fontWeight: 800, height: 18, fontSize: "0.68rem", border: "1px solid rgba(16,185,129,0.2)" }}
                                             />
                                         </Box>
                                     </MenuItem>
@@ -361,109 +403,128 @@ const PortalTemplates = () => {
                             })}
                         </Select>
                     </FormControl>
-                    <Typography variant="body2" color="text.secondary" fontWeight={600}>
-                        Showing{' '}
-                        <strong style={{ color: '#fff' }}>{filteredTemplates.length}</strong>
-                        {' '}template{filteredTemplates.length !== 1 ? 's' : ''}
-                        {currentTab !== 'All' ? ` in "${currentTab}"` : ' across all categories'}
+                    <Typography variant="body2" color="text.secondary" fontWeight={500} fontSize="0.82rem">
+                        Showing{" "}
+                        <Box component="span" sx={{ color: "text.primary", fontWeight: 700 }}>
+                            {filteredTemplates.length}
+                        </Box>{" "}
+                        template{filteredTemplates.length !== 1 ? "s" : ""}
+                        {currentTab !== "All" ? ` in "${currentTab}"` : ""}
                     </Typography>
                 </Box>
 
-                {/* Templates Grid catalog */}
+                {/* ── Grid ───────────────────────────────────────────────── */}
                 {loading ? (
                     <Box display="flex" justifyContent="center" alignItems="center" minHeight="300px">
-                        <CircularProgress color="primary" size={50} />
+                        <CircularProgress color="primary" size={44} />
                     </Box>
                 ) : filteredTemplates.length === 0 ? (
                     <Box
                         sx={{
-                            background: "rgba(30, 41, 59, 0.2)",
-                            border: "2px dashed rgba(255, 255, 255, 0.08)",
-                            borderRadius: "24px",
+                            background: "rgba(30,41,59,0.18)",
+                            border: "2px dashed rgba(255,255,255,0.07)",
+                            borderRadius: "20px",
                             p: 6,
                             textAlign: "center"
                         }}
                     >
-                        <FolderIcon sx={{ fontSize: 80, color: "text.disabled", mb: 2 }} />
+                        <FolderIcon sx={{ fontSize: 72, color: "text.disabled", mb: 2 }} />
                         <Typography variant="h6" fontWeight={700} color="text.secondary">
                             No templates found
                         </Typography>
                         <Typography variant="body2" color="text.disabled" sx={{ mt: 1, mb: 3 }}>
                             {currentTab === "All"
                                 ? "Deploy your first responsive HTML or PHP ZIP template to get started."
-                                : `No template deployed under the "${currentTab}" category.`}
+                                : `No templates under "${currentTab}" yet.`}
                         </Typography>
-                        <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => setOpenDialog(true)} sx={{ borderRadius: "8px" }}>
+                        <Button variant="outlined" startIcon={<UploadIcon />} onClick={() => setOpenDialog(true)} sx={{ borderRadius: "8px", textTransform: "none", fontWeight: 700 }}>
                             Upload Template
                         </Button>
                     </Box>
                 ) : (
-                    <Grid container spacing={3}>
-                        {filteredTemplates.map((t) => (
-                            <Grid item xs={12} sm={6} md={4} lg={4} key={t.id}>
-                                <Card
+                    /* Responsive grid: 2 → 3 → 4 → 5 columns */
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gap: 2.5,
+                            gridTemplateColumns: {
+                                xs: "repeat(2, 1fr)",
+                                sm: "repeat(3, 1fr)",
+                                md: "repeat(4, 1fr)",
+                                lg: "repeat(5, 1fr)",
+                                xl: "repeat(6, 1fr)"
+                            }
+                        }}
+                    >
+                        {filteredTemplates.map((t) => {
+                            const types = (t.type || "website").split(",").map((s) => s.trim());
+                            const primaryType = types[0];
+                            const typeConf = TYPE_CONFIG[primaryType] || TYPE_CONFIG.website;
+
+                            return (
+                                <Box
+                                    key={t.id}
                                     id={`template-card-${t.id}`}
                                     sx={{
-                                        background: "rgba(15, 23, 42, 0.7)",
-                                        backdropFilter: "blur(16px)",
-                                        border: "1px solid rgba(255, 255, 255, 0.07)",
-                                        borderRadius: "12px",
-                                        height: "100%",
                                         display: "flex",
                                         flexDirection: "column",
+                                        borderRadius: "14px",
                                         overflow: "hidden",
-                                        transition: "all 0.25s ease",
+                                        background: "rgba(13, 20, 38, 0.75)",
+                                        border: "1px solid rgba(255,255,255,0.07)",
+                                        backdropFilter: "blur(12px)",
+                                        transition: "transform 0.22s ease, box-shadow 0.22s ease, border-color 0.22s ease",
                                         "&:hover": {
-                                            transform: "translateY(-4px)",
-                                            boxShadow: "0 16px 40px rgba(0,0,0,0.5)",
-                                            border: "1px solid rgba(99, 102, 241, 0.3)",
+                                            transform: "translateY(-3px)",
+                                            boxShadow: "0 12px 32px rgba(0,0,0,0.55)",
+                                            borderColor: "rgba(99,102,241,0.35)"
                                         }
                                     }}
                                 >
-                                    {/* Thumbnail Image Area */}
-                                    <Box sx={{
-                                        position: "relative",
-                                        height: "200px",
-                                        background: "linear-gradient(135deg, rgba(99,102,241,0.1) 0%, rgba(16,185,129,0.1) 100%)",
-                                        display: "flex",
-                                        alignItems: "center",
-                                        justifyContent: "center",
-                                        borderBottom: "1px solid rgba(255, 255, 255, 0.05)",
-                                        overflow: "hidden"
-                                    }}>
-                                        {/* Top-Left Category Badge */}
-                                        <Box sx={{
-                                            position: "absolute",
-                                            top: 0,
-                                            left: 0,
-                                            bgcolor: "#10B981",
-                                            color: "#fff",
-                                            px: 1.5,
-                                            py: 0.5,
-                                            borderBottomRightRadius: "12px",
-                                            display: "flex",
-                                            alignItems: "center",
-                                            gap: 0.5,
-                                            fontWeight: 800,
-                                            fontSize: "0.75rem",
-                                            zIndex: 2,
-                                            boxShadow: "2px 2px 8px rgba(0,0,0,0.2)"
-                                        }}>
-                                            <TemplatesIcon sx={{ fontSize: "1rem" }} />
-                                            {t.category.split('/')[0].trim()}
+                                    {/* ── Thumbnail ────────────────────────── */}
+                                    <Box
+                                        sx={{
+                                            position: "relative",
+                                            height: "160px",
+                                            background: "linear-gradient(135deg, rgba(99,102,241,0.08) 0%, rgba(16,185,129,0.08) 100%)",
+                                            overflow: "hidden",
+                                            flexShrink: 0
+                                        }}
+                                    >
+                                        {/* Category pill */}
+                                        <Box
+                                            sx={{
+                                                position: "absolute",
+                                                top: 0,
+                                                left: 0,
+                                                bgcolor: "#10B981",
+                                                color: "#fff",
+                                                px: 1.25,
+                                                py: 0.4,
+                                                borderBottomRightRadius: "10px",
+                                                display: "flex",
+                                                alignItems: "center",
+                                                gap: 0.4,
+                                                fontWeight: 800,
+                                                fontSize: "0.68rem",
+                                                zIndex: 2,
+                                                letterSpacing: "0.02em"
+                                            }}
+                                        >
+                                            <TemplatesIcon sx={{ fontSize: "0.85rem" }} />
+                                            {t.category.split("/")[0].trim()}
                                         </Box>
 
-                                        {/* Live Preview iframe Thumbnail */}
-                                        <Box sx={{
-                                            width: "100%",
-                                            height: "100%",
-                                            position: "absolute",
-                                            top: 0,
-                                            left: 0,
-                                            zIndex: 1,
-                                            pointerEvents: "none", // Prevent interaction
-                                            overflow: "hidden"
-                                        }}>
+                                        {/* iframe preview */}
+                                        <Box
+                                            sx={{
+                                                position: "absolute",
+                                                inset: 0,
+                                                zIndex: 1,
+                                                pointerEvents: "none",
+                                                overflow: "hidden"
+                                            }}
+                                        >
                                             <iframe
                                                 src={`https://mybookings.allysoftsolutions.com/Templates/${t.templateId || t.id}/`}
                                                 title={`Preview of ${t.displayName}`}
@@ -485,180 +546,161 @@ const PortalTemplates = () => {
                                                 }}
                                                 onLoad={(e) => {
                                                     try {
-                                                        const iframe = e.target;
-                                                        const doc = iframe.contentDocument || iframe.contentWindow.document;
+                                                        const doc = e.target.contentDocument || e.target.contentWindow.document;
                                                         if (doc) {
-                                                            const style = doc.createElement('style');
-                                                            style.innerHTML = `
-                                                                [data-aos] { opacity: 1 !important; transform: none !important; }
-                                                                .wow { visibility: visible !important; animation: none !important; }
-                                                                #preloader, .preloader, .loader, .spinner { display: none !important; opacity: 0 !important; z-index: -1 !important; }
-                                                            `;
+                                                            const style = doc.createElement("style");
+                                                            style.innerHTML = `[data-aos]{opacity:1!important;transform:none!important;}.wow{visibility:visible!important;animation:none!important;}#preloader,.preloader,.loader,.spinner{display:none!important;}`;
                                                             doc.head.appendChild(style);
                                                         }
-                                                    } catch (err) {
-                                                        // Cross-origin or other error, ignore
-                                                    }
+                                                    } catch (_) { }
                                                 }}
                                                 scrolling="no"
                                             />
                                         </Box>
                                     </Box>
 
-                                    <CardContent sx={{ flexGrow: 1, p: 2.5, pb: 1, minWidth: 0 }}>
-                                        {/* Title */}
+                                    {/* ── Body ─────────────────────────────── */}
+                                    <Box sx={{ p: 1.75, pb: 1.25, flexGrow: 1, minWidth: 0 }}>
+                                        {/* Type badge */}
+                                        <Box display="flex" gap={0.75} mb={1} flexWrap="wrap">
+                                            {types.map((type) => {
+                                                const conf = TYPE_CONFIG[type] || TYPE_CONFIG.website;
+                                                return (
+                                                    <Box
+                                                        key={type}
+                                                        sx={{
+                                                            display: "inline-flex",
+                                                            alignItems: "center",
+                                                            px: 0.9,
+                                                            py: 0.25,
+                                                            borderRadius: "6px",
+                                                            bgcolor: conf.bg,
+                                                            border: `1px solid ${conf.color}28`
+                                                        }}
+                                                    >
+                                                        <Typography sx={{ color: conf.color, fontWeight: 700, fontSize: "0.68rem", letterSpacing: "0.04em", textTransform: "uppercase" }}>
+                                                            {conf.label}
+                                                        </Typography>
+                                                    </Box>
+                                                );
+                                            })}
+                                        </Box>
+
+                                        {/* Name */}
                                         <Typography
-                                            variant="h6"
-                                            fontWeight={800}
+                                            variant="body2"
+                                            fontWeight={700}
                                             color="text.primary"
-                                            sx={{ 
-                                                fontSize: "1.1rem", 
-                                                lineHeight: 1.3, 
-                                                mb: 0.5, 
-                                                overflow: "hidden", 
-                                                textOverflow: "ellipsis", 
-                                                display: "-webkit-box", 
-                                                WebkitLineClamp: 2, 
+                                            sx={{
+                                                fontSize: "0.85rem",
+                                                lineHeight: 1.35,
+                                                overflow: "hidden",
+                                                display: "-webkit-box",
+                                                WebkitLineClamp: 2,
                                                 WebkitBoxOrient: "vertical",
-                                                wordBreak: "break-word" 
+                                                wordBreak: "break-word",
+                                                mb: 0.4
                                             }}
                                         >
                                             {t.displayName}
                                         </Typography>
-                                        {/* Byline */}
-                                        <Typography variant="body2" color="text.secondary" sx={{ fontStyle: "italic", mb: 2 }}>
-                                            by Admin in {t.category}
-                                        </Typography>
 
-                                        {/* Pricing / Type tags area */}
-                                        <Box display="flex" flexWrap="wrap" gap={1}>
-                                            {(t.type || "website").split(",").map((typeVal) => {
-                                                const type = typeVal.trim();
-                                                return (
-                                                    <Typography
-                                                        key={type}
-                                                        variant="h6"
-                                                        fontWeight={800}
-                                                        sx={{ color: type === "portfolio" ? "#818CF8" : "#34D399", fontSize: "1.1rem" }}
-                                                    >
-                                                        {type === "portfolio" ? "Portfolio" : "Website"}
-                                                    </Typography>
-                                                );
-                                            })}
-                                        </Box>
-                                    </CardContent>
-
-                                    <Box sx={{ px: 2.5 }}>
-                                        <Divider sx={{ borderColor: "rgba(255, 255, 255, 0.05)" }} />
-                                    </Box>
-
-                                    {/* Footer Actions */}
-                                    <Box sx={{
-                                        p: 2,
-                                        px: 2.5,
-                                        display: "flex",
-                                        justifyContent: "space-between",
-                                        alignItems: "center"
-                                    }}>
-                                        <Typography 
-                                            variant="caption" 
-                                            color="text.secondary" 
-                                            sx={{ 
-                                                fontWeight: 600, 
-                                                overflow: "hidden", 
-                                                textOverflow: "ellipsis", 
-                                                whiteSpace: "nowrap",
-                                                maxWidth: "100px" 
-                                            }}
+                                        {/* ID */}
+                                        <Typography
+                                            variant="caption"
+                                            color="text.disabled"
+                                            sx={{ fontSize: "0.68rem", fontFamily: "monospace", display: "block", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}
                                             title={t.templateId || t.id || "N/A"}
                                         >
-                                            ID: {t.templateId || t.id || "N/A"}
+                                            {t.templateId || t.id || "N/A"}
                                         </Typography>
+                                    </Box>
 
-                                        <Box display="flex" gap={1}>
-                                            <Tooltip title="Delete Template" arrow>
-                                                <IconButton
-                                                    onClick={() => handleDeleteClick(t)}
-                                                    size="small"
-                                                    sx={{
-                                                        border: "1px solid rgba(255,255,255,0.12)",
-                                                        borderRadius: "4px",
-                                                        color: "text.secondary",
-                                                        "&:hover": { color: "#F87171", borderColor: "#F87171" }
-                                                    }}
-                                                >
-                                                    <DeleteIcon fontSize="small" />
-                                                </IconButton>
-                                            </Tooltip>
-                                            <Button
-                                                variant="outlined"
-                                                onClick={() => {
-                                                    const url = `https://mybookings.allysoftsolutions.com/Templates/${t.templateId || t.id}/`;
-                                                    window.open(url, '_blank');
-                                                }}
+                                    {/* ── Footer actions ────────────────────── */}
+                                    <Box
+                                        sx={{
+                                            px: 1.5,
+                                            pb: 1.5,
+                                            pt: 1,
+                                            display: "flex",
+                                            gap: 0.75,
+                                            alignItems: "center",
+                                            borderTop: "1px solid rgba(255,255,255,0.05)"
+                                        }}
+                                    >
+                                        {/* Preview */}
+                                        <Tooltip title="Live Preview" arrow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => window.open(`https://mybookings.allysoftsolutions.com/Templates/${t.templateId || t.id}/`, "_blank")}
                                                 sx={{
-                                                    borderRadius: "4px",
-                                                    textTransform: "none",
-                                                    fontWeight: 700,
-                                                    fontSize: "0.8rem",
-                                                    borderColor: "rgba(255,255,255,0.12)",
-                                                    color: "text.primary",
-                                                    px: 2,
-                                                    "&:hover": { borderColor: "primary.main", bgcolor: "rgba(59,130,246,0.08)", color: "primary.main" }
+                                                    borderRadius: "6px",
+                                                    border: "1px solid rgba(255,255,255,0.1)",
+                                                    color: "text.secondary",
+                                                    width: 28,
+                                                    height: 28,
+                                                    "&:hover": { color: "#60A5FA", borderColor: "#60A5FA", bgcolor: "rgba(96,165,250,0.08)" }
                                                 }}
                                             >
-                                                Live Preview
-                                            </Button>
-                                            <Button
-                                                variant="contained"
+                                                <OpenInNewIcon sx={{ fontSize: "0.9rem" }} />
+                                            </IconButton>
+                                        </Tooltip>
+
+                                        {/* Delete */}
+                                        <Tooltip title="Delete" arrow>
+                                            <IconButton
+                                                size="small"
+                                                onClick={() => handleDeleteClick(t)}
+                                                sx={{
+                                                    borderRadius: "6px",
+                                                    border: "1px solid rgba(255,255,255,0.1)",
+                                                    color: "text.secondary",
+                                                    width: 28,
+                                                    height: 28,
+                                                    "&:hover": { color: "#F87171", borderColor: "#F87171", bgcolor: "rgba(248,113,113,0.08)" }
+                                                }}
+                                            >
+                                                <DeleteIcon sx={{ fontSize: "0.9rem" }} />
+                                            </IconButton>
+                                        </Tooltip>
+
+                                        {/* Edit */}
+                                        <Tooltip title="Edit" arrow>
+                                            <IconButton
+                                                size="small"
                                                 onClick={() => handleOpenEditDialog(t)}
                                                 sx={{
-                                                    borderRadius: "4px",
-                                                    textTransform: "none",
-                                                    fontWeight: 700,
-                                                    fontSize: "0.8rem",
-                                                    px: 2
+                                                    borderRadius: "6px",
+                                                    border: "1px solid rgba(255,255,255,0.1)",
+                                                    color: "text.secondary",
+                                                    width: 28,
+                                                    height: 28,
+                                                    "&:hover": { color: "#3B82F6", borderColor: "#3B82F6", bgcolor: "rgba(59,130,246,0.08)" }
                                                 }}
                                             >
-                                                Edit
-                                            </Button>
-                                        </Box>
+                                                <EditIcon sx={{ fontSize: "0.9rem" }} />
+                                            </IconButton>
+                                        </Tooltip>
                                     </Box>
-                                </Card>
-                            </Grid>
-                        ))}
-                    </Grid>
+                                </Box>
+                            );
+                        })}
+                    </Box>
                 )}
 
-                {/* Deploy Template dialog modal */}
+                {/* ── Deploy Dialog ──────────────────────────────────────── */}
                 <Dialog
                     open={openDialog}
                     onClose={() => !deploying && setOpenDialog(false)}
-                    PaperProps={{
-                        sx: {
-                            background: "rgba(15, 23, 42, 0.95)",
-                            backdropFilter: "blur(24px)",
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: "24px",
-                            color: "text.primary",
-                            maxWidth: "500px",
-                            width: "100%"
-                        }
-                    }}
+                    PaperProps={{ sx: dialogPaperSx }}
                 >
                     <DialogTitle component="div" sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Typography variant="h5" fontWeight={800}>
-                            Deploy ZIP Template
-                        </Typography>
-                        <IconButton
-                            id="btn-close-deploy-dialog"
-                            onClick={() => !deploying && setOpenDialog(false)}
-                            disabled={deploying}
-                            sx={{ color: "text.secondary" }}
-                        >
+                        <Typography variant="h6" fontWeight={800}>Deploy ZIP Template</Typography>
+                        <IconButton id="btn-close-deploy-dialog" onClick={() => !deploying && setOpenDialog(false)} disabled={deploying} sx={{ color: "text.secondary" }}>
                             <CloseIcon />
                         </IconButton>
                     </DialogTitle>
+
                     <DialogContent sx={{ p: 3 }}>
                         <Typography variant="body2" color="text.secondary" mb={3}>
                             Upload a ZIP template package to register it in the platform.
@@ -673,7 +715,7 @@ const PortalTemplates = () => {
                             value={displayName}
                             onChange={(e) => setDisplayName(e.target.value)}
                             disabled={deploying}
-                            sx={{ mb: 3 }}
+                            sx={{ mb: 2.5 }}
                         />
 
                         <TextField
@@ -685,7 +727,7 @@ const PortalTemplates = () => {
                             value={category}
                             onChange={(e) => setCategory(e.target.value)}
                             disabled={deploying}
-                            sx={{ mb: 3 }}
+                            sx={{ mb: 2.5 }}
                         >
                             {INDUSTRY_OPTIONS.map((opt) => (
                                 <MenuItem key={opt.value} value={opt.value} id={`menu-opt-${opt.value.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}>
@@ -694,94 +736,35 @@ const PortalTemplates = () => {
                             ))}
                         </TextField>
 
-                        <FormControl component="fieldset" disabled={deploying} sx={{ mb: 3, width: "100%", textAlign: "left" }}>
-                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.85rem", mb: 1.5, fontWeight: 700 }}>
+                        <FormControl component="fieldset" disabled={deploying} sx={{ mb: 2.5, width: "100%" }}>
+                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.8rem", mb: 1.25, fontWeight: 700 }}>
                                 Template Type (Site Mode)
                             </FormLabel>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
-                                {/* Website Card */}
-                                <Box
+                            <Box sx={{ display: "flex", gap: 1.5 }}>
+                                <TypeCard
+                                    id="checkbox-deploy-website"
+                                    checked={deployWebsite}
+                                    onChange={handleDeployWebsiteChange}
                                     onClick={() => !deploying && handleDeployWebsiteChange(true)}
-                                    sx={{
-                                        flex: 1,
-                                        cursor: deploying ? 'not-allowed' : 'pointer',
-                                        p: 2,
-                                        borderRadius: '16px',
-                                        border: '1.5px solid',
-                                        borderColor: deployWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
-                                        backgroundColor: deployWebsite ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            borderColor: deployWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
-                                            backgroundColor: deployWebsite ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
-                                        }
-                                    }}
-                                >
-                                    <Checkbox
-                                        id="checkbox-deploy-website"
-                                        checked={deployWebsite}
-                                        onChange={(e) => handleDeployWebsiteChange(e.target.checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        color="primary"
-                                        sx={{ p: 0 }}
-                                        disabled={deploying}
-                                    />
-                                    <Box>
-                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            🌐 Website
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
-                                            Standard site mode
-                                        </Typography>
-                                    </Box>
-                                </Box>
-
-                                {/* Portfolio Card */}
-                                <Box
+                                    disabled={deploying}
+                                    emoji="🌐"
+                                    label="Website"
+                                    sublabel="Standard site mode"
+                                />
+                                <TypeCard
+                                    id="checkbox-deploy-portfolio"
+                                    checked={deployPortfolio}
+                                    onChange={handleDeployPortfolioChange}
                                     onClick={() => !deploying && handleDeployPortfolioChange(true)}
-                                    sx={{
-                                        flex: 1,
-                                        cursor: deploying ? 'not-allowed' : 'pointer',
-                                        p: 2,
-                                        borderRadius: '16px',
-                                        border: '1.5px solid',
-                                        borderColor: deployPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
-                                        backgroundColor: deployPortfolio ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            borderColor: deployPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
-                                            backgroundColor: deployPortfolio ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
-                                        }
-                                    }}
-                                >
-                                    <Checkbox
-                                        id="checkbox-deploy-portfolio"
-                                        checked={deployPortfolio}
-                                        onChange={(e) => handleDeployPortfolioChange(e.target.checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        color="primary"
-                                        sx={{ p: 0 }}
-                                        disabled={deploying}
-                                    />
-                                    <Box>
-                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            💼 Portfolio
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
-                                            Solo provider mode
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                                    disabled={deploying}
+                                    emoji="💼"
+                                    label="Portfolio"
+                                    sublabel="Solo provider mode"
+                                />
                             </Box>
                         </FormControl>
 
-                        {/* File Upload drag area */}
+                        {/* ZIP upload zone */}
                         <Button
                             id="btn-select-zip-file"
                             component="label"
@@ -789,34 +772,33 @@ const PortalTemplates = () => {
                             disabled={deploying}
                             sx={{
                                 width: "100%",
-                                py: 4,
-                                border: "2px dashed rgba(255, 255, 255, 0.12)",
-                                borderRadius: "16px",
+                                py: 3.5,
+                                border: "2px dashed",
+                                borderColor: zipFile ? "primary.main" : "rgba(255,255,255,0.1)",
+                                borderRadius: "14px",
                                 textTransform: "none",
                                 color: zipFile ? "primary.main" : "text.secondary",
-                                background: "rgba(255, 255, 255, 0.02)",
-                                "&:hover": {
-                                    background: "rgba(255, 255, 255, 0.04)",
-                                    borderColor: "primary.main"
-                                }
+                                background: "rgba(255,255,255,0.015)",
+                                "&:hover": { background: "rgba(255,255,255,0.035)", borderColor: "primary.main" }
                             }}
                         >
-                            <Box display="flex" flexDirection="column" alignItems="center" gap={1.5}>
-                                <UploadIcon sx={{ fontSize: 40 }} />
+                            <Box display="flex" flexDirection="column" alignItems="center" gap={1.25}>
+                                <UploadIcon sx={{ fontSize: 36 }} />
                                 <Box textAlign="center">
-                                    <Typography variant="body1" fontWeight={700}>
-                                        {fileName ? fileName : "Click to select ZIP Template archive"}
+                                    <Typography variant="body2" fontWeight={700}>
+                                        {fileName || "Click to select ZIP archive"}
                                     </Typography>
                                     <Typography variant="caption" color="text.disabled">
-                                        Max File Size: 50MB (Supports index.php/html & databases)
+                                        Max 50 MB · index.php / index.html supported
                                     </Typography>
                                 </Box>
                             </Box>
                             <input type="file" accept=".zip" hidden onChange={handleFileChange} />
                         </Button>
                     </DialogContent>
-                    <DialogActions sx={{ p: 3, pt: 0, justifyContent: "flex-end", gap: 1.5 }}>
-                        <Button id="btn-cancel-deploy" onClick={() => setOpenDialog(false)} disabled={deploying} sx={{ color: "text.secondary", fontWeight: 600 }}>
+
+                    <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>
+                        <Button id="btn-cancel-deploy" onClick={() => setOpenDialog(false)} disabled={deploying} sx={{ color: "text.secondary", fontWeight: 600, textTransform: "none" }}>
                             Cancel
                         </Button>
                         <Button
@@ -825,54 +807,32 @@ const PortalTemplates = () => {
                             onClick={handleDeploy}
                             disabled={deploying}
                             sx={{
-                                borderRadius: "10px",
-                                px: 3,
-                                py: 1.2,
-                                fontWeight: 700,
-                                textTransform: "none",
+                                borderRadius: "10px", px: 3, py: 1.1, fontWeight: 700, textTransform: "none",
                                 background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
-                                "&:hover": {
-                                    background: "linear-gradient(135deg, #059669 0%, #047857 100%)"
-                                }
+                                "&:hover": { background: "linear-gradient(135deg, #059669 0%, #047857 100%)" }
                             }}
                         >
-                            {deploying ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Deploy & Extract"}
+                            {deploying ? <CircularProgress size={22} sx={{ color: "#fff" }} /> : "Deploy & Extract"}
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Edit Template dialog modal */}
+                {/* ── Edit Dialog ────────────────────────────────────────── */}
                 <Dialog
                     open={openEditDialog}
                     onClose={() => !savingEdit && setOpenEditDialog(false)}
-                    PaperProps={{
-                        sx: {
-                            background: "rgba(15, 23, 42, 0.95)",
-                            backdropFilter: "blur(24px)",
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: "24px",
-                            color: "text.primary",
-                            maxWidth: "500px",
-                            width: "100%"
-                        }
-                    }}
+                    PaperProps={{ sx: dialogPaperSx }}
                 >
                     <DialogTitle component="div" sx={{ p: 3, pb: 0, display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                        <Typography variant="h5" fontWeight={800}>
-                            Edit Template Details
-                        </Typography>
-                        <IconButton
-                            id="btn-close-edit-dialog"
-                            onClick={() => !savingEdit && setOpenEditDialog(false)}
-                            disabled={savingEdit}
-                            sx={{ color: "text.secondary" }}
-                        >
+                        <Typography variant="h6" fontWeight={800}>Edit Template Details</Typography>
+                        <IconButton id="btn-close-edit-dialog" onClick={() => !savingEdit && setOpenEditDialog(false)} disabled={savingEdit} sx={{ color: "text.secondary" }}>
                             <CloseIcon />
                         </IconButton>
                     </DialogTitle>
+
                     <DialogContent sx={{ p: 3 }}>
                         <Typography variant="body2" color="text.secondary" mb={3}>
-                            Update the metadata details of your template. Note that the underlying folder slug/template ID remains constant to prevent breaking active client setups.
+                            Update metadata only — the underlying folder slug stays constant to avoid breaking active client setups.
                         </Typography>
 
                         <TextField
@@ -884,7 +844,7 @@ const PortalTemplates = () => {
                             value={editDisplayName}
                             onChange={(e) => setEditDisplayName(e.target.value)}
                             disabled={savingEdit}
-                            sx={{ mb: 3 }}
+                            sx={{ mb: 2.5 }}
                         />
 
                         <TextField
@@ -896,7 +856,7 @@ const PortalTemplates = () => {
                             value={editCategory}
                             onChange={(e) => setEditCategory(e.target.value)}
                             disabled={savingEdit}
-                            sx={{ mb: 3 }}
+                            sx={{ mb: 2.5 }}
                         >
                             {INDUSTRY_OPTIONS.map((opt) => (
                                 <MenuItem key={opt.value} value={opt.value} id={`menu-edit-opt-${opt.value.toLowerCase().replace(/[^a-z0-9]/g, "-")}`}>
@@ -905,95 +865,37 @@ const PortalTemplates = () => {
                             ))}
                         </TextField>
 
-                        <FormControl component="fieldset" disabled={savingEdit} sx={{ mb: 3, width: "100%", textAlign: "left" }}>
-                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.85rem", mb: 1.5, fontWeight: 700 }}>
+                        <FormControl component="fieldset" disabled={savingEdit} sx={{ mb: 1, width: "100%" }}>
+                            <FormLabel component="legend" sx={{ color: "text.secondary", fontSize: "0.8rem", mb: 1.25, fontWeight: 700 }}>
                                 Template Type (Site Mode)
                             </FormLabel>
-                            <Box sx={{ display: 'flex', gap: 2 }}>
-                                {/* Website Card */}
-                                <Box
+                            <Box sx={{ display: "flex", gap: 1.5 }}>
+                                <TypeCard
+                                    id="checkbox-edit-website"
+                                    checked={editWebsite}
+                                    onChange={handleEditWebsiteChange}
                                     onClick={() => !savingEdit && handleEditWebsiteChange(true)}
-                                    sx={{
-                                        flex: 1,
-                                        cursor: savingEdit ? 'not-allowed' : 'pointer',
-                                        p: 2,
-                                        borderRadius: '16px',
-                                        border: '1.5px solid',
-                                        borderColor: editWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
-                                        backgroundColor: editWebsite ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            borderColor: editWebsite ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
-                                            backgroundColor: editWebsite ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
-                                        }
-                                    }}
-                                >
-                                    <Checkbox
-                                        id="checkbox-edit-website"
-                                        checked={editWebsite}
-                                        onChange={(e) => handleEditWebsiteChange(e.target.checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        color="primary"
-                                        sx={{ p: 0 }}
-                                        disabled={savingEdit}
-                                    />
-                                    <Box>
-                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            🌐 Website
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
-                                            Standard site mode
-                                        </Typography>
-                                    </Box>
-                                </Box>
-
-                                {/* Portfolio Card */}
-                                <Box
+                                    disabled={savingEdit}
+                                    emoji="🌐"
+                                    label="Website"
+                                    sublabel="Standard site mode"
+                                />
+                                <TypeCard
+                                    id="checkbox-edit-portfolio"
+                                    checked={editPortfolio}
+                                    onChange={handleEditPortfolioChange}
                                     onClick={() => !savingEdit && handleEditPortfolioChange(true)}
-                                    sx={{
-                                        flex: 1,
-                                        cursor: savingEdit ? 'not-allowed' : 'pointer',
-                                        p: 2,
-                                        borderRadius: '16px',
-                                        border: '1.5px solid',
-                                        borderColor: editPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.08)',
-                                        backgroundColor: editPortfolio ? 'rgba(59, 130, 246, 0.05)' : 'rgba(255, 255, 255, 0.02)',
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: 1.5,
-                                        transition: 'all 0.2s ease',
-                                        '&:hover': {
-                                            borderColor: editPortfolio ? 'primary.main' : 'rgba(255, 255, 255, 0.15)',
-                                            backgroundColor: editPortfolio ? 'rgba(59, 130, 246, 0.08)' : 'rgba(255, 255, 255, 0.04)'
-                                        }
-                                    }}
-                                >
-                                    <Checkbox
-                                        id="checkbox-edit-portfolio"
-                                        checked={editPortfolio}
-                                        onChange={(e) => handleEditPortfolioChange(e.target.checked)}
-                                        onClick={(e) => e.stopPropagation()}
-                                        color="primary"
-                                        sx={{ p: 0 }}
-                                        disabled={savingEdit}
-                                    />
-                                    <Box>
-                                        <Typography variant="body2" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                            💼 Portfolio
-                                        </Typography>
-                                        <Typography variant="caption" color="text.secondary" sx={{ display: 'block', fontSize: '0.75rem', mt: 0.25 }}>
-                                            Solo provider mode
-                                        </Typography>
-                                    </Box>
-                                </Box>
+                                    disabled={savingEdit}
+                                    emoji="💼"
+                                    label="Portfolio"
+                                    sublabel="Solo provider mode"
+                                />
                             </Box>
                         </FormControl>
                     </DialogContent>
-                    <DialogActions sx={{ p: 3, pt: 0, justifyContent: "flex-end", gap: 1.5 }}>
-                        <Button id="btn-cancel-edit" onClick={() => setOpenEditDialog(false)} disabled={savingEdit} sx={{ color: "text.secondary", fontWeight: 600 }}>
+
+                    <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>
+                        <Button id="btn-cancel-edit" onClick={() => setOpenEditDialog(false)} disabled={savingEdit} sx={{ color: "text.secondary", fontWeight: 600, textTransform: "none" }}>
                             Cancel
                         </Button>
                         <Button
@@ -1001,55 +903,33 @@ const PortalTemplates = () => {
                             variant="contained"
                             onClick={handleEditSubmit}
                             disabled={savingEdit}
-                            sx={{
-                                borderRadius: "10px",
-                                px: 3,
-                                py: 1.2,
-                                fontWeight: 700,
-                                textTransform: "none"
-                            }}
+                            sx={{ borderRadius: "10px", px: 3, py: 1.1, fontWeight: 700, textTransform: "none" }}
                         >
-                            {savingEdit ? <CircularProgress size={24} sx={{ color: "white" }} /> : "Save Changes"}
+                            {savingEdit ? <CircularProgress size={22} sx={{ color: "#fff" }} /> : "Save Changes"}
                         </Button>
                     </DialogActions>
                 </Dialog>
 
-                {/* Delete Confirmation Modal */}
+                {/* ── Delete Confirmation ────────────────────────────────── */}
                 <Dialog
                     open={deleteDialogOpen}
                     onClose={() => !deleting && setDeleteDialogOpen(false)}
-                    PaperProps={{
-                        sx: {
-                            background: "rgba(15, 23, 42, 0.95)",
-                            backdropFilter: "blur(24px)",
-                            border: "1px solid rgba(255, 255, 255, 0.08)",
-                            borderRadius: "24px",
-                            color: "text.primary",
-                            maxWidth: "400px",
-                            width: "100%"
-                        }
-                    }}
+                    PaperProps={{ sx: { ...dialogPaperSx, maxWidth: "380px" } }}
                 >
                     <DialogTitle sx={{ p: 3, pb: 1, display: "flex", alignItems: "center", gap: 1 }}>
-                        <DeleteIcon color="error" />
-                        <Typography variant="h5" fontWeight={800}>
-                            Delete Template
-                        </Typography>
+                        <DeleteIcon color="error" fontSize="small" />
+                        <Typography variant="h6" fontWeight={800}>Delete Template</Typography>
                     </DialogTitle>
-                    <DialogContent sx={{ p: 3, pt: 1 }}>
+                    <DialogContent sx={{ p: 3, pt: 0.5 }}>
                         <Typography variant="body2" color="text.secondary">
-                            Are you sure you want to permanently delete the <strong>{templateToDelete?.displayName}</strong> template?
+                            Permanently delete <Box component="span" sx={{ color: "text.primary", fontWeight: 700 }}>{templateToDelete?.displayName}</Box>?
                         </Typography>
-                        <Typography variant="caption" color="error.light" sx={{ display: 'block', mt: 1, fontWeight: 700 }}>
-                            This action cannot be undone and will remove all associated files.
+                        <Typography variant="caption" color="error.light" sx={{ display: "block", mt: 1, fontWeight: 600 }}>
+                            This cannot be undone — all associated files will be removed.
                         </Typography>
                     </DialogContent>
                     <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>
-                        <Button
-                            onClick={() => setDeleteDialogOpen(false)}
-                            disabled={deleting}
-                            sx={{ color: "text.secondary", fontWeight: 600 }}
-                        >
+                        <Button onClick={() => setDeleteDialogOpen(false)} disabled={deleting} sx={{ color: "text.secondary", fontWeight: 600, textTransform: "none" }}>
                             Cancel
                         </Button>
                         <Button
@@ -1057,18 +937,13 @@ const PortalTemplates = () => {
                             color="error"
                             onClick={confirmDelete}
                             disabled={deleting}
-                            sx={{
-                                borderRadius: "10px",
-                                px: 3,
-                                py: 1,
-                                fontWeight: 700,
-                                textTransform: "none"
-                            }}
+                            sx={{ borderRadius: "10px", px: 2.5, py: 1, fontWeight: 700, textTransform: "none" }}
                         >
-                            {deleting ? <CircularProgress size={20} color="inherit" /> : "Yes, Delete"}
+                            {deleting ? <CircularProgress size={18} color="inherit" /> : "Delete"}
                         </Button>
                     </DialogActions>
                 </Dialog>
+
             </Box>
         </PageTransition>
     );
