@@ -12,20 +12,24 @@ class FCMService extends GetxService {
   late NotificationService _notificationService;
 
   Future<FCMService> init() async {
-    _messaging = FirebaseMessaging.instance;
-    _localNotifications = FlutterLocalNotificationsPlugin();
-    _notificationService = Get.find<NotificationService>();
-    
-    await _setupLocalNotifications();
-    await _requestPermissions();
-    _listenToMessages();
-    
-    // Get token for server registration
-    String? token = await _messaging.getToken();
-    if (token != null) {
-      await saveTokenToServer(token);
+    try {
+      _messaging = FirebaseMessaging.instance;
+      _localNotifications = FlutterLocalNotificationsPlugin();
+      _notificationService = Get.find<NotificationService>();
+      
+      await _setupLocalNotifications();
+      await _requestPermissions();
+      _listenToMessages();
+      
+      // Get token for server registration
+      String? token = await _messaging.getToken();
+      if (token != null) {
+        await saveTokenToServer(token);
+      }
+      print('FCM Token: $token');
+    } catch (e) {
+      print('Error initializing FCMService: $e');
     }
-    print('FCM Token: $token');
     
     return this;
   }
