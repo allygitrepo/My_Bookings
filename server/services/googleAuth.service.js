@@ -8,9 +8,24 @@ const client = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
  */
 const verifyGoogleToken = async (token) => {
     try {
+        try {
+            const parts = token.split('.');
+            if (parts.length === 3) {
+                const payloadBuf = Buffer.from(parts[1], 'base64');
+                const decodedPayload = JSON.parse(payloadBuf.toString());
+                console.log("Decoded Token Payload:", decodedPayload);
+            }
+        } catch (decErr) {
+            console.error("Failed to decode token for inspection:", decErr);
+        }
+
         const ticket = await client.verifyIdToken({
             idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
+            audience: [
+                process.env.GOOGLE_CLIENT_ID,
+                "175183335539-vg9oq1olf66jp64bvlal5ut1avebqu50.apps.googleusercontent.com", // Android Client ID (175183335539)
+                "259733920973-mo0t9s7nvgso8fsqm6ejd14hspmlpl10.apps.googleusercontent.com"  // Active Client ID (259733920973)
+            ],
         });
         const payload = ticket.getPayload();
         

@@ -49,6 +49,13 @@ const authController = {
                 } 
             });
 
+            if (user && (user.auth_provider !== 'google' || user.password !== 'google-auth-no-password')) {
+                return res.status(400).json({
+                    success: false,
+                    message: "This email is registered with a password. Please log in using your email and password."
+                });
+            }
+
             if (!user) {
                 // Create new user
                 user = await Users.create({

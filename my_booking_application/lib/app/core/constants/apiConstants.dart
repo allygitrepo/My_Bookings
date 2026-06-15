@@ -1,9 +1,10 @@
 class ApiConstants {
   static const String baseUrl =
-      'http://192.168.1.9:3000/mybookings'; // Update with your server IP if testing on physical device
+      'http://192.168.1.6:3000/mybookings'; // Update with your server IP if testing on physical device
 
   // Auth
   static const String login = '/users/login';
+  static const String googleLogin = '/auth/google';
   static const String register = '/users/register';
   static const String profile = '/users/update';
 
