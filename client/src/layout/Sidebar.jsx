@@ -58,7 +58,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             <Box sx={{ p: 3, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <Logo size={36} />
+                <Logo size={50} />
             </Box>
 
             <Box sx={{ px: 2, mb: 2, display: { xs: 'block', md: 'none' } }}>

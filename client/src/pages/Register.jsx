@@ -20,7 +20,7 @@ import {
     Dialog, DialogContent, DialogTitle, 
     DialogActions, Stack 
 } from '@mui/material';
-import logoImg from '../assets/logo.png';
+import Logo from '../components/Logo';
 
 const STATS = [
     { icon: <BoltIcon sx={{ fontSize: 22, color: '#a5b4fc' }} />, value: '5,000+', label: 'Businesses' },
@@ -201,20 +201,7 @@ const Register = () => {
                         fontWeight: 900, color: 'white',
                         lineHeight: 1.08, mb: 4, fontSize: { md: '2.6rem', lg: '3rem' }
                     }}>
-                        <Box
-                            component="img"
-                            src="/logo.png"
-                            alt="MyBookings"
-                            sx={{
-                                width: 180, height: 180,
-                                borderRadius: '16px',
-                                objectFit: 'contain',
-                                bgcolor: 'rgba(255,255,255,0.07)',
-                                p: 1.5,
-                                border: '1px solid rgba(255,255,255,0.12)',
-                                mb: 4
-                            }}
-                        />
+                        <Logo size={180} showText={false} sx={{ mb: 4 }} glow={true} />
                         <br />
                         Start managing
                         bookings{' '}
@@ -273,7 +260,7 @@ const Register = () => {
                 >
                     {/* Mobile logo */}
                     <Box sx={{ display: { xs: 'flex', md: 'none' }, mb: 5, justifyContent: 'center' }}>
-                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: '16px', objectFit: 'contain' }} />
+                        <Logo size={72} showText={false} glow={true} />
                     </Box>
 
                     <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', mb: 0.5 }}>

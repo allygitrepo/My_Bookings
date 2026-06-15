@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ArrowLeft, BookOpen, User, Star, CalendarCheck, CreditCard, Layout, MapPin, Users, CheckCircle2, DollarSign, Info, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion } from 'framer-motion';
+import Logo from '../components/Logo';
 
 const ImagePreview = ({ src, alt, maxHeight = '400px' }) => {
     return (
@@ -582,11 +583,7 @@ const Documentation = () => {
                     </Link>
                     <div style={{ width: '1px', height: '24px', background: 'rgba(255,255,255,0.1)' }} />
                     <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <img
-                            src="/logo.png"
-                            alt="MyBookings"
-                            style={{ width: 36, height: 36, borderRadius: 8, objectFit: 'contain', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)' }}
-                        />
+                        <Logo size={36} showText={false} sx={{ m: 0 }} />
                         <span style={{
                             fontWeight: 900, fontSize: '1.25rem', letterSpacing: '-0.5px',
                             background: 'linear-gradient(90deg, #c084fc, #818cf8)',

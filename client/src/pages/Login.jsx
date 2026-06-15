@@ -14,7 +14,7 @@ import { googleLogin } from '../services/authService';
 import { useBusiness } from '../context/BusinessContext';
 import { useSubscription } from '../context/SubscriptionContext';
 import { motion, AnimatePresence } from 'framer-motion';
-import logoImg from '../assets/logo.png';
+import Logo from '../components/Logo';
 import GoogleLoginButton from "@/components/auth/GoogleLoginButton";
 
 const FEATURES = [
@@ -143,20 +143,7 @@ const Login = () => {
                     style={{ position: 'relative', zIndex: 1, width: '100%' }}
                 >
                     {/* Logo — square, centered between heading and subtitle */}
-                    <Box
-                        component="img"
-                        src="/logo.png"
-                        alt="MyBookings"
-                        sx={{
-                            width: 180, height: 180,
-                            borderRadius: '16px',
-                            objectFit: 'contain',
-                            bgcolor: 'rgba(255,255,255,0.08)',
-                            p: 1.5,
-                            border: '1px solid rgba(255,255,255,0.12)',
-                            mb: 4,
-                        }}
-                    />
+                    <Logo size={180} showText={false} sx={{ mb: 4 }} glow={true} />
                     <Typography variant="h2" sx={{
                         fontWeight: 900, color: 'white',
                         lineHeight: 1.1, mb: 4, fontSize: { md: '2.8rem', lg: '3.2rem' }
@@ -226,7 +213,7 @@ const Login = () => {
                 >
                     {/* Mobile logo */}
                     <Box sx={{ display: { xs: 'flex', md: 'none' }, mb: 5, justifyContent: 'center' }}>
-                        <Box component="img" src="/logo.png" alt="MyBookings" sx={{ width: 72, height: 72, borderRadius: '16px', objectFit: 'contain' }} />
+                        <Logo size={72} showText={false} glow={true} />
                     </Box>
 
                     <Typography variant="h4" fontWeight={900} sx={{ color: '#0f172a', mb: 1 }}>

@@ -1,6 +1,7 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { MessageCircle, Briefcase, Camera, Calendar, Users, CreditCard, BarChart3, Layout, ArrowRight, Shield } from 'lucide-react';
+import Logo from '../Logo';
 
 const QUICK_LINKS = [
     { label: 'Features', href: '#features' },
@@ -39,7 +40,7 @@ const LandingFooter = () => {
                     {/* Brand column */}
                     <div>
                         <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16 }}>
-                            <img src="/logo.png" alt="MyBookings" style={{ width: 48, height: 48, borderRadius: 12, objectFit: 'contain', border: '1px solid rgba(255,255,255,0.1)', background: 'rgba(255,255,255,0.05)' }} />
+                            <Logo size={48} showText={false} sx={{ m: 0 }} glow={true} />
                             <span style={{ fontWeight: 900, fontSize: '1.3rem', background: 'linear-gradient(90deg, #c084fc, #818cf8)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
                                 MyBookings
                             </span>

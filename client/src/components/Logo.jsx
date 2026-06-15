@@ -2,12 +2,12 @@ import React from 'react';
 import { Box } from '@mui/material';
 import logoImg from '../assets/logo.png';
 
-const Logo = ({ size = 150, showText = true, sx = {} }) => {
+const Logo = ({ size = 150, showText = true, sx = {}, ...props }) => {
     return (
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...sx }}>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, ...sx }} {...props}>
             <Box
                 component="img"
-                src="/logo.png"
+                src={logoImg}
                 alt="MyBookings Logo"
                 sx={{
                     width: size,

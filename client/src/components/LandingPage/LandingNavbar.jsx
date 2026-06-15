@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Menu, X, ArrowRight, Zap } from 'lucide-react';
+import Logo from '../Logo';
 
 const NAV_LINKS = [
     { label: 'Features', href: '#features' },
@@ -49,11 +50,7 @@ const LandingNavbar = () => {
 
                 {/* Logo */}
                 <Link to="/" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <img
-                        src="/logo.png"
-                        alt="MyBookings"
-                        style={{ width: 44, height: 44, borderRadius: 10, objectFit: 'contain', border: '1px solid rgba(255,255,255,0.12)', background: 'rgba(255,255,255,0.06)' }}
-                    />
+                    <Logo size={44} showText={false} sx={{ m: 0 }} glow={true} />
                     <span style={{
                         fontWeight: 900, fontSize: '1.25rem', letterSpacing: '-0.5px',
                         background: 'linear-gradient(90deg, #c084fc, #818cf8)',

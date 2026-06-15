@@ -11,7 +11,7 @@ import PageTransition from '../components/PageTransition';
 import { getBusinesses } from '../api/business.api';
 import { getApiKeys } from '../api/apiKey.api';
 import { useBusiness } from '../context/BusinessContext';
-// import { CopyToClipboard } from 'react-copy-to-clipboard';
+import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
 
 const WidgetScript = () => {

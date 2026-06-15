@@ -17,7 +17,7 @@ import {
     AccountBalanceWallet as SettlementsIcon
 } from '@mui/icons-material';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import logoImg from '../assets/logo.png';
+import Logo from '../components/Logo';
 
 const DRAWER_WIDTH = 260;
 
@@ -45,29 +45,19 @@ const PortalSidebar = ({ open, onClose, variant }) => {
     const drawerContent = (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: 'background.paper' }}>
             <Toolbar sx={{ px: 3, py: 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1.5 }}>
-                <Box
-                    component="img"
-                    src="/logo.png"
-                    alt="Logo"
-                    sx={{ width: 60, height: 60, borderRadius: 2, cursor: 'pointer' }}
-                    onClick={() => navigate('/portal/dashboard')}
-                />
+                <Logo size={120} showText={false} sx={{ cursor: 'pointer', m: 0 }} onClick={() => navigate('/portal/dashboard')} />
                 <Box sx={{ textAlign: 'center' }}>
                     <Typography variant="h6" fontWeight={900} color="primary" sx={{ letterSpacing: -0.5, lineHeight: 1.2 }}>
                         SUPER PORTAL
                     </Typography>
-                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 600, textTransform: 'uppercase', letterSpacing: 1 }}>
-                        Administrator
-                    </Typography>
+
                 </Box>
             </Toolbar>
 
             <Divider sx={{ opacity: 0.6 }} />
 
             <List sx={{ flexGrow: 1, px: 2, py: 2 }}>
-                <Typography variant="caption" sx={{ px: 2, mb: 1, display: 'block', color: 'text.secondary', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 1 }}>
-                    System Management
-                </Typography>
+
                 {menuItems.map((item) => {
                     const isActive = location.pathname === item.path;
                     return (

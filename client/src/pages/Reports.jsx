@@ -180,7 +180,7 @@ const Reports = () => {
         const apiBase = import.meta.env.VITE_API_BASE_URL.replace('/mybookings', '');
         const logoUrl = business?.logo 
             ? (business.logo.startsWith('http') ? business.logo : `${apiBase}${business.logo}`)
-            : '/logo.png';
+            : logoImg;
             
         let logo64;
         try {
@@ -338,7 +338,7 @@ const Reports = () => {
 
             // Add Watermark (Platform Logo at low opacity)
             try {
-                const platformLogo64 = await toBase64('/logo.png');
+                const platformLogo64 = await toBase64(logoImg);
                 doc.setGState(new doc.GState({ opacity: 0.1 }));
                 doc.addImage(platformLogo64, 'PNG', 55, 100, 100, 100);
                 doc.setGState(new doc.GState({ opacity: 1 })); // Reset opacity
