@@ -78,14 +78,16 @@ class _SplashScreenState extends State<SplashScreen>
 
   void _initAnimations() {
     // Orbs
-    _orbOpacity = Tween<double>(begin: 0, end: 1).animate(
-      CurvedAnimation(parent: _orbCtrl, curve: Curves.easeOut),
-    );
+    _orbOpacity = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(CurvedAnimation(parent: _orbCtrl, curve: Curves.easeOut));
 
     // Logo spring
-    _logoScale = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut),
-    );
+    _logoScale = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoCtrl, curve: Curves.elasticOut));
     _logoOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _logoCtrl,
@@ -94,17 +96,20 @@ class _SplashScreenState extends State<SplashScreen>
     );
 
     // Arc spin (0 → 2π continuous)
-    _arcRotation = Tween<double>(begin: 0, end: 2 * math.pi).animate(
-      CurvedAnimation(parent: _arcCtrl, curve: Curves.linear),
-    );
+    _arcRotation = Tween<double>(
+      begin: 0,
+      end: 2 * math.pi,
+    ).animate(CurvedAnimation(parent: _arcCtrl, curve: Curves.linear));
 
     // Pulse rings
-    _pulseScale = Tween<double>(begin: 1.0, end: 1.06).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
-    _pulseOpacity = Tween<double>(begin: 0.35, end: 1.0).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
+    _pulseScale = Tween<double>(
+      begin: 1.0,
+      end: 1.06,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
+    _pulseOpacity = Tween<double>(
+      begin: 0.35,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut));
 
     // Brand name / Tagline
     _brandOpacity = Tween<double>(begin: 0, end: 1).animate(
@@ -113,15 +118,13 @@ class _SplashScreenState extends State<SplashScreen>
         curve: const Interval(0.0, 0.55, curve: Curves.easeOut),
       ),
     );
-    _brandSlide = Tween<Offset>(
-      begin: const Offset(0, 0.4),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: _textCtrl,
-        curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
-      ),
-    );
+    _brandSlide = Tween<Offset>(begin: const Offset(0, 0.4), end: Offset.zero)
+        .animate(
+          CurvedAnimation(
+            parent: _textCtrl,
+            curve: const Interval(0.0, 0.6, curve: Curves.easeOut),
+          ),
+        );
     _taglineOpacity = Tween<double>(begin: 0, end: 1).animate(
       CurvedAnimation(
         parent: _textCtrl,
@@ -166,9 +169,7 @@ class _SplashScreenState extends State<SplashScreen>
       final authService = Get.find<AuthService>();
       final destination = authService.isLogged ? Routes.HOME : Routes.LOGIN;
 
-      Get.offAllNamed(
-        destination,
-      );
+      Get.offAllNamed(destination);
     }
   }
 
@@ -189,7 +190,9 @@ class _SplashScreenState extends State<SplashScreen>
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      backgroundColor: isDark ? AppColors.backgroundDark : AppColors.backgroundLight,
+      backgroundColor: isDark
+          ? AppColors.backgroundDark
+          : AppColors.backgroundLight,
       body: Stack(
         children: [
           // ── Grid background ──
@@ -229,7 +232,9 @@ class _SplashScreenState extends State<SplashScreen>
                     style: TextStyle(
                       fontSize: 12,
                       letterSpacing: 1.2,
-                      color: isDark ? AppColors.textSecondaryDark.withOpacity(0.5) : AppColors.textSecondaryLight.withOpacity(0.5),
+                      color: isDark
+                          ? AppColors.textSecondaryDark.withOpacity(0.5)
+                          : AppColors.textSecondaryLight.withOpacity(0.5),
                       fontFamily: 'Syne',
                     ),
                   ),
@@ -237,7 +242,11 @@ class _SplashScreenState extends State<SplashScreen>
                   Image.asset(
                     'assets/images/company_logo.png',
                     height: 30,
-                    errorBuilder: (context, error, stackTrace) => const Icon(Icons.business_rounded, color: AppColors.accent, size: 30),
+                    errorBuilder: (context, error, stackTrace) => const Icon(
+                      Icons.business_rounded,
+                      color: AppColors.accent,
+                      size: 30,
+                    ),
                   ),
                 ],
               ),
@@ -281,7 +290,9 @@ class _SplashScreenState extends State<SplashScreen>
           ),
           _orb(
             size: 200,
-            color: isDark ? AppColors.primaryDark : AppColors.primaryLight.withOpacity(0.3),
+            color: isDark
+                ? AppColors.primaryDark
+                : AppColors.primaryLight.withOpacity(0.3),
             centerOffset: true,
           ),
         ],
@@ -313,7 +324,10 @@ class _SplashScreenState extends State<SplashScreen>
     );
     if (centerOffset) {
       return Positioned(
-        top: 0, bottom: 0, left: 0, right: 0,
+        top: 0,
+        bottom: 0,
+        left: 0,
+        right: 0,
         child: Center(
           child: Transform.translate(
             offset: const Offset(0, -60),
@@ -346,9 +360,21 @@ class _SplashScreenState extends State<SplashScreen>
     );
   }
 
-  Widget _shard(double x, double y, double size, double baseRotation, bool isDark) {
+  Widget _shard(
+    double x,
+    double y,
+    double size,
+    double baseRotation,
+    bool isDark,
+  ) {
     final t = _shardCtrl.value;
-    final opacity = (t < 0.3 ? t / 0.3 : t > 0.8 ? (1 - t) / 0.2 : 1.0) * 0.22;
+    final opacity =
+        (t < 0.3
+            ? t / 0.3
+            : t > 0.8
+            ? (1 - t) / 0.2
+            : 1.0) *
+        0.22;
     final dy = -28.0 * t;
     final rot = baseRotation + t * 0.3;
     return Positioned(
@@ -360,7 +386,9 @@ class _SplashScreenState extends State<SplashScreen>
           angle: rot,
           child: CustomPaint(
             size: Size(size, size * 1.4),
-            painter: _DiamondPainter((isDark ? AppColors.accent : AppColors.primary).withOpacity(0.4)),
+            painter: _DiamondPainter(
+              (isDark ? AppColors.accent : AppColors.primary).withOpacity(0.4),
+            ),
           ),
         ),
       ),
@@ -370,9 +398,7 @@ class _SplashScreenState extends State<SplashScreen>
   // ── Logo ring ─────────────────────────────────────────────────
   Widget _buildLogoRing(bool isDark) {
     return AnimatedBuilder(
-      animation: Listenable.merge([
-        _logoCtrl, _arcCtrl, _pulseCtrl,
-      ]),
+      animation: Listenable.merge([_logoCtrl, _arcCtrl, _pulseCtrl]),
       builder: (_, __) {
         return ScaleTransition(
           scale: _logoScale,
@@ -447,9 +473,14 @@ class _SplashScreenState extends State<SplashScreen>
                       child: Padding(
                         padding: const EdgeInsets.all(20.0),
                         child: Image.asset(
-                          'assets/icons/application_logo_bg.png',
+                          'assets/icons/app_logo_bg.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.calendar_today_rounded, color: Colors.white, size: 40),
+                          errorBuilder: (context, error, stackTrace) =>
+                              const Icon(
+                                Icons.calendar_today_rounded,
+                                color: Colors.white,
+                                size: 40,
+                              ),
                         ),
                       ),
                     ),
@@ -472,7 +503,8 @@ class _SplashScreenState extends State<SplashScreen>
           child: FadeTransition(
             opacity: _brandOpacity,
             child: ShaderMask(
-              shaderCallback: (bounds) => AppColors.textGradient.createShader(bounds),
+              shaderCallback: (bounds) =>
+                  AppColors.textGradient.createShader(bounds),
               child: const Text(
                 'My Bookings',
                 style: TextStyle(
@@ -494,7 +526,9 @@ class _SplashScreenState extends State<SplashScreen>
             style: TextStyle(
               fontSize: 11,
               letterSpacing: 3.5,
-              color: isDark ? AppColors.textTertiaryDark : AppColors.textTertiaryLight,
+              color: isDark
+                  ? AppColors.textTertiaryDark
+                  : AppColors.textTertiaryLight,
               fontWeight: FontWeight.w400,
               fontFamily: 'Syne',
             ),
@@ -580,7 +614,9 @@ class _GridPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()
-      ..color = (isDark ? AppColors.accent : AppColors.primary).withOpacity(0.04)
+      ..color = (isDark ? AppColors.accent : AppColors.primary).withOpacity(
+        0.04,
+      )
       ..strokeWidth = 1;
     const step = 34.0;
     for (double x = 0; x < size.width; x += step) {
@@ -604,7 +640,11 @@ class _ArcPainter extends CustomPainter {
       ..strokeWidth = 2.0
       ..strokeCap = StrokeCap.round
       ..shader = const SweepGradient(
-        colors: [Colors.transparent, AppColors.splashArcStart, AppColors.splashArcEnd],
+        colors: [
+          Colors.transparent,
+          AppColors.splashArcStart,
+          AppColors.splashArcEnd,
+        ],
         stops: [0.0, 0.6, 1.0],
       ).createShader(rect);
     canvas.drawArc(rect.deflate(1), 0, math.pi * 1.65, false, paint);

@@ -23,12 +23,13 @@ const verifyGoogleToken = async (token) => {
             idToken: token,
             audience: [
                 process.env.GOOGLE_CLIENT_ID,
+                "175183335539-98a7nuhghnanrlboa38dse512er3lgb7.apps.googleusercontent.com", // Web Client ID (175183335539)
                 "175183335539-vg9oq1olf66jp64bvlal5ut1avebqu50.apps.googleusercontent.com", // Android Client ID (175183335539)
                 "259733920973-mo0t9s7nvgso8fsqm6ejd14hspmlpl10.apps.googleusercontent.com"  // Active Client ID (259733920973)
             ],
         });
         const payload = ticket.getPayload();
-        
+
         return {
             email: payload.email,
             name: payload.name,

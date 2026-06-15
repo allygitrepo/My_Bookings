@@ -1,6 +1,10 @@
 class ApiConstants {
   static const String baseUrl =
-      'http://192.168.1.6:3000/mybookings'; // Update with your server IP if testing on physical device
+      'https://silverapi.allysoftsolutions.com/mybookings';
+  // Update with your server IP if testing on physical device
+
+  // static const String baseUrl =
+  //     'http://192.168.1.6:3000/mybookings';
 
   // Auth
   static const String login = '/users/login';
