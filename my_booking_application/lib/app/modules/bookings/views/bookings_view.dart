@@ -29,7 +29,7 @@ class BookingsView extends GetView<BookingsController> {
                 padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
                 itemCount: controller.filteredBookings.length,
                 itemBuilder: (context, index) {
-                  return _buildBookingCard(context, controller.filteredBookings[index]);
+                  return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
                 },
               ),
             );
@@ -78,7 +78,7 @@ class BookingsView extends GetView<BookingsController> {
     });
   }
 
-  Widget _buildBookingCard(BuildContext context, BookingModel booking) {
+  Widget _buildBookingCard(BuildContext context, BookingModel booking, int serialNumber) {
     final statusColor = _getStatusColor(booking.status ?? '');
     
     return Container(
@@ -116,7 +116,7 @@ class BookingsView extends GetView<BookingsController> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Booking #${booking.id}',
+                            'Booking $serialNumber',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -138,12 +138,27 @@ class BookingsView extends GetView<BookingsController> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Icon(Icons.payments_outlined, size: 16, color: AppColors.lavender400),
-                          const SizedBox(width: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.payments_outlined, size: 16, color: AppColors.lavender400),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Paid: ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                           Text(
-                            '₹${booking.totalAmount?.toStringAsFixed(2)}',
+                            'Total: ₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
                             style: TextStyle(
                               color: Theme.of(context).brightness == Brightness.dark ? AppColors.navy300 : AppColors.primary,
                               fontWeight: FontWeight.w600,

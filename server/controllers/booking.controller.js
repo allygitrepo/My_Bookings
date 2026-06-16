@@ -1,4 +1,4 @@
-const { Booking, Business, Customer, Service, Staff, Location, BookingService } = require("../models/associations");
+const { Booking, Business, Customer, Service, Staff, Location, BookingService, Payment } = require("../models/associations");
 const { Op } = require("sequelize");
 const { emitToBusiness } = require("../services/socket.service");
 const fcmService = require("../services/fcm.service");
@@ -114,7 +114,8 @@ const bookingController = {
                     { model: Service, as: 'services', through: { attributes: [] } },
                     { model: Staff, as: 'staff' },
                     { model: Location, as: 'location' },
-                    { model: Business, as: 'business' }
+                    { model: Business, as: 'business' },
+                    { model: Payment }
                 ]
             });
 
@@ -127,32 +128,38 @@ const bookingController = {
 
             res.status(201).json({ success: true, message: "Booking created successfully", data: fullBooking || row });
 
-            // Emit Socket Event with full details
-            emitToBusiness(business_id, "bookingCreated", fullBooking || row);
+            const isWidget = req.isWidget || !!req.headers['x-api-key'] || !!req.body.is_widget_request;
 
-            // Send FCM Notification to the Owner
-            try {
-                const business = await Business.findByPk(business_id);
-                if (business && business.user_id) {
-                    const owner = await User.findByPk(business.user_id);
-                    if (owner && owner.fcm_token) {
-                        const clientName = fullBooking?.customer?.name || "A Client";
-                        const staffName = fullBooking?.staff?.staff_name || "Staff";
-                        const bookingTime = fullBooking?.start_time || row.start_time;
+            // Emit Socket Event with full details - only if not from widget
+            if (!isWidget) {
+                emitToBusiness(business_id, "bookingCreated", fullBooking || row);
+            }
 
-                        await fcmService.sendNotification(
-                            owner.fcm_token,
-                            "New Booking Alert",
-                            `${clientName} has booked a slot of ${staffName} at ${bookingTime}`,
-                            {
-                                type: "new_booking",
-                                booking_id: row.id.toString()
-                            }
-                        );
+            // Send FCM Notification to the Owner - only if not from widget
+            if (!isWidget) {
+                try {
+                    const business = await Business.findByPk(business_id);
+                    if (business && business.user_id) {
+                        const owner = await User.findByPk(business.user_id);
+                        if (owner && owner.fcm_token) {
+                            const clientName = fullBooking?.customer?.name || "A Client";
+                            const staffName = fullBooking?.staff?.staff_name || "Staff";
+                            const bookingTime = fullBooking?.start_time || row.start_time;
+
+                            await fcmService.sendNotification(
+                                owner.fcm_token,
+                                "New Booking Alert",
+                                `${clientName} has booked a slot of ${staffName} at ${bookingTime}`,
+                                {
+                                    type: "new_booking",
+                                    booking_id: row.id.toString()
+                                }
+                            );
+                        }
                     }
+                } catch (fcmErr) {
+                    console.error("[FCM] Failed to send notification to owner:", fcmErr.message);
                 }
-            } catch (fcmErr) {
-                console.error("[FCM] Failed to send notification to owner:", fcmErr.message);
             }
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -183,7 +190,12 @@ const bookingController = {
             const { count, rows } = await Booking.findAndCountAll({
                 where: whereClause,
                 include: [
-                    { model: Service, as: 'services', through: { attributes: [] } }
+                    { model: Service, as: 'services', through: { attributes: [] } },
+                    { model: Payment }
+                ],
+                order: [
+                    ['booking_date', 'ASC'],
+                    ['start_time', 'ASC']
                 ],
                 limit,
                 offset,
@@ -218,7 +230,8 @@ const bookingController = {
             const row = await Booking.findOne({
                 where: whereClause,
                 include: [
-                    { model: Service, as: 'services', through: { attributes: [] } }
+                    { model: Service, as: 'services', through: { attributes: [] } },
+                    { model: Payment }
                 ]
             });
             if (!row) return res.status(404).json({ success: false, message: "Booking not found" });

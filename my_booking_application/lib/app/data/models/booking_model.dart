@@ -9,6 +9,7 @@ class BookingModel {
   String? endTime;
   String? status; // We'll store it as a string for the UI (Confirmed/Pending)
   double? totalAmount;
+  double? paidAmount;
 
   String? customerName;
   String? serviceName;
@@ -22,6 +23,7 @@ class BookingModel {
     this.endTime,
     this.status,
     this.totalAmount,
+    this.paidAmount,
     this.customerName,
     this.serviceName,
   });
@@ -41,7 +43,25 @@ class BookingModel {
       status = json['status']?.toString() ?? 'Pending';
     }
     
-    totalAmount = json['total_amount'] != null ? double.tryParse(json['total_amount'].toString()) : 0.0;
+    // Parse payments to compute totalAmount and paidAmount
+    double totalAmt = 0.0;
+    double paidAmt = 0.0;
+    if (json['payments'] != null && (json['payments'] as List).isNotEmpty) {
+      final paymentsList = json['payments'] as List;
+      for (var paymentJson in paymentsList) {
+        final double amt = double.tryParse(paymentJson['amount']?.toString() ?? '0.0') ?? 0.0;
+        final double paid = double.tryParse(paymentJson['paid_amount']?.toString() ?? '0.0') ?? 0.0;
+        final bool isPaid = paymentJson['payment_status'] == true || paymentJson['payment_status'] == 1 || paymentJson['payment_status'] == '1';
+        
+        totalAmt += amt;
+        if (isPaid) {
+          paidAmt += paid;
+        }
+      }
+    }
+    
+    totalAmount = totalAmt > 0 ? totalAmt : (json['total_amount'] != null ? double.tryParse(json['total_amount'].toString()) : 0.0);
+    paidAmount = paidAmt;
     
     // Handle nested customer object if provided by backend
     if (json['customer'] != null) {
@@ -69,6 +89,7 @@ class BookingModel {
     data['end_time'] = endTime;
     data['status'] = status;
     data['total_amount'] = totalAmount;
+    data['paid_amount'] = paidAmount;
     data['customer_name'] = customerName;
     data['service_name'] = serviceName;
     return data;

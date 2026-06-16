@@ -8,13 +8,89 @@ const Business = require("../models/business.model");
 const User = require("../models/user.model");
 const Package = require("../models/package.model");
 const whatsappService = require("../services/whatsapp.service");
+const fcmService = require("../services/fcm.service");
 
 const getBusinessId = (req) => {
     if (req.isWidget) return req.business_id ?? -1;
     return req.user?.business_id ?? -1;
 };
 
+const sendBookingSuccessNotifications = async (bookingId) => {
+    try {
+        const { Customer, Service, Staff, Location, Payment } = require("../models/associations");
+        const fullBooking = await Booking.findByPk(bookingId, {
+            include: [
+                { model: Customer, as: 'customer' },
+                { model: Service, as: 'services', through: { attributes: [] } },
+                { model: Staff, as: 'staff' },
+                { model: Location, as: 'location' },
+                { model: Business, as: 'business' },
+                { model: Payment }
+            ]
+        });
+
+        if (!fullBooking) return;
+
+        // 1. Emit socket event to update client-side
+        emitToBusiness(fullBooking.business_id, "bookingCreated", fullBooking);
+
+        // 2. Send FCM Notification to the Owner
+        const business = fullBooking.business;
+        if (business && business.user_id) {
+            const owner = await User.findByPk(business.user_id);
+            if (owner && owner.fcm_token) {
+                const clientName = fullBooking.customer?.name || "A Client";
+                const staffName = fullBooking.staff?.staff_name || "Staff";
+                const bookingTime = fullBooking.start_time;
+
+                await fcmService.sendNotification(
+                    owner.fcm_token,
+                    "Booking Payment Confirmed",
+                    `${clientName} has paid and confirmed their booking of ${staffName} at ${bookingTime}`,
+                    {
+                        type: "booking_confirmed",
+                        booking_id: bookingId.toString()
+                    }
+                );
+            }
+        }
+    } catch (err) {
+        console.error("Error in sendBookingSuccessNotifications:", err);
+    }
+};
+
+const handlePaymentSuccess = async (payment) => {
+    try {
+        if (payment.payment_status) {
+            const booking = await Booking.findByPk(payment.booking_id);
+            if (booking) {
+                // Update booking status
+                if (!booking.payment_status) {
+                    await booking.update({ payment_status: true });
+                }
+
+                // WhatsApp notification
+                try {
+                    await whatsappService.sendBookingNotification(payment.booking_id);
+                } catch (waErr) {
+                    console.error("Error sending WhatsApp notification:", waErr.message);
+                }
+
+                // App & socket notification
+                try {
+                    await sendBookingSuccessNotifications(payment.booking_id);
+                } catch (notifErr) {
+                    console.error("Error calling sendBookingSuccessNotifications:", notifErr);
+                }
+            }
+        }
+    } catch (err) {
+        console.error("Error in handlePaymentSuccess:", err);
+    }
+};
+
 const paymentController = {
+    sendBookingSuccessNotifications,
     create: async (req, res) => {
         try {
             const data = { ...req.body };
@@ -26,6 +102,9 @@ const paymentController = {
                 data.business_id = booking.business_id;
             }
             const row = await Payment.create(data);
+            if (row.payment_status) {
+                await handlePaymentSuccess(row);
+            }
             res.status(201).json({ success: true, message: "Payment created successfully", data: row });
 
             // Emit Socket Event
@@ -112,7 +191,11 @@ const paymentController = {
         try {
             const row = await Payment.findByPk(req.params.id);
             if (!row) return res.status(404).json({ success: false, message: "Payment not found" });
+            const wasPaid = row.payment_status;
             await row.update(req.body);
+            if (row.payment_status && !wasPaid) {
+                await handlePaymentSuccess(row);
+            }
             res.json({ success: true, message: "Payment updated successfully", data: row });
 
             // Emit Socket Event
@@ -212,11 +295,7 @@ const paymentController = {
                 payment_status: true
             });
 
-            // Update booking status
-            await booking.update({ payment_status: true });
-
-            // Trigger WhatsApp Notifications
-            whatsappService.sendBookingNotification(booking_id);
+            await handlePaymentSuccess(paymentRecord);
 
             res.json({ 
                 success: true, 
@@ -295,10 +374,8 @@ const paymentController = {
                                 transaction_id: paymentId,
                                 payment_status: true
                             });
-                            await booking.update({ payment_status: true });
 
-                            // Trigger WhatsApp Notifications
-                            whatsappService.sendBookingNotification(bookingId);
+                            await handlePaymentSuccess(paymentRecord);
                         } else {
                         }
                     }
