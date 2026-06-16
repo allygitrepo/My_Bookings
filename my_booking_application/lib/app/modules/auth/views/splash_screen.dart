@@ -405,8 +405,8 @@ class _SplashScreenState extends State<SplashScreen>
           child: FadeTransition(
             opacity: _logoOpacity,
             child: SizedBox(
-              width: 160,
-              height: 160,
+              width: 200,
+              height: 200,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
@@ -416,8 +416,8 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Opacity(
                       opacity: _pulseOpacity.value * 0.55,
                       child: Container(
-                        width: 160,
-                        height: 160,
+                        width: 180,
+                        height: 180,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -434,8 +434,8 @@ class _SplashScreenState extends State<SplashScreen>
                     child: Opacity(
                       opacity: _pulseOpacity.value,
                       child: Container(
-                        width: 142,
-                        height: 142,
+                        width: 162,
+                        height: 162,
                         decoration: BoxDecoration(
                           shape: BoxShape.circle,
                           border: Border.all(
@@ -450,14 +450,14 @@ class _SplashScreenState extends State<SplashScreen>
                   Transform.rotate(
                     angle: _arcRotation.value,
                     child: CustomPaint(
-                      size: const Size(130, 130),
+                      size: const Size(150, 150),
                       painter: _ArcPainter(),
                     ),
                   ),
                   // Inner logo circle
                   Container(
-                    width: 100,
-                    height: 100,
+                    width: 120,
+                    height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
                       gradient: AppColors.logoGradient,
@@ -471,7 +471,7 @@ class _SplashScreenState extends State<SplashScreen>
                     ),
                     child: Center(
                       child: Padding(
-                        padding: const EdgeInsets.all(20.0),
+                        padding: const EdgeInsets.all(16.0),
                         child: Image.asset(
                           'assets/icons/app_logo_bg.png',
                           fit: BoxFit.contain,
@@ -479,7 +479,7 @@ class _SplashScreenState extends State<SplashScreen>
                               const Icon(
                                 Icons.calendar_today_rounded,
                                 color: Colors.white,
-                                size: 40,
+                                size: 48,
                               ),
                         ),
                       ),
@@ -503,8 +503,18 @@ class _SplashScreenState extends State<SplashScreen>
           child: FadeTransition(
             opacity: _brandOpacity,
             child: ShaderMask(
-              shaderCallback: (bounds) =>
-                  AppColors.textGradient.createShader(bounds),
+              shaderCallback: (bounds) => (isDark
+                      ? AppColors.textGradient
+                      : const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            AppColors.navy900,
+                            AppColors.navy600,
+                            AppColors.violet600,
+                          ],
+                        ))
+                  .createShader(bounds),
               child: const Text(
                 'My Bookings',
                 style: TextStyle(
@@ -527,9 +537,9 @@ class _SplashScreenState extends State<SplashScreen>
               fontSize: 11,
               letterSpacing: 3.5,
               color: isDark
-                  ? AppColors.textTertiaryDark
-                  : AppColors.textTertiaryLight,
-              fontWeight: FontWeight.w400,
+                  ? AppColors.textSecondaryDark
+                  : AppColors.navy600.withOpacity(0.7),
+              fontWeight: FontWeight.w600,
               fontFamily: 'Syne',
             ),
           ),
