@@ -2,6 +2,7 @@
 # This is a generated file; do not edit or check into version control.
 export "FLUTTER_ROOT=C:\flutter_windows_3.16.9-stable\flutter"
 export "FLUTTER_APPLICATION_PATH=C:\Ally_Soft_Solution\Ally_Soft_Solution_Git_Projects\My_Bookings\my_booking_application"
+export "FLUTTER_FRAMEWORK_SWIFT_PACKAGE_PATH=C:\Ally_Soft_Solution\Ally_Soft_Solution_Git_Projects\My_Bookings\my_booking_application\ios\Flutter\ephemeral\Packages\.packages\FlutterFramework"
 export "COCOAPODS_PARALLEL_CODE_SIGN=true"
 export "FLUTTER_TARGET=lib\main.dart"
 export "FLUTTER_BUILD_DIR=build"

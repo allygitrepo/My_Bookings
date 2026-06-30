@@ -142,11 +142,22 @@ const businessController = {
                 Service.findAll({ where: { business_id: business.id, status: true } })
             ]);
 
+            const ApiKey = require("../models/apiKey.model");
+            const crypto = require("crypto");
+            let apiKeyRecord = await ApiKey.findOne({ where: { business_id: business.id, status: true } });
+            if (!apiKeyRecord) {
+                const api_key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+                apiKeyRecord = await ApiKey.create({ business_id: business.id, api_key, status: true });
+            }
+
+            const businessJson = business.toJSON();
+            businessJson.api_key = apiKeyRecord.api_key;
+
             res.json({
                 success: true,
                 message: "Public business data fetched",
                 data: {
-                    business,
+                    business: businessJson,
                     locations,
                     services
                 }
@@ -175,11 +186,22 @@ const businessController = {
                 Service.findAll({ where: { business_id: business.id, status: true } })
             ]);
 
+            const ApiKey = require("../models/apiKey.model");
+            const crypto = require("crypto");
+            let apiKeyRecord = await ApiKey.findOne({ where: { business_id: business.id, status: true } });
+            if (!apiKeyRecord) {
+                const api_key = 'pk_live_' + crypto.randomUUID().replace(/-/g, '');
+                apiKeyRecord = await ApiKey.create({ business_id: business.id, api_key, status: true });
+            }
+
+            const businessJson = business.toJSON();
+            businessJson.api_key = apiKeyRecord.api_key;
+
             res.json({
                 success: true,
                 message: "Public business data fetched by ID",
                 data: {
-                    business,
+                    business: businessJson,
                     locations,
                     services
                 }

@@ -281,4 +281,70 @@ const getSettlementPaidTemplate = (userName, businessName, totalAmount, paymentC
     `;
 };
 
-module.exports = { getWelcomeTemplate, getOtpTemplate, getSettlementPaidTemplate };
+const getForgotPasswordOtpTemplate = (otp) => {
+    return `
+    <!DOCTYPE html>
+    <html lang="en">
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Reset your password — MyBookings</title>
+    </head>
+    <body style="margin:0;padding:0;background-color:#f0f2f5;font-family:'Segoe UI',Tahoma,Geneva,Verdana,sans-serif;line-height:1.6;color:#333;">
+
+        <table width="100%" cellpadding="0" cellspacing="0" style="background:#f0f2f5;padding:24px 0;">
+            <tr>
+                <td align="center">
+                    <table width="560" cellpadding="0" cellspacing="0" style="max-width:560px;background:#fff;border-radius:12px;overflow:hidden;box-shadow:0 2px 16px rgba(0,0,0,0.10);">
+
+                        <!-- Header -->
+                        <tr>
+                            <td style="background:#111827;padding:28px 20px;text-align:center;">
+                                <div style="font-size:11px;letter-spacing:2px;text-transform:uppercase;color:#9ca3af;margin-bottom:4px;">MyBookings</div>
+                                <div style="font-size:20px;font-weight:600;color:#fff;">Password Reset Request</div>
+                            </td>
+                        </tr>
+
+                        <!-- Body -->
+                        <tr>
+                            <td style="padding:36px 32px;text-align:center;">
+
+                                <!-- Icon -->
+                                <img src="https://mybookings.allysoftsolutions.com/logo.png" alt="Security" style="width:60px;height:60px;border-radius:10px;margin:0 auto 18px;display:block;">
+
+                                <p style="color:#374151;font-size:15px;line-height:1.7;margin:0 0 6px;">Use this one-time code to reset your password.</p>
+                                <p style="color:#6b7280;font-size:13px;margin:0 0 28px;">It expires in <strong style="color:#374151;">10 minutes</strong>. Do not share it with anyone.</p>
+
+                                <!-- OTP Block -->
+                                <div style="background:#f3f4f6;border:1.5px dashed #d1d5db;border-radius:12px;padding:28px 20px;margin:0 auto 28px;max-width:260px;">
+                                    <div style="letter-spacing:12px;font-size:38px;font-weight:800;color:#111827;font-family:monospace;">${otp}</div>
+                                    <div style="color:#9ca3af;font-size:12px;margin-top:10px;">One-Time Password</div>
+                                </div>
+
+                                <!-- Warning notice -->
+                                <div style="background:#fef9c3;border:1px solid #fde68a;border-radius:8px;padding:12px 16px;text-align:left;margin-bottom:8px;">
+                                    <p style="color:#92400e;font-size:13px;margin:0;line-height:1.5;">⚠️&nbsp; If you didn't request this code, you can safely ignore this email. Your password will not change.</p>
+                                </div>
+
+                            </td>
+                        </tr>
+
+                        <!-- Footer -->
+                        <tr>
+                            <td style="background:#f9fafb;padding:20px;text-align:center;border-top:1px solid #e5e7eb;">
+                                <p style="color:#9ca3af;font-size:12px;margin:0 0 4px;">Questions? Email us at <a href="mailto:support@mybookings.allysoft.in" style="color:#4f46e5;text-decoration:none;">support@mybookings.allysoft.in</a></p>
+                                <p style="color:#d1d5db;font-size:11px;margin:0;">&copy; ${new Date().getFullYear()} MyBookings by Allysoft Solutions. All rights reserved.</p>
+                            </td>
+                        </tr>
+
+                    </table>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+    </html>
+    `;
+};
+
+module.exports = { getWelcomeTemplate, getOtpTemplate, getSettlementPaidTemplate, getForgotPasswordOtpTemplate };

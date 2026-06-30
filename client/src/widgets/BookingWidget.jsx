@@ -440,7 +440,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 start_time: startSlot,
                 end_time: addMinutes(startSlot, finalDuration),
                 payment_status: false,
-                status: true
+                status: true,
+                is_widget_request: true
             };
 
             const bookingRes = await createBooking(bookingPayload);

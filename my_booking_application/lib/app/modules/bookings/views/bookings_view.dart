@@ -29,7 +29,7 @@ class BookingsView extends GetView<BookingsController> {
                 padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
                 itemCount: controller.filteredBookings.length,
                 itemBuilder: (context, index) {
-                  return _buildBookingCard(context, controller.filteredBookings[index]);
+                  return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
                 },
               ),
             );
@@ -78,7 +78,7 @@ class BookingsView extends GetView<BookingsController> {
     });
   }
 
-  Widget _buildBookingCard(BuildContext context, BookingModel booking) {
+  Widget _buildBookingCard(BuildContext context, BookingModel booking, int serialNumber) {
     final statusColor = _getStatusColor(booking.status ?? '');
     
     return Container(
@@ -116,7 +116,7 @@ class BookingsView extends GetView<BookingsController> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text(
-                            'Booking #${booking.id}',
+                            'Booking $serialNumber',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
                               fontSize: 16,
@@ -138,12 +138,27 @@ class BookingsView extends GetView<BookingsController> {
                         ],
                       ),
                       const SizedBox(height: 4),
-                      Row(
+                      Wrap(
+                        spacing: 12,
+                        runSpacing: 4,
+                        crossAxisAlignment: WrapCrossAlignment.center,
                         children: [
-                          const Icon(Icons.payments_outlined, size: 16, color: AppColors.lavender400),
-                          const SizedBox(width: 4),
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(Icons.payments_outlined, size: 16, color: AppColors.lavender400),
+                              const SizedBox(width: 4),
+                              Text(
+                                'Paid: ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                style: const TextStyle(
+                                  color: AppColors.success,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
                           Text(
-                            '₹${booking.totalAmount?.toStringAsFixed(2)}',
+                            'Total: ₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
                             style: TextStyle(
                               color: Theme.of(context).brightness == Brightness.dark ? AppColors.navy300 : AppColors.primary,
                               fontWeight: FontWeight.w600,
@@ -157,10 +172,8 @@ class BookingsView extends GetView<BookingsController> {
               ],
             ),
           ),
-          if (booking.status?.toLowerCase() == 'pending') ...[
-            const Divider(height: 1),
-            _buildActionButtons(booking),
-          ],
+          const Divider(height: 1),
+          _buildDeleteActionButton(booking),
         ],
       ),
     );
@@ -219,29 +232,21 @@ class BookingsView extends GetView<BookingsController> {
     );
   }
 
-  Widget _buildActionButtons(BookingModel booking) {
+  Widget _buildDeleteActionButton(BookingModel booking) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       child: Row(
+        mainAxisAlignment: MainAxisAlignment.end,
         children: [
-          Expanded(
-            child: TextButton.icon(
-              onPressed: () => _confirmAction(booking.id!, 'cancelled'),
-              icon: const Icon(Icons.close_rounded, color: AppColors.error, size: 18),
-              label: const Text('Cancel', style: TextStyle(color: AppColors.error)),
-            ),
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: () => controller.updateBookingStatus(booking.id!, 'confirmed'),
-              icon: const Icon(Icons.check_rounded, size: 18),
-              label: const Text('Confirm'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: AppColors.success,
-                foregroundColor: Colors.white,
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                elevation: 0,
+          TextButton.icon(
+            onPressed: () => _confirmDelete(booking.id!),
+            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 20),
+            label: const Text(
+              'Delete Booking',
+              style: TextStyle(
+                color: AppColors.error,
+                fontWeight: FontWeight.bold,
+                fontFamily: 'Syne',
               ),
             ),
           ),
@@ -250,19 +255,22 @@ class BookingsView extends GetView<BookingsController> {
     );
   }
 
-  void _confirmAction(int id, String status) {
+  void _confirmDelete(int id) {
     Get.dialog(
       AlertDialog(
-        title: Text('Confirm $status'),
-        content: Text('Are you sure you want to $status this booking?'),
+        title: const Text('Delete Booking', style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.bold)),
+        content: const Text('Are you sure you want to delete this booking?', style: TextStyle(fontFamily: 'Syne')),
         actions: [
-          TextButton(onPressed: () => Get.back(), child: const Text('No')),
+          TextButton(
+            onPressed: () => Get.back(),
+            child: const Text('No', style: TextStyle(fontFamily: 'Syne')),
+          ),
           TextButton(
             onPressed: () {
               Get.back();
-              controller.updateBookingStatus(id, status);
+              controller.deleteBooking(id);
             },
-            child: const Text('Yes', style: TextStyle(color: AppColors.error)),
+            child: const Text('Yes', style: TextStyle(color: AppColors.error, fontFamily: 'Syne', fontWeight: FontWeight.bold)),
           ),
         ],
       ),

@@ -27,12 +27,30 @@ class BookingsController extends GetxController {
       if (response.data['success'] == true) {
         final List bookingsJson = response.data['data'] ?? [];
         bookings.value = bookingsJson.map((j) => BookingModel.fromJson(j)).toList();
+        sortBookings();
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to fetch bookings');
     } finally {
       isLoading.value = false;
     }
+  }
+
+  void sortBookings() {
+    bookings.sort((a, b) {
+      if (a.bookingDate == null && b.bookingDate == null) return 0;
+      if (a.bookingDate == null) return 1;
+      if (b.bookingDate == null) return -1;
+      
+      int dateCompare = a.bookingDate!.compareTo(b.bookingDate!);
+      if (dateCompare != 0) return dateCompare;
+      
+      if (a.startTime == null && b.startTime == null) return 0;
+      if (a.startTime == null) return 1;
+      if (b.startTime == null) return -1;
+      
+      return a.startTime!.compareTo(b.startTime!);
+    });
   }
 
   List<BookingModel> get filteredBookings {
@@ -62,18 +80,44 @@ class BookingsController extends GetxController {
     }
   }
 
-  void addBooking(BookingModel booking) {
-    // Check if already exists to prevent duplicates
-    if (!bookings.any((b) => b.id == booking.id)) {
-      bookings.insert(0, booking);
-      bookings.refresh();
+  Future<void> deleteBooking(int id) async {
+    try {
+      isLoading.value = true;
+      final response = await _apiClient.delete('${ApiConstants.deleteBooking}/$id');
+
+      if (response.data['success'] == true) {
+        bookings.removeWhere((b) => b.id == id);
+        bookings.refresh();
+        Get.snackbar('Success', 'Booking deleted successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white);
+      } else {
+        Get.snackbar('Error', response.data['message'] ?? 'Failed to delete booking');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete booking');
+    } finally {
+      isLoading.value = false;
     }
+  }
+
+  void addBooking(BookingModel booking) {
+    final index = bookings.indexWhere((b) => b.id == booking.id);
+    if (index == -1) {
+      bookings.add(booking);
+    } else {
+      bookings[index] = booking;
+    }
+    sortBookings();
+    bookings.refresh();
   }
 
   void updateBooking(BookingModel booking) {
     final index = bookings.indexWhere((b) => b.id == booking.id);
     if (index != -1) {
       bookings[index] = booking;
+      sortBookings();
       bookings.refresh();
     }
   }

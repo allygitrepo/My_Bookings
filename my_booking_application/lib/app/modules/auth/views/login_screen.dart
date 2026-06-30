@@ -1,7 +1,9 @@
 import 'dart:math' as math;
+import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/appColors.dart';
+import '../../../routes/appPages.dart';
 import '../controllers/login_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -85,7 +87,6 @@ class _LoginScreenState extends State<LoginScreen>
                           position: _slideAnimation,
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
-                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const SizedBox(height: 40),
                               // ── Logo ──
@@ -93,96 +94,133 @@ class _LoginScreenState extends State<LoginScreen>
                                 child: Hero(
                                   tag: 'app_logo',
                                   child: Container(
-                                    width: 80,
-                                    height: 80,
-                                    padding: const EdgeInsets.all(16),
+                                    width: 90,
+                                    height: 90,
+                                    padding: const EdgeInsets.all(18),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
                                       gradient: AppColors.logoGradient,
+                                      border: Border.all(
+                                        color: Colors.white.withOpacity(isDark ? 0.15 : 0.8),
+                                        width: 2,
+                                      ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.accent.withOpacity(
-                                            0.3,
-                                          ),
-                                          blurRadius: 25,
-                                          spreadRadius: 1,
+                                          color: AppColors.accent.withOpacity(0.35),
+                                          blurRadius: 30,
+                                          spreadRadius: 2,
                                         ),
                                       ],
                                     ),
                                     child: Image.asset(
-                                      'assets/icons/application_logo_bg.png',
+                                      'assets/icons/app_logo_bg.png',
                                       fit: BoxFit.contain,
                                       errorBuilder:
                                           (context, error, stackTrace) =>
                                               const Icon(
                                                 Icons.calendar_today_rounded,
                                                 color: Colors.white,
-                                                size: 30,
+                                                size: 34,
                                               ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 32),
+                              const SizedBox(height: 24),
 
-                              // ── Header ──
-                              Text(
-                                'Welcome Back',
-                                style: TextStyle(
-                                  fontSize: 32,
-                                  fontWeight: FontWeight.w900,
-                                  color: isDark
-                                      ? AppColors.textPrimaryDark
-                                      : AppColors.textPrimaryLight,
-                                  fontFamily: 'Syne',
-                                  letterSpacing: -1,
-                                ),
-                              ),
-                              const SizedBox(height: 4),
-                              Text(
-                                'Your Booking Partner is ready to assist you.',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: isDark
-                                      ? AppColors.textSecondaryDark
-                                      : AppColors.textSecondaryLight,
-                                  fontFamily: 'Syne',
-                                ),
-                              ),
+                              // ── Glassmorphism Form Card ──
+                              ClipRRect(
+                                borderRadius: BorderRadius.circular(28),
+                                child: BackdropFilter(
+                                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                  child: Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(28),
+                                      color: isDark
+                                          ? AppColors.surfaceDark.withOpacity(0.65)
+                                          : Colors.white.withOpacity(0.75),
+                                      border: Border.all(
+                                        color: isDark
+                                            ? Colors.white.withOpacity(0.08)
+                                            : AppColors.primary.withOpacity(0.08),
+                                        width: 1.5,
+                                      ),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withOpacity(isDark ? 0.25 : 0.05),
+                                          blurRadius: 30,
+                                          offset: const Offset(0, 15),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // ── Header ──
+                                        Text(
+                                          'Welcome Back',
+                                          style: TextStyle(
+                                            fontSize: 26,
+                                            fontWeight: FontWeight.w900,
+                                            color: isDark
+                                                ? AppColors.textPrimaryDark
+                                                : AppColors.textPrimaryLight,
+                                            fontFamily: 'Syne',
+                                            letterSpacing: -0.5,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 4),
+                                        Text(
+                                          'Your Booking Partner is ready to assist you.',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            color: isDark
+                                                ? AppColors.textSecondaryDark
+                                                : AppColors.textSecondaryLight,
+                                            fontFamily: 'Syne',
+                                          ),
+                                        ),
+                                        const SizedBox(height: 20),
 
-                              const SizedBox(height: 32),
+                                        // ── Login Form ──
+                                        _buildLoginForm(isDark),
+                                        const SizedBox(height: 8),
 
-                              // ── Login Form ──
-                              _buildLoginForm(isDark),
+                                        // ── Forgot Password ──
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: TextButton(
+                                            onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
+                                            style: TextButton.styleFrom(
+                                              padding: EdgeInsets.zero,
+                                              minimumSize: Size.zero,
+                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                            ),
+                                            child: const Text(
+                                              'Forgot Password?',
+                                              style: TextStyle(
+                                                color: AppColors.accent,
+                                                fontWeight: FontWeight.w600,
+                                                fontFamily: 'Syne',
+                                                fontSize: 13,
+                                              ),
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(height: 16),
 
-                              const SizedBox(height: 8),
+                                        // ── Login Button ──
+                                        _buildLoginButton(isDark),
+                                        const SizedBox(height: 20),
 
-                              // ── Forgot Password ──
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: TextButton(
-                                  onPressed: () {},
-                                  child: Text(
-                                    'Forgot Password?',
-                                    style: TextStyle(
-                                      color: AppColors.accent,
-                                      fontWeight: FontWeight.w600,
-                                      fontFamily: 'Syne',
-                                      fontSize: 13,
+                                        // ── Social Login ──
+                                        _buildSocialLogin(isDark),
+                                      ],
                                     ),
                                   ),
                                 ),
                               ),
-
-                              const SizedBox(height: 16),
-
-                              // ── Login Button ──
-                              _buildLoginButton(isDark),
-
-                              const SizedBox(height: 24),
-
-                              // ── Social Login ──
-                              _buildSocialLogin(isDark),
                               const SizedBox(height: 40),
                             ],
                           ),
@@ -230,31 +268,33 @@ class _LoginScreenState extends State<LoginScreen>
             ),
           ],
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         OutlinedButton(
           onPressed: () {
             controller.loginWithGoogle();
           },
           style: OutlinedButton.styleFrom(
-            fixedSize: const Size(double.maxFinite, 56),
+            fixedSize: const Size(double.maxFinite, 50),
             side: BorderSide.none,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(28),
+              borderRadius: BorderRadius.circular(16),
             ),
             backgroundColor: const Color(0xFF1A73E8),
             padding: EdgeInsets.zero,
+            shadowColor: Colors.black.withOpacity(0.05),
+            elevation: isDark ? 0 : 2,
           ),
           child: Row(
             children: [
-              const SizedBox(width: 4),
+              const SizedBox(width: 12),
               Container(
-                width: 48,
-                height: 48,
+                width: 32,
+                height: 32,
                 decoration: const BoxDecoration(
                   color: Colors.white,
                   shape: BoxShape.circle,
                 ),
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(5),
                 child: Image.asset(
                   'assets/icons/google_logo.png',
                   fit: BoxFit.contain,
@@ -267,13 +307,13 @@ class _LoginScreenState extends State<LoginScreen>
                     style: TextStyle(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
-                      fontSize: 16,
+                      fontSize: 15,
                       fontFamily: 'Syne',
                     ),
                   ),
                 ),
               ),
-              const SizedBox(width: 52),
+              const SizedBox(width: 44),
             ],
           ),
         ),
@@ -355,7 +395,7 @@ class _LoginScreenState extends State<LoginScreen>
           hint: 'owner@example.com',
           isDark: isDark,
         ),
-        const SizedBox(height: 24),
+        const SizedBox(height: 16),
         Obx(
           () => _buildTextField(
             controller: controller.passwordController,
@@ -386,11 +426,11 @@ class _LoginScreenState extends State<LoginScreen>
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 8),
+          padding: const EdgeInsets.only(left: 4, bottom: 6),
           child: Text(
             label,
             style: TextStyle(
-              fontSize: 14,
+              fontSize: 13,
               fontWeight: FontWeight.w600,
               color: isDark
                   ? AppColors.textSecondaryDark
@@ -401,20 +441,14 @@ class _LoginScreenState extends State<LoginScreen>
         ),
         Container(
           decoration: BoxDecoration(
-            color: isDark ? AppColors.surfaceDark : AppColors.surfaceLight,
+            color: isDark ? Colors.black.withOpacity(0.2) : Colors.white,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: isDark ? AppColors.borderDark : AppColors.borderLight,
-              width: 1,
+              color: isDark
+                  ? Colors.white.withOpacity(0.08)
+                  : AppColors.borderLight,
+              width: 1.5,
             ),
-            boxShadow: [
-              if (!isDark)
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.03),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
-                ),
-            ],
           ),
           child: TextField(
             controller: controller,
@@ -424,13 +458,14 @@ class _LoginScreenState extends State<LoginScreen>
                   ? AppColors.textPrimaryDark
                   : AppColors.textPrimaryLight,
               fontFamily: 'Syne',
+              fontSize: 15,
             ),
             decoration: InputDecoration(
               hintText: hint,
               hintStyle: TextStyle(
                 color: isDark
                     ? AppColors.textDisabledDark
-                    : AppColors.textDisabledLight,
+                    : AppColors.textDisabledLight.withOpacity(0.7),
                 fontSize: 14,
               ),
               prefixIcon: Icon(icon, color: AppColors.accent, size: 20),
@@ -449,7 +484,7 @@ class _LoginScreenState extends State<LoginScreen>
               border: InputBorder.none,
               contentPadding: const EdgeInsets.symmetric(
                 horizontal: 16,
-                vertical: 18,
+                vertical: 14,
               ),
             ),
           ),
@@ -462,7 +497,7 @@ class _LoginScreenState extends State<LoginScreen>
     return Obx(
       () => Container(
         width: double.infinity,
-        height: 60,
+        height: 50,
         decoration: BoxDecoration(
           gradient: AppColors.brandGradient,
           borderRadius: BorderRadius.circular(16),
