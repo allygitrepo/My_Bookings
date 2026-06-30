@@ -3,6 +3,8 @@ import 'package:get/get.dart';
 import '../modules/auth/bindings/auth_binding.dart';
 import '../modules/auth/views/login_screen.dart';
 import '../modules/auth/views/splash_screen.dart';
+import '../modules/forgot_password/bindings/forgot_password_binding.dart';
+import '../modules/forgot_password/views/forgot_password_view.dart';
 import '../modules/main_binding.dart';
 import '../modules/mainLayout.dart';
 
@@ -30,6 +32,11 @@ class AppPages {
       name: _Paths.LOGIN,
       page: () => const LoginScreen(),
       binding: AuthBinding(),
+    ),
+    GetPage(
+      name: _Paths.FORGOT_PASSWORD,
+      page: () => const ForgotPasswordView(),
+      binding: ForgotPasswordBinding(),
     ),
     GetPage(
       name: _Paths.HOME,

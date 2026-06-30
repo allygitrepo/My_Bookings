@@ -171,8 +171,7 @@ const bookingController = {
             const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
 
-            const whereClause = {}; // Bookings don't use 'status: true' consistently or at all? 
-            // In getAll original it didn't have status: true.
+            const whereClause = { status: true };
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;

@@ -10,6 +10,9 @@ class ApiConstants {
   static const String googleLogin = '/auth/google';
   static const String register = '/users/register';
   static const String profile = '/users/update';
+  static const String forgotPassword = '/users/forgot-password';
+  static const String verifyResetOtp = '/users/verify-reset-otp';
+  static const String resetPassword = '/users/reset-password';
 
   // Business
   static const String myBusinesses = '/business/all';
@@ -19,6 +22,7 @@ class ApiConstants {
   static const String bookings = '/bookings/all';
   static const String createBooking = '/bookings/create';
   static const String updateBooking = '/bookings/update'; // + /:id
+  static const String deleteBooking = '/bookings/delete'; // + /:id
 
   // Stats
   static const String dashboardStats = '/business/stats';

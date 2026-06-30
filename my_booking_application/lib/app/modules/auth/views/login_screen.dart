@@ -3,6 +3,7 @@ import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../core/constants/appColors.dart';
+import '../../../routes/appPages.dart';
 import '../controllers/login_controller.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -190,7 +191,7 @@ class _LoginScreenState extends State<LoginScreen>
                                         Align(
                                           alignment: Alignment.centerRight,
                                           child: TextButton(
-                                            onPressed: () {},
+                                            onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
                                             style: TextButton.styleFrom(
                                               padding: EdgeInsets.zero,
                                               minimumSize: Size.zero,

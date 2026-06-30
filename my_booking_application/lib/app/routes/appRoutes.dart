@@ -11,6 +11,7 @@ abstract class Routes {
   static const SERVICES = _Paths.SERVICES;
   static const CUSTOMERS = _Paths.CUSTOMERS;
   static const SETTINGS = _Paths.SETTINGS;
+  static const FORGOT_PASSWORD = _Paths.FORGOT_PASSWORD;
 }
 
 abstract class _Paths {
@@ -23,4 +24,5 @@ abstract class _Paths {
   static const SERVICES = '/services';
   static const CUSTOMERS = '/customers';
   static const SETTINGS = '/settings';
+  static const FORGOT_PASSWORD = '/forgot-password';
 }

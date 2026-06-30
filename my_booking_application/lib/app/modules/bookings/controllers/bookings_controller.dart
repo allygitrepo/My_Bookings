@@ -80,6 +80,28 @@ class BookingsController extends GetxController {
     }
   }
 
+  Future<void> deleteBooking(int id) async {
+    try {
+      isLoading.value = true;
+      final response = await _apiClient.delete('${ApiConstants.deleteBooking}/$id');
+
+      if (response.data['success'] == true) {
+        bookings.removeWhere((b) => b.id == id);
+        bookings.refresh();
+        Get.snackbar('Success', 'Booking deleted successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white);
+      } else {
+        Get.snackbar('Error', response.data['message'] ?? 'Failed to delete booking');
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to delete booking');
+    } finally {
+      isLoading.value = false;
+    }
+  }
+
   void addBooking(BookingModel booking) {
     final index = bookings.indexWhere((b) => b.id == booking.id);
     if (index == -1) {
