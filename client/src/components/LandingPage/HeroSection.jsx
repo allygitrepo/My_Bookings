@@ -72,7 +72,7 @@ const HeroSection = () => {
                         {/* CTA Buttons */}
                         <motion.div
                             custom={0.3} initial="hidden" animate="visible" variants={fadeUp}
-                            style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 40 }}
+                            style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 24 }}
                         >
                             <Link to="/register" style={{ textDecoration: 'none' }}>
                                 <button style={{
@@ -104,6 +104,16 @@ const HeroSection = () => {
                             >
                                 See Features <ChevronDown size={17} strokeWidth={2.5} />
                             </button>
+                        </motion.div>
+
+                        <motion.div
+                            custom={0.35} initial="hidden" animate="visible" variants={fadeUp}
+                            style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 44 }}
+                        >
+                            <span style={{ color: 'rgba(255,255,255,0.85)', fontSize: '1.25rem', fontWeight: 600 }}>Also available on mobile:</span>
+                            <a href="https://play.google.com/store/apps/details?id=com.allysoftsolutions.mybookings" target="_blank" rel="noopener noreferrer" style={{ display: 'flex', alignItems: 'center', transition: 'transform 0.2s' }} onMouseOver={e => e.currentTarget.style.transform = 'scale(1.05)'} onMouseOut={e => e.currentTarget.style.transform = 'scale(1)'}>
+                                <img src="/Googleplay.png" alt="Get it on Google Play" style={{ height: 110, borderRadius: 8, objectFit: 'contain' }} />
+                            </a>
                         </motion.div>
 
                         {/* Social proof badges */}
