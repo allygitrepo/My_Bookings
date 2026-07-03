@@ -136,6 +136,8 @@ const bookingController = {
             }
 
             // Send FCM Notification to the Owner - only if not from widget
+            // Disabled: Notifications should only be sent upon successful payment/confirmation, not on initial booking creation.
+            /*
             if (!isWidget) {
                 try {
                     const business = await Business.findByPk(business_id);
@@ -145,11 +147,14 @@ const bookingController = {
                             const clientName = fullBooking?.customer?.name || "A Client";
                             const staffName = fullBooking?.staff?.staff_name || "Staff";
                             const bookingTime = fullBooking?.start_time || row.start_time;
+                            const serviceNames = fullBooking?.services && fullBooking.services.length > 0
+                                ? fullBooking.services.map(s => s.service_name).join(", ")
+                                : "Services";
 
                             await fcmService.sendNotification(
                                 owner.fcm_token,
                                 "New Booking Alert",
-                                `${clientName} has booked a slot of ${staffName} at ${bookingTime}`,
+                                `${clientName} has booked a slot of ${serviceNames} with ${staffName} at ${bookingTime}`,
                                 {
                                     type: "new_booking",
                                     booking_id: row.id.toString()
@@ -161,6 +166,7 @@ const bookingController = {
                     console.error("[FCM] Failed to send notification to owner:", fcmErr.message);
                 }
             }
+            */
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -190,11 +196,12 @@ const bookingController = {
                 where: whereClause,
                 include: [
                     { model: Service, as: 'services', through: { attributes: [] } },
+                    { model: Staff, as: 'staff' },
                     { model: Payment }
                 ],
                 order: [
-                    ['booking_date', 'ASC'],
-                    ['start_time', 'ASC']
+                    ['booking_date', 'DESC'],
+                    ['start_time', 'DESC']
                 ],
                 limit,
                 offset,

@@ -31,11 +31,14 @@ const sendBookingSuccessNotifications = async (bookingId) => {
                 const clientName = fullBooking.customer?.name || "A Client";
                 const staffName = fullBooking.staff?.staff_name || "Staff";
                 const bookingTime = fullBooking.start_time;
+                const serviceNames = fullBooking.services && fullBooking.services.length > 0
+                    ? fullBooking.services.map(s => s.service_name).join(", ")
+                    : "Services";
 
                 await fcmService.sendNotification(
                     owner.fcm_token,
                     "Booking Payment Confirmed",
-                    `${clientName} has paid and confirmed their booking of ${staffName} at ${bookingTime}`,
+                    `${clientName} has paid and confirmed their booking of ${serviceNames} with ${staffName} at ${bookingTime}`,
                     {
                         type: "booking_confirmed",
                         booking_id: bookingId.toString()
