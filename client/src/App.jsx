@@ -49,6 +49,7 @@ import PortalPackages from './pages/portal/PortalPackages';
 import AdminPayments from './pages/portal/AdminPayments';
 import PortalTemplates from './pages/portal/PortalTemplates';
 import PortalSettlements from './pages/portal/PortalSettlements';
+import AppAdvertisement from './components/AppAdvertisement';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
@@ -99,6 +100,7 @@ function App() {
               <Router>
                 <SubscriptionProvider>
                   <Toaster position="top-right" />
+                  <AppAdvertisement />
                   <Routes>
                   {/* Public Routes */}
                   <Route path="/" element={<LandingPage />} />
