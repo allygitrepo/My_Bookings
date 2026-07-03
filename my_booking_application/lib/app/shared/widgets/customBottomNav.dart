@@ -43,15 +43,16 @@ class CustomBottomNavBar extends StatelessWidget {
               _buildNavItem(context, Icons.home_outlined, Icons.home_rounded, 'Home', 0, primaryPurple),
               _buildNavItem(context, Icons.calendar_month_outlined, Icons.calendar_month_rounded, 'Bookings', 1, primaryPurple),
               
-              // Spacer for the center button
-              const Expanded(child: SizedBox()),
+              // Spacer for the center button (commented out)
+              // const Expanded(child: SizedBox()),
               
               _buildNavItem(context, Icons.people_outline_rounded, Icons.people_rounded, 'Staff', 2, primaryPurple),
               _buildNavItem(context, Icons.build_outlined, Icons.build_rounded, 'Services', 3, primaryPurple),
             ],
           ),
 
-          // ── Floating Center Button ──
+          // ── Floating Center Button ── (commented out)
+          /*
           Positioned(
             top: -25, // Elevate above the bar
             child: Column(
@@ -89,6 +90,7 @@ class CustomBottomNavBar extends StatelessWidget {
               ],
             ),
           ),
+          */
         ],
       ),
     );

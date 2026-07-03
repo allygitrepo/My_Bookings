@@ -3,6 +3,7 @@ import 'package:get_storage/get_storage.dart';
 import 'package:my_booking_application/app/data/services/socket_service.dart';
 import 'package:my_booking_application/app/routes/appPages.dart';
 import '../models/user_model.dart';
+import 'fcm_service.dart';
 
 class AuthService extends GetxService {
   final _storage = GetStorage();
@@ -27,6 +28,11 @@ class AuthService extends GetxService {
     _isLogged.value = true;
     _storage.write('user', user.toJson());
     Get.find<SocketService>().connect();
+    
+    // Update FCM token on server for this user
+    if (Get.isRegistered<FCMService>()) {
+      Get.find<FCMService>().updateToken();
+    }
   }
 
   void logout() {

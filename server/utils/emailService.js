@@ -1,6 +1,6 @@
 
 const nodemailer = require('nodemailer');
-const { getWelcomeTemplate, getOtpTemplate, getSettlementPaidTemplate } = require('./emailTemplates');
+const { getWelcomeTemplate, getOtpTemplate, getSettlementPaidTemplate, getForgotPasswordOtpTemplate } = require('./emailTemplates');
 
 const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
@@ -13,6 +13,26 @@ const transporter = nodemailer.createTransport({
 });
 
 const emailService = {
+    /**
+     * Send OTP email for password reset
+     */
+    sendForgotPasswordOtpEmail: async (email, otp) => {
+        try {
+            const mailOptions = {
+                from: `"MyBookings" <${process.env.SMTP_USER}>`,
+                to: email,
+                subject: `${otp} is your MyBookings password reset code`,
+                html: getForgotPasswordOtpTemplate(otp),
+            };
+
+            const info = await transporter.sendMail(mailOptions);
+            return { success: true, messageId: info.messageId };
+        } catch (error) {
+            console.error('Error sending forgot password OTP email:', error);
+            return { success: false, error: error.message };
+        }
+    },
+
     /**
      * Send OTP email for registration
      */

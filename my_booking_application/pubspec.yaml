@@ -2,7 +2,7 @@ name: my_booking_application
 description: "A new Flutter project."
 publish_to: 'none' 
 
-version: 1.0.0+1
+version: 1.0.1+4
 
 environment:
   sdk: ^3.11.0
@@ -73,7 +73,7 @@ flutter:
 flutter_launcher_icons:
   android: true
   iOS: true
-  image_path: "assets/icons/application_logo.png"
+  image_path: "assets/icons/app_logo_bg.png"
 
 package_rename_config:
   android:

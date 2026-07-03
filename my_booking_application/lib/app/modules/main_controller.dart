@@ -24,7 +24,7 @@ class MainController extends GetxController {
 
   void changePage(int index) {
     if (index == -1) {
-      onPlusButtonPressed();
+      // onPlusButtonPressed();
       return;
     }
     currentIndex.value = index;
@@ -32,6 +32,7 @@ class MainController extends GetxController {
 
   String get currentTitle => titles[currentIndex.value];
 
+  /*
   void onPlusButtonPressed() {
     Get.bottomSheet(
       Container(
@@ -142,4 +143,5 @@ class MainController extends GetxController {
       ),
     );
   }
+  */
 }

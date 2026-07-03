@@ -264,6 +264,108 @@ const userController = {
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
+    },
+
+    forgotPassword: async (req, res) => {
+        try {
+            const { email } = req.body;
+            if (!email) return res.status(400).json({ success: false, message: "Email is required" });
+
+            const user = await Users.findOne({ where: { email } });
+            if (!user) {
+                return res.status(404).json({ success: false, message: "Email not registered" });
+            }
+
+            // Generate a 4-digit OTP
+            const otp = Math.floor(1000 + Math.random() * 9000).toString();
+            const expiry = new Date(Date.now() + 10 * 60 * 1000); // 10 minutes expiry
+
+            await user.update({
+                reset_otp: otp,
+                otp_expiry: expiry,
+                is_otp_verified: false
+            });
+
+            const emailRes = await emailService.sendForgotPasswordOtpEmail(email, otp);
+            if (!emailRes.success) {
+                return res.status(500).json({ success: false, message: "Failed to send verification email" });
+            }
+
+            res.status(200).json({
+                success: true,
+                message: "Password reset OTP sent to your email"
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: "Server Error", error: err.message });
+        }
+    },
+
+    verifyResetOtp: async (req, res) => {
+        try {
+            const { email, otp } = req.body;
+            if (!email || !otp) {
+                return res.status(400).json({ success: false, message: "Email and OTP are required" });
+            }
+
+            const user = await Users.findOne({ where: { email } });
+            if (!user) {
+                return res.status(404).json({ success: false, message: "User not found" });
+            }
+
+            if (!user.reset_otp || user.reset_otp !== otp) {
+                return res.status(400).json({ success: false, message: "Invalid OTP" });
+            }
+
+            if (new Date() > new Date(user.otp_expiry)) {
+                return res.status(400).json({ success: false, message: "OTP has expired" });
+            }
+
+            await user.update({ is_otp_verified: true });
+
+            res.status(200).json({
+                success: true,
+                message: "OTP verified successfully. You can now reset your password."
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: "Server Error", error: err.message });
+        }
+    },
+
+    resetPassword: async (req, res) => {
+        try {
+            const { email, password, confirmPassword } = req.body;
+            if (!email || !password || !confirmPassword) {
+                return res.status(400).json({ success: false, message: "All fields are required" });
+            }
+
+            if (password !== confirmPassword) {
+                return res.status(400).json({ success: false, message: "Passwords do not match" });
+            }
+
+            const user = await Users.findOne({ where: { email } });
+            if (!user) {
+                return res.status(404).json({ success: false, message: "User not found" });
+            }
+
+            if (!user.is_otp_verified) {
+                return res.status(400).json({ success: false, message: "OTP is not verified. Please verify OTP first." });
+            }
+
+            const hashedPassword = await bcrypt.hash(password, 10);
+            await user.update({
+                password: hashedPassword,
+                reset_otp: null,
+                otp_expiry: null,
+                is_otp_verified: false
+            });
+
+            res.status(200).json({
+                success: true,
+                message: "Password reset successfully"
+            });
+        } catch (err) {
+            res.status(500).json({ success: false, message: "Server Error", error: err.message });
+        }
     }
 };
 

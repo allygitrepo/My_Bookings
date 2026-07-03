@@ -7,25 +7,31 @@ import 'notification_service.dart';
 import '../models/notification_model.dart';
 
 class FCMService extends GetxService {
+  static final Set<String> processedBookings = {};
+
   late FirebaseMessaging _messaging;
   late FlutterLocalNotificationsPlugin _localNotifications;
   late NotificationService _notificationService;
 
   Future<FCMService> init() async {
-    _messaging = FirebaseMessaging.instance;
-    _localNotifications = FlutterLocalNotificationsPlugin();
-    _notificationService = Get.find<NotificationService>();
-    
-    await _setupLocalNotifications();
-    await _requestPermissions();
-    _listenToMessages();
-    
-    // Get token for server registration
-    String? token = await _messaging.getToken();
-    if (token != null) {
-      await saveTokenToServer(token);
+    try {
+      _messaging = FirebaseMessaging.instance;
+      _localNotifications = FlutterLocalNotificationsPlugin();
+      _notificationService = Get.find<NotificationService>();
+      
+      await _setupLocalNotifications();
+      await _requestPermissions();
+      _listenToMessages();
+      
+      // Get token for server registration
+      String? token = await _messaging.getToken();
+      if (token != null) {
+        await saveTokenToServer(token);
+      }
+      print('FCM Token: $token');
+    } catch (e) {
+      print('Error initializing FCMService: $e');
     }
-    print('FCM Token: $token');
     
     return this;
   }
@@ -67,19 +73,39 @@ class FCMService extends GetxService {
     final data = message.data;
 
     if (notification != null) {
+      final String? bookingId = data['booking_id'];
+      final String type = data['type'] ?? 'new_booking';
+      
+      bool isDuplicate = false;
+      if (bookingId != null && bookingId.isNotEmpty) {
+        final cacheKey = '${bookingId}_$type';
+        if (processedBookings.contains(cacheKey)) {
+          print('FCM: Duplicate detected for booking: $bookingId');
+          isDuplicate = true;
+        } else {
+          processedBookings.add(cacheKey);
+          // Limit cache size
+          if (processedBookings.length > 100) {
+            processedBookings.remove(processedBookings.first);
+          }
+        }
+      }
+
       String formattedBody = _formatBodyWith12HourTime(notification.body ?? '');
       
-      final newNotif = NotificationModel(
-        id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
-        title: notification.title,
-        body: formattedBody,
-        createdAt: DateTime.now(),
-        bookingId: data['booking_id'],
-        type: data['type'] ?? 'new_booking',
-        isRead: false,
-      );
-      
-      _notificationService.addNotification(newNotif);
+      if (!isDuplicate) {
+        final newNotif = NotificationModel(
+          id: message.messageId ?? DateTime.now().millisecondsSinceEpoch.toString(),
+          title: notification.title,
+          body: formattedBody,
+          createdAt: DateTime.now(),
+          bookingId: bookingId,
+          type: type,
+          isRead: false,
+        );
+        
+        _notificationService.addNotification(newNotif);
+      }
 
       if (isForeground) {
         _showLocalNotification(notification, formattedBody);
@@ -125,6 +151,17 @@ class FCMService extends GetxService {
       body: body,
       notificationDetails: details,
     );
+  }
+
+  Future<void> updateToken() async {
+    try {
+      String? token = await _messaging.getToken();
+      if (token != null) {
+        await saveTokenToServer(token);
+      }
+    } catch (e) {
+      print('Error updating FCM Token: $e');
+    }
   }
 
   Future<void> saveTokenToServer(String token) async {

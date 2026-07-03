@@ -71,6 +71,19 @@ const Users = sequelize.define(
         fcm_token: {
             type: DataTypes.TEXT,
             allowNull: true
+        },
+        reset_otp: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        otp_expiry: {
+            type: DataTypes.DATE,
+            allowNull: true
+        },
+        is_otp_verified: {
+            type: DataTypes.BOOLEAN,
+            allowNull: true,
+            defaultValue: false
         }
     },
     {
