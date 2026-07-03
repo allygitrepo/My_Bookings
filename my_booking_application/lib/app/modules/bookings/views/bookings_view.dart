@@ -82,99 +82,129 @@ class BookingsView extends GetView<BookingsController> {
     final statusColor = _getStatusColor(booking.status ?? '');
     
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
         color: Theme.of(context).cardColor,
         borderRadius: BorderRadius.circular(16),
         border: Theme.of(context).brightness == Brightness.dark 
             ? Border.all(color: Colors.white10, width: 1) 
-            : null,
+            : Border.all(color: Colors.black.withOpacity(0.05), width: 1),
         boxShadow: [
           BoxShadow(
             color: Theme.of(context).brightness == Brightness.dark 
                 ? Colors.black26 
-                : Colors.black.withOpacity(0.04),
-            blurRadius: 10,
-            offset: const Offset(0, 4),
+                : Colors.black.withOpacity(0.02),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      child: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                _buildDateBadge(context, booking.bookingDate ?? ''),
-                const SizedBox(width: 16),
-                Expanded(
-                  child: Column(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        child: Row(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            _buildDateBadge(context, booking.bookingDate ?? ''),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
-                          Text(
-                            'Booking $serialNumber',
-                            style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 16,
-                              color: Theme.of(context).textTheme.titleMedium?.color,
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              (booking.serviceName != null &&
+                                      booking.serviceName!.isNotEmpty &&
+                                      booking.serviceName != 'No Service Assigned')
+                                  ? booking.serviceName!
+                                  : 'Booking $serialNumber',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                                color: Theme.of(context).textTheme.titleMedium?.color,
+                              ),
                             ),
-                          ),
-                          _buildStatusBadge(context, booking.status ?? '', statusColor),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Row(
-                        children: [
-                          const Icon(Icons.access_time_rounded, size: 16, color: AppColors.lavender400),
-                          const SizedBox(width: 4),
-                          Text(
-                            '${booking.startTime} - ${booking.endTime}',
-                            style: TextStyle(color: Theme.of(context).textTheme.bodySmall?.color),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 4),
-                      Wrap(
-                        spacing: 12,
-                        runSpacing: 4,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Icon(Icons.payments_outlined, size: 16, color: AppColors.lavender400),
-                              const SizedBox(width: 4),
+                            if (booking.staffName != null && booking.staffName!.isNotEmpty) ...[
+                              const SizedBox(height: 2),
                               Text(
-                                'Paid: ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                'with ${booking.staffName}',
                                 style: const TextStyle(
-                                  color: AppColors.success,
-                                  fontWeight: FontWeight.w600,
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w500,
+                                  color: AppColors.lavender400,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      _buildStatusBadge(context, booking.status ?? '', statusColor),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.access_time_rounded, size: 14, color: AppColors.lavender400),
+                      const SizedBox(width: 4),
+                      Text(
+                        '${booking.startTime} - ${booking.endTime}',
+                        style: TextStyle(
+                          fontSize: 13,
+                          color: Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      const Icon(Icons.payments_outlined, size: 14, color: AppColors.lavender400),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: RichText(
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          text: TextSpan(
+                            style: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                              fontFamily: Theme.of(context).textTheme.bodyMedium?.fontFamily,
+                            ),
+                            children: [
+                              TextSpan(
+                                text: 'Paid: ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                style: const TextStyle(color: AppColors.success),
+                              ),
+                              TextSpan(
+                                text: '  •  ',
+                                style: TextStyle(color: AppColors.lavender400.withOpacity(0.8)),
+                              ),
+                              TextSpan(
+                                text: 'Total: ₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
+                                style: TextStyle(
+                                  color: Theme.of(context).brightness == Brightness.dark 
+                                      ? AppColors.navy300 
+                                      : AppColors.primary,
                                 ),
                               ),
                             ],
                           ),
-                          Text(
-                            'Total: ₹${booking.totalAmount?.toStringAsFixed(2) ?? '0.00'}',
-                            style: TextStyle(
-                              color: Theme.of(context).brightness == Brightness.dark ? AppColors.navy300 : AppColors.primary,
-                              fontWeight: FontWeight.w600,
-                            ),
-                          ),
-                        ],
+                        ),
                       ),
                     ],
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const Divider(height: 1),
-          _buildDeleteActionButton(booking),
-        ],
+          ],
+        ),
       ),
     );
   }
@@ -228,51 +258,6 @@ class BookingsView extends GetView<BookingsController> {
           fontSize: 10,
           fontWeight: FontWeight.bold,
         ),
-      ),
-    );
-  }
-
-  Widget _buildDeleteActionButton(BookingModel booking) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.end,
-        children: [
-          TextButton.icon(
-            onPressed: () => _confirmDelete(booking.id!),
-            icon: const Icon(Icons.delete_outline_rounded, color: AppColors.error, size: 20),
-            label: const Text(
-              'Delete Booking',
-              style: TextStyle(
-                color: AppColors.error,
-                fontWeight: FontWeight.bold,
-                fontFamily: 'Syne',
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  void _confirmDelete(int id) {
-    Get.dialog(
-      AlertDialog(
-        title: const Text('Delete Booking', style: TextStyle(fontFamily: 'Syne', fontWeight: FontWeight.bold)),
-        content: const Text('Are you sure you want to delete this booking?', style: TextStyle(fontFamily: 'Syne')),
-        actions: [
-          TextButton(
-            onPressed: () => Get.back(),
-            child: const Text('No', style: TextStyle(fontFamily: 'Syne')),
-          ),
-          TextButton(
-            onPressed: () {
-              Get.back();
-              controller.deleteBooking(id);
-            },
-            child: const Text('Yes', style: TextStyle(color: AppColors.error, fontFamily: 'Syne', fontWeight: FontWeight.bold)),
-          ),
-        ],
       ),
     );
   }

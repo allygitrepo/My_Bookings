@@ -13,6 +13,7 @@ class BookingModel {
 
   String? customerName;
   String? serviceName;
+  String? staffName;
 
   BookingModel({
     this.id,
@@ -26,6 +27,7 @@ class BookingModel {
     this.paidAmount,
     this.customerName,
     this.serviceName,
+    this.staffName,
   });
 
   BookingModel.fromJson(Map<String, dynamic> json) {
@@ -77,6 +79,11 @@ class BookingModel {
     } else {
       serviceName = 'No Service Assigned';
     }
+
+    // Handle nested staff object if provided by backend
+    if (json['staff'] != null) {
+      staffName = json['staff']['staff_name'];
+    }
   }
 
   Map<String, dynamic> toJson() {
@@ -92,6 +99,7 @@ class BookingModel {
     data['paid_amount'] = paidAmount;
     data['customer_name'] = customerName;
     data['service_name'] = serviceName;
+    data['staff_name'] = staffName;
     return data;
   }
 

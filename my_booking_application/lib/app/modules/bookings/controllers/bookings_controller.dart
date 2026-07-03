@@ -42,14 +42,14 @@ class BookingsController extends GetxController {
       if (a.bookingDate == null) return 1;
       if (b.bookingDate == null) return -1;
       
-      int dateCompare = a.bookingDate!.compareTo(b.bookingDate!);
+      int dateCompare = b.bookingDate!.compareTo(a.bookingDate!);
       if (dateCompare != 0) return dateCompare;
       
       if (a.startTime == null && b.startTime == null) return 0;
       if (a.startTime == null) return 1;
       if (b.startTime == null) return -1;
       
-      return a.startTime!.compareTo(b.startTime!);
+      return b.startTime!.compareTo(a.startTime!);
     });
   }
 
