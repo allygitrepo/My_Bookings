@@ -720,38 +720,43 @@ const Businesses = () => {
                         <Divider sx={{ my: 2.5 }} />
                         <FieldSection label="Business Location Details">
                             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                                <Controller
-                                    name="location_type"
-                                    control={control}
-                                    render={({ field: { value, onChange } }) => (
-                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, width: '100%' }}>
-                                            <Paper
-                                                onClick={() => onChange('Physical')}
-                                                sx={{
-                                                    p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
-                                                    border: '2px solid', borderColor: value === 'Physical' ? 'primary.main' : 'divider',
-                                                    bgcolor: value === 'Physical' ? 'primary.50' : 'background.paper',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <LocationIcon color={value === 'Physical' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
-                                                <Typography variant="body2" fontWeight={700} color={value === 'Physical' ? 'primary' : 'text.secondary'}>Physical</Typography>
-                                            </Paper>
-                                            <Paper
-                                                onClick={() => onChange('Online')}
-                                                sx={{
-                                                    p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
-                                                    border: '2px solid', borderColor: value === 'Online' ? 'primary.main' : 'divider',
-                                                    bgcolor: value === 'Online' ? 'primary.50' : 'background.paper',
-                                                    transition: 'all 0.2s'
-                                                }}
-                                            >
-                                                <OnlineIcon color={value === 'Online' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
-                                                <Typography variant="body2" fontWeight={700} color={value === 'Online' ? 'primary' : 'text.secondary'}>Online</Typography>
-                                            </Paper>
-                                        </Box>
-                                    )}
-                                />
+                                <Box sx={{ p: 2, bgcolor: 'action.hover', borderRadius: '16px', border: '1px dashed', borderColor: 'divider' }}>
+                                    <Controller
+                                        name="location_type"
+                                        control={control}
+                                        render={({ field: { value, onChange } }) => (
+                                            <FormControlLabel
+                                                control={
+                                                    <Switch
+                                                        checked={value === 'Online'}
+                                                        onChange={(e) => onChange(e.target.checked ? 'Online' : 'Physical')}
+                                                        color="primary"
+                                                    />
+                                                }
+                                                label={
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        {value === 'Online' ? (
+                                                            <OnlineIcon color="primary" fontSize="small" />
+                                                        ) : (
+                                                            <LocationIcon color="action" fontSize="small" />
+                                                        )}
+                                                        <Box>
+                                                            <Typography variant="body2" fontWeight={700}>
+                                                                Is this an Online Business?
+                                                            </Typography>
+                                                            <Typography variant="caption" color="text.secondary">
+                                                                {value === 'Online'
+                                                                    ? "Online business (Google Meet, Zoom, virtual consultations)."
+                                                                    : "Physical location (physical street address & branch)."
+                                                                }
+                                                            </Typography>
+                                                        </Box>
+                                                    </Box>
+                                                }
+                                            />
+                                        )}
+                                    />
+                                </Box>
 
                                 {locationType === 'Physical' ? (
                                     <>

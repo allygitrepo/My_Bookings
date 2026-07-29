@@ -21,6 +21,7 @@ import {
     DialogActions, Stack 
 } from '@mui/material';
 import Logo from '../components/Logo';
+import { validateName } from '../utils/validators';
 
 const STATS = [
     { icon: <BoltIcon sx={{ fontSize: 22, color: '#a5b4fc' }} />, value: '5,000+', label: 'Businesses' },
@@ -62,6 +63,7 @@ const Register = () => {
     const isDark = theme.palette.mode === 'dark';
     const navigate = useNavigate();
     const [form, setForm] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+    const [fieldErrors, setFieldErrors] = useState({ name: '' });
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirm, setShowConfirm] = useState(false);
     const [loading, setLoading] = useState(false);
@@ -74,7 +76,16 @@ const Register = () => {
     const [otpToken, setOtpToken] = useState('');
     const [resending, setResending] = useState(false);
 
-    const handleChange = (e) => setForm({ ...form, [e.target.name]: e.target.value });
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setForm(prev => ({ ...prev, [name]: value }));
+        setError('');
+
+        if (name === 'name') {
+            const res = validateName(value);
+            setFieldErrors(prev => ({ ...prev, name: res === true ? '' : res }));
+        }
+    };
 
     const strength = getPasswordStrength(form.password);
 
@@ -87,6 +98,12 @@ const Register = () => {
         e.preventDefault();
         setError('');
         if (!form.name.trim()) { setError('Full Name is required'); return; }
+        const nameVal = validateName(form.name);
+        if (nameVal !== true) {
+            setFieldErrors(prev => ({ ...prev, name: nameVal }));
+            setError(nameVal);
+            return;
+        }
         if (form.password.length < 6) { setError('Password must be at least 6 characters'); return; }
         if (form.password !== form.confirmPassword) { setError('Passwords do not match'); return; }
 
@@ -296,6 +313,8 @@ const Register = () => {
                                     value={form.name} onChange={handleChange}
                                     onFocus={() => setFocused('name')} onBlur={() => setFocused('')}
                                     required autoFocus variant="outlined"
+                                    error={!!fieldErrors.name}
+                                    helperText={fieldErrors.name}
                                     sx={inputSx(focused, 'name')}
                                 />
                             </Box>

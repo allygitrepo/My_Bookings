@@ -33,8 +33,8 @@ export const validatePhone = (value) => {
 // 4. Name Field Validation (Alphabets only)
 export const validateName = (value) => {
     if (!value) return true;
-    const regex = /^[A-Za-z0-9 .\-\(\)]+$/;
-    if (!regex.test(value)) return "Name should contain only alphabets, numbers and common symbols";
+    const regex = /^[A-Za-z\s.\-']+$/;
+    if (!regex.test(value)) return "Full name must contain letters only";
     if (containsEmoji(value)) return "Emojis are not allowed";
     return true;
 };
