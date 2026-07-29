@@ -14,6 +14,7 @@ import { getServices } from '../api/service.api';
 import { useBusiness } from '../context/BusinessContext';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -101,17 +102,32 @@ const StaffServices = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to remove this assignment?')) {
-            try {
-                const response = await deleteStaffService(id);
-                if (response.success) {
-                    toast.success('Assignment removed');
-                    fetchData();
-                }
-            } catch (error) {
-                toast.error('Failed to remove assignment');
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [ssToDelete, setSsToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleDeleteClick = (id) => {
+        setSsToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!ssToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const response = await deleteStaffService(ssToDelete);
+            if (response.success) {
+                toast.success('Assignment removed');
+                fetchData();
+            } else {
+                toast.error(response.message || 'Failed to remove assignment');
             }
+        } catch (error) {
+            toast.error('Failed to remove assignment');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setSsToDelete(null);
         }
     };
 
@@ -149,7 +165,7 @@ const StaffServices = () => {
                                     <TableCell>{ss.created_at ? new Date(ss.created_at).toLocaleDateString() : '—'}</TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(ss)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(ss.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDeleteClick(ss.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -208,6 +224,18 @@ const StaffServices = () => {
                     </Grid>
                 </FieldSection>
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setSsToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Remove Assignment?"
+                message="Are you sure you want to remove this staff-service assignment?"
+                confirmText="Remove"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

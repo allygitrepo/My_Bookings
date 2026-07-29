@@ -28,6 +28,7 @@ import { validateName, validateMobile, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import { compressImage } from '../utils/imageHelper';
 import PhoneInput from '../components/ui/PhoneInput';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const DAYS = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
 const PHOTO_SIZE_LIMIT = 500 * 1024; // 500 KB limit for base64
@@ -323,21 +324,35 @@ const Staff = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this staff member?')) {
-            try {
-                // Also delete their availability
-                const staffAvails = availability.filter(a => a.staff_id === id);
-                await Promise.all(staffAvails.map(a => deleteStaffAvailability(a.id)));
-                const response = await deleteStaff(id);
-                if (response.success) {
-                    toast.success('Staff member deleted successfully');
-                    fetchData();
-                    refreshUsage();
-                }
-            } catch (error) {
-                toast.error('Failed to delete staff member');
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [staffToDelete, setStaffToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleDeleteClick = (id) => {
+        setStaffToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!staffToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const staffAvails = availability.filter(a => a.staff_id === staffToDelete);
+            await Promise.all(staffAvails.map(a => deleteStaffAvailability(a.id)));
+            const response = await deleteStaff(staffToDelete);
+            if (response.success) {
+                toast.success('Staff member deleted successfully');
+                fetchData();
+                refreshUsage();
+            } else {
+                toast.error(response.message || 'Failed to delete staff member');
             }
+        } catch (error) {
+            toast.error('Failed to delete staff member');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setStaffToDelete(null);
         }
     };
 
@@ -466,7 +481,7 @@ const Staff = () => {
                                     </TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(s)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(s.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDeleteClick(s.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -495,7 +510,7 @@ const Staff = () => {
                                 </Box>
                                 <Box>
                                     <IconButton onClick={() => handleOpen(s)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(s.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDeleteClick(s.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
 
@@ -868,6 +883,18 @@ const Staff = () => {
                         )} />
                 </FieldSection>
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setStaffToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Staff Member?"
+                message="Are you sure you want to delete this staff member? Their availability schedules and service assignments will also be deleted."
+                confirmText="Delete Staff"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

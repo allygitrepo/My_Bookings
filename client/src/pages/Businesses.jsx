@@ -31,6 +31,7 @@ import toast from 'react-hot-toast';
 import { validateName, validateEmail, validatePhone, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import PhoneInput from '../components/ui/PhoneInput';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const INDUSTRY_OPTIONS = [
     { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
@@ -187,18 +188,33 @@ const Businesses = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this business?')) {
-            try {
-                const response = await deleteBusiness(id);
-                if (response.success) {
-                    toast.success('Business deleted successfully');
-                    refreshBusinesses();
-                    refreshUsage();
-                }
-            } catch (error) {
-                toast.error('Failed to delete business');
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [businessToDelete, setBusinessToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleDeleteClick = (id) => {
+        setBusinessToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!businessToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const response = await deleteBusiness(businessToDelete);
+            if (response.success) {
+                toast.success('Business deleted successfully');
+                refreshBusinesses();
+                refreshUsage();
+            } else {
+                toast.error(response.message || 'Failed to delete business');
             }
+        } catch (error) {
+            toast.error('Failed to delete business');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setBusinessToDelete(null);
         }
     };
 
@@ -300,7 +316,7 @@ const Businesses = () => {
                                         </IconButton>
                                     )}
                                     <IconButton onClick={() => handleOpen(biz)} color="primary" size="small" disabled={biz.status === false}><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDeleteClick(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
                                 </TableCell>
                             </TableRow>
                         ))}
@@ -345,7 +361,7 @@ const Businesses = () => {
                                         </IconButton>
                                     )}
                                     <IconButton onClick={() => handleOpen(biz)} color="primary" size="small" disabled={biz.status === false}><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDeleteClick(biz.id)} color="error" size="small" disabled={biz.status === false}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
 
@@ -677,6 +693,18 @@ const Businesses = () => {
                     </>
                 )}
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setBusinessToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Business?"
+                message="Are you sure you want to delete this business? All associated services, bookings, and locations under this business will be permanently affected."
+                confirmText="Delete Business"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

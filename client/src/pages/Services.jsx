@@ -21,6 +21,7 @@ import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -197,22 +198,36 @@ const Services = () => {
         ]);
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this service?')) {
-            try {
-                // Delete associated staff assignments
-                const associatedSS = staffServices.filter(ss => ss.service_id === id);
-                await Promise.all(associatedSS.map(ss => deleteStaffService(ss.id)));
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [serviceToDelete, setServiceToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
-                const response = await deleteService(id);
-                if (response.success) {
-                    toast.success('Service deleted successfully');
-                    fetchData();
-                    refreshUsage();
-                }
-            } catch (error) {
-                toast.error('Failed to delete service');
+    const handleDeleteClick = (id) => {
+        setServiceToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!serviceToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const associatedSS = staffServices.filter(ss => ss.service_id === serviceToDelete);
+            await Promise.all(associatedSS.map(ss => deleteStaffService(ss.id)));
+
+            const response = await deleteService(serviceToDelete);
+            if (response.success) {
+                toast.success('Service deleted successfully');
+                fetchData();
+                refreshUsage();
+            } else {
+                toast.error(response.message || 'Failed to delete service');
             }
+        } catch (error) {
+            toast.error('Failed to delete service');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setServiceToDelete(null);
         }
     };
 
@@ -291,7 +306,7 @@ const Services = () => {
                                     </TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(svc)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(svc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDeleteClick(svc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -323,7 +338,7 @@ const Services = () => {
                                 </Box>
                                 <Box>
                                     <IconButton onClick={() => handleOpen(svc)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                    <IconButton onClick={() => handleDelete(svc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                    <IconButton onClick={() => handleDeleteClick(svc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                 </Box>
                             </Box>
 
@@ -541,6 +556,18 @@ const Services = () => {
                         }} />
                 </FieldSection>
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setServiceToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Service?"
+                message="Are you sure you want to delete this service? All staff assignments for this service will also be removed."
+                confirmText="Delete Service"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

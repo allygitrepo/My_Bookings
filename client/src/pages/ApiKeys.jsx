@@ -18,6 +18,7 @@ import { useBusiness } from '../context/BusinessContext';
 import { CopyToClipboard } from 'react-copy-to-clipboard';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const ApiKeys = () => {
     const { selectedBusinessId } = useBusiness();
@@ -96,17 +97,32 @@ const ApiKeys = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this API Key?')) {
-            try {
-                const response = await deleteApiKey(id);
-                if (response.success) {
-                    toast.success('API Key deleted');
-                    fetchData();
-                }
-            } catch (error) {
-                toast.error('Failed to delete API Key');
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [keyToDelete, setKeyToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleDeleteClick = (id) => {
+        setKeyToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!keyToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const response = await deleteApiKey(keyToDelete);
+            if (response.success) {
+                toast.success('API Key deleted');
+                fetchData();
+            } else {
+                toast.error(response.message || 'Failed to delete API Key');
             }
+        } catch (error) {
+            toast.error('Failed to delete API Key');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setKeyToDelete(null);
         }
     };
 
@@ -183,7 +199,7 @@ const ApiKeys = () => {
                                                 </IconButton>
                                             </Tooltip>
                                         </CopyToClipboard>
-                                        <IconButton size="small" color="error" onClick={() => handleDelete(k.id)}>
+                                        <IconButton size="small" color="error" onClick={() => handleDeleteClick(k.id)}>
                                             <DeleteIcon fontSize="small" />
                                         </IconButton>
                                     </TableCell>
@@ -230,6 +246,18 @@ const ApiKeys = () => {
                         )} />
                 </Box>
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setKeyToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete API Key?"
+                message="Are you sure you want to delete this API Key? Any external integrations using this key will immediately stop working."
+                confirmText="Delete Key"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

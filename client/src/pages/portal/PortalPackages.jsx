@@ -25,6 +25,7 @@ import {
 import axiosInstance from '../../api/axiosInstance';
 import PageTransition from '../../components/PageTransition';
 import toast from 'react-hot-toast';
+import ConfirmDialog from '../../components/ConfirmDialog';
 
 const PortalPackages = () => {
     const [packages, setPackages] = useState([]);
@@ -98,17 +99,32 @@ const PortalPackages = () => {
         window.scrollTo({ top: 0, behavior: 'smooth' });
     };
 
-    const handleDelete = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this package? This action cannot be undone.')) return;
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [pkgToDelete, setPkgToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
 
+    const handleDeleteClick = (id) => {
+        setPkgToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!pkgToDelete) return;
+        setDeleteLoading(true);
         try {
-            const response = await axiosInstance.delete(`/packages/${id}`);
+            const response = await axiosInstance.delete(`/packages/${pkgToDelete}`);
             if (response.data.success) {
                 toast.success('Package deleted successfully');
                 fetchPackages();
+            } else {
+                toast.error(response.data.message || 'Failed to delete package');
             }
         } catch (error) {
             toast.error(error.response?.data?.message || 'Failed to delete package');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setPkgToDelete(null);
         }
     };
 
@@ -414,7 +430,7 @@ const PortalPackages = () => {
                                                 </IconButton>
                                             </Tooltip>
                                             <Tooltip title="Delete Package">
-                                                <IconButton onClick={() => handleDelete(pkg.id)} size="small" sx={{ bgcolor: 'rgba(244, 67, 54, 0.05)' }}>
+                                                <IconButton onClick={() => handleDeleteClick(pkg.id)} size="small" sx={{ bgcolor: 'rgba(244, 67, 54, 0.05)' }}>
                                                     <DeleteIcon fontSize="small" color="error" />
                                                 </IconButton>
                                             </Tooltip>
@@ -435,6 +451,18 @@ const PortalPackages = () => {
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Card>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setPkgToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Package?"
+                message="Are you sure you want to delete this subscription package? This action cannot be undone."
+                confirmText="Delete Package"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };

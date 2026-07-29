@@ -66,9 +66,13 @@ const businessController = {
                 whereClause.id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
                 // Portal Admin sees all
+                if (req.query.status !== undefined) {
+                    whereClause.status = req.query.status === 'true';
+                }
             } else {
-                // Owners see all their businesses (active or suspended)
+                // Owners see active businesses only
                 whereClause.user_id = req.user?.user_id ?? -1;
+                whereClause.status = true;
             }
 
             const { count, rows } = await Business.findAndCountAll({

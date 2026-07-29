@@ -18,6 +18,7 @@ import toast from 'react-hot-toast';
 import { validateName, blockEmoji } from '../utils/validators';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import locationService from '../utils/locationService';
+import ConfirmDialog from '../components/ConfirmDialog';
 
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
@@ -182,18 +183,33 @@ const Locations = () => {
         }
     };
 
-    const handleDelete = async (id) => {
-        if (window.confirm('Are you sure you want to delete this location?')) {
-            try {
-                const response = await deleteLocation(id);
-                if (response.success) { 
-                    toast.success('Location deleted successfully'); 
-                    fetchData(); 
-                    refreshUsage();
-                }
-            } catch (error) {
-                toast.error('Failed to delete location');
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [locationToDelete, setLocationToDelete] = useState(null);
+    const [deleteLoading, setDeleteLoading] = useState(false);
+
+    const handleDeleteClick = (id) => {
+        setLocationToDelete(id);
+        setDeleteConfirmOpen(true);
+    };
+
+    const handleConfirmDelete = async () => {
+        if (!locationToDelete) return;
+        setDeleteLoading(true);
+        try {
+            const response = await deleteLocation(locationToDelete);
+            if (response.success) {
+                toast.success('Location deleted successfully');
+                fetchData();
+                refreshUsage();
+            } else {
+                toast.error(response.message || 'Failed to delete location');
             }
+        } catch (error) {
+            toast.error('Failed to delete location');
+        } finally {
+            setDeleteLoading(false);
+            setDeleteConfirmOpen(false);
+            setLocationToDelete(null);
         }
     };
 
@@ -284,7 +300,7 @@ const Locations = () => {
                                     </TableCell>
                                     <TableCell align="right">
                                         <IconButton onClick={() => handleOpen(loc)} color="primary" size="small" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                        <IconButton onClick={() => handleDelete(loc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                        <IconButton onClick={() => handleDeleteClick(loc.id)} color="error" size="small" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                                     </TableCell>
                                 </TableRow>
                             );
@@ -310,7 +326,7 @@ const Locations = () => {
                             </Box>
                             <Box>
                                 <IconButton onClick={() => handleOpen(loc)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
-                                <IconButton onClick={() => handleDelete(loc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
+                                <IconButton onClick={() => handleDeleteClick(loc.id)} size="small" color="error" disabled={isSuspended}><DeleteIcon fontSize="small" /></IconButton>
                             </Box>
                         </Box>
                         
@@ -475,6 +491,18 @@ const Locations = () => {
                     </Box>
                 </FieldSection>
             </FormDrawer>
+
+            <ConfirmDialog
+                open={deleteConfirmOpen}
+                onClose={() => { if (!deleteLoading) { setDeleteConfirmOpen(false); setLocationToDelete(null); } }}
+                onConfirm={handleConfirmDelete}
+                loading={deleteLoading}
+                title="Delete Location?"
+                message="Are you sure you want to delete this location? All assigned services and availability rules at this location will be affected."
+                confirmText="Delete Location"
+                confirmColor="error"
+                iconType="delete"
+            />
         </PageTransition>
     );
 };
