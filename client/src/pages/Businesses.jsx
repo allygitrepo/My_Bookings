@@ -33,16 +33,26 @@ import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import PhoneInput from '../components/ui/PhoneInput';
 import ConfirmDialog from '../components/ConfirmDialog';
 import locationService from '../utils/locationService';
+import {
+    Hospital,
+    Building2,
+    Scissors,
+    Dumbbell,
+    Sparkles,
+    GraduationCap,
+    Briefcase,
+    Folder
+} from 'lucide-react';
 
 const INDUSTRY_OPTIONS = [
-    { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
-    { label: 'Corporate', value: 'Corporate', icon: '🏢' },
-    { label: 'Salon / Beauty', value: 'Salon / Beauty', icon: '✂️' },
-    { label: 'Gym / Fitness', value: 'Gym / Fitness', icon: '💪' },
-    { label: 'Spa / Wellness', value: 'Spa / Wellness', icon: '🧖' },
-    { label: 'Education / Coaching', value: 'Education / Coaching', icon: '🎓' },
-    { label: 'Professional Services', value: 'Professional Services', icon: '💼' },
-    { label: 'Other', value: 'Other', icon: '📁' }
+    { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: Hospital, color: '#ef4444' },
+    { label: 'Corporate', value: 'Corporate', icon: Building2, color: '#3b82f6' },
+    { label: 'Salon / Beauty', value: 'Salon / Beauty', icon: Scissors, color: '#ec4899' },
+    { label: 'Gym / Fitness', value: 'Gym / Fitness', icon: Dumbbell, color: '#f59e0b' },
+    { label: 'Spa / Wellness', value: 'Spa / Wellness', icon: Sparkles, color: '#10b981' },
+    { label: 'Education / Coaching', value: 'Education / Coaching', icon: GraduationCap, color: '#8b5cf6' },
+    { label: 'Professional Services', value: 'Professional Services', icon: Briefcase, color: '#6366f1' },
+    { label: 'Other', value: 'Other', icon: Folder, color: '#64748b' }
 ];
 
 const FieldSection = ({ label, children }) => (
@@ -320,7 +330,25 @@ const Businesses = () => {
                                 <TableCell sx={{ fontWeight: 500 }}>
                                     {biz.business_name}
                                 </TableCell>
-                                <TableCell>{biz.business_type}</TableCell>
+                                <TableCell>
+                                    {(() => {
+                                        const opt = INDUSTRY_OPTIONS.find(o => o.value === biz.business_type);
+                                        if (!opt) return biz.business_type;
+                                        const IconComp = opt.icon;
+                                        return (
+                                            <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                                <Box sx={{
+                                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                    width: 24, height: 24, borderRadius: 1.2,
+                                                    bgcolor: `${opt.color}18`, color: opt.color
+                                                }}>
+                                                    <IconComp size={14} />
+                                                </Box>
+                                                <Typography variant="body2" fontWeight={500}>{biz.business_type}</Typography>
+                                            </Box>
+                                        );
+                                    })()}
+                                </TableCell>
                                 <TableCell>{biz.phone}</TableCell>
                                 <TableCell>{biz.email}</TableCell>
                                 {/* <TableCell>{biz.sync_email || '—'}</TableCell> */}
@@ -382,11 +410,15 @@ const Businesses = () => {
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
                                     <Box sx={{
-                                        width: 40, height: 40, borderRadius: 2, bgcolor: 'primary.50',
-                                        display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.2rem'
-                                    }}>
-                                        {industry?.icon || '🏢'}
-                                    </Box>
+                                         width: 40, height: 40, borderRadius: 2,
+                                         bgcolor: `${industry?.color || '#3b82f6'}18`, color: industry?.color || '#3b82f6',
+                                         display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                     }}>
+                                         {industry?.icon ? (() => {
+                                             const IconComp = industry.icon;
+                                             return <IconComp size={20} />;
+                                         })() : <Building2 size={20} />}
+                                     </Box>
                                     <Box>
                                         <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -476,15 +508,41 @@ const Businesses = () => {
                                         labelId="business-type-label"
                                         label="Business Type *"
                                         sx={{ borderRadius: 2 }}
-                                    >
-                                        {INDUSTRY_OPTIONS.map(opt => (
-                                            <MenuItem key={opt.value} value={opt.value} sx={{ py: 1.2 }}>
+                                        renderValue={(selected) => {
+                                            const opt = INDUSTRY_OPTIONS.find(o => o.value === selected);
+                                            if (!opt) return selected;
+                                            const IconComp = opt.icon;
+                                            return (
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Typography component="span" sx={{ fontSize: '1.2rem' }}>{opt.icon}</Typography>
-                                                    <Typography variant="body2">{opt.label}</Typography>
+                                                    <Box sx={{
+                                                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                        width: 26, height: 26, borderRadius: 1.5,
+                                                        bgcolor: `${opt.color}18`, color: opt.color
+                                                    }}>
+                                                        <IconComp size={15} />
+                                                    </Box>
+                                                    <Typography variant="body2" fontWeight={600}>{opt.label}</Typography>
                                                 </Box>
-                                            </MenuItem>
-                                        ))}
+                                            );
+                                        }}
+                                    >
+                                        {INDUSTRY_OPTIONS.map(opt => {
+                                            const IconComp = opt.icon;
+                                            return (
+                                                <MenuItem key={opt.value} value={opt.value} sx={{ py: 1.2 }}>
+                                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                                        <Box sx={{
+                                                            display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                            width: 32, height: 32, borderRadius: 1.8,
+                                                            bgcolor: `${opt.color}18`, color: opt.color
+                                                        }}>
+                                                            <IconComp size={18} />
+                                                        </Box>
+                                                        <Typography variant="body2" fontWeight={600}>{opt.label}</Typography>
+                                                    </Box>
+                                                </MenuItem>
+                                            );
+                                        })}
                                     </Select>
                                     {errors.business_type && (
                                         <Typography variant="caption" color="error" sx={{ mt: 0.5, ml: 1.5 }}>
