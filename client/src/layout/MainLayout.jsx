@@ -65,10 +65,11 @@ const MainLayout = () => {
                     flexGrow: 1,
                     p: 3,
                     width: { md: `calc(100% - ${isSidebarOpen && !isMobile ? DRAWER_WIDTH : 0}px)` },
+                    minWidth: 0,
                     transition: theme.transitions.create(['margin', 'width'], {
                         easing: theme.transitions.easing.sharp,
                         duration: theme.transitions.duration.leavingScreen,
-                        }),
+                    }),
                 }}
             >
                 <Navbar

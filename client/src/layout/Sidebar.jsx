@@ -150,8 +150,12 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
             open={open}
             onClose={onClose}
             sx={{
-                width: drawerWidth,
+                width: variant === 'temporary' ? drawerWidth : (open ? drawerWidth : 0),
                 flexShrink: 0,
+                transition: (theme) => theme.transitions.create('width', {
+                    easing: theme.transitions.easing.sharp,
+                    duration: theme.transitions.duration.enteringScreen,
+                }),
                 '& .MuiDrawer-paper': {
                     width: drawerWidth,
                     boxSizing: 'border-box',
