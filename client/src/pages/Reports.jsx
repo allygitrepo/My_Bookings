@@ -71,9 +71,8 @@ const Reports = () => {
     const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
 
-    // Filter States
     const [startDate, setStartDate] = useState(dayjs().startOf('month'));
-    const [endDate, setEndDate] = useState(dayjs().endOf('month'));
+    const [endDate, setEndDate] = useState(dayjs().add(1, 'month').endOf('month'));
     const [reportType, setReportType] = useState('bookings'); // 'bookings', 'payments', 'ledger'
     const [filterBusiness, setFilterBusiness] = useState(contextBusinessId || 'all');
     const [filterStatus, setFilterStatus] = useState('All');
@@ -111,20 +110,25 @@ const Reports = () => {
     }, [contextBusinessId, businesses]);
 
     // Derived Reporting Data
+    const startStr = startDate ? startDate.format('YYYY-MM-DD') : '';
+    const endStr = endDate ? endDate.format('YYYY-MM-DD') : '';
+
     const filteredBookings = bookings.filter(b => {
         const matchesBusiness = filterBusiness === 'all' || String(b.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
 
-        const bDate = dayjs(b.booking_date);
-        const matchesDate = bDate.isAfter(startDate.subtract(1, 'day')) && bDate.isBefore(endDate.add(1, 'day'));
+        const bDateStr = dayjs(b.booking_date).format('YYYY-MM-DD');
+        const matchesDate = !startStr || !endStr || (bDateStr >= startStr && bDateStr <= endStr);
 
-        const isConfirmedInDb = (b.status === true || b.status === 1);
-        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
         const isPast = bookingDateTime.isBefore(dayjs());
         const status = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
 
         const matchesStatus = filterStatus === 'All' || status === filterStatus;
-        const matchesService = filterService === 'All' || String(b.service_id) === String(filterService);
+        const matchesService = filterService === 'All' || 
+            String(b.service_id) === String(filterService) ||
+            (b.services && b.services.some(s => String(s.id) === String(filterService)));
 
         return matchesDate && matchesStatus && matchesService;
     }).sort((a, b) => dayjs(a.booking_date).diff(dayjs(b.booking_date)));
@@ -132,8 +136,8 @@ const Reports = () => {
     const filteredPayments = payments.filter(p => {
         const matchesBusiness = filterBusiness === 'all' || String(p.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
-        const pDate = dayjs(p.created_at);
-        return pDate.isAfter(startDate.subtract(1, 'day')) && pDate.isBefore(endDate.add(1, 'day'));
+        const pDateStr = dayjs(p.created_at).format('YYYY-MM-DD');
+        return !startStr || !endStr || (pDateStr >= startStr && pDateStr <= endStr);
     }).sort((a, b) => dayjs(a.created_at).diff(dayjs(b.created_at)));
 
     const ledgerData = customers.map(customer => {
@@ -141,13 +145,14 @@ const Reports = () => {
         const customerPayments = payments.filter(p => p.booking_id && customerBookings.some(b => String(b.id) === String(p.booking_id)));
 
         const totalDue = customerBookings.reduce((sum, b) => {
-            const payment = payments.find(p => p.booking_id === b.id);
-            const service = services.find(s => s.id === b.service_id);
-            // Use the price recorded in the payment, otherwise fallback to current service price
-            return sum + Number(payment?.amount || service?.price || 0);
+            const payment = payments.find(p => String(p.booking_id) === String(b.id));
+            const servicePrice = b.services && b.services.length > 0
+                ? b.services.reduce((acc, s) => acc + Number(s.price || 0), 0)
+                : (services.find(s => String(s.id) === String(b.service_id))?.price || 0);
+            return sum + Number(payment?.amount || servicePrice || 0);
         }, 0);
 
-        const totalPaid = customerPayments.reduce((sum, p) => sum + Number(p.paid_amount || 0), 0);
+        const totalPaid = customerPayments.reduce((sum, p) => sum + Number(p.paid_amount || p.amount || 0), 0);
 
         return {
             ...customer,
@@ -365,7 +370,7 @@ const Reports = () => {
                         variant="contained"
                         startIcon={<PdfIcon />}
                         onClick={generatePDF}
-                        sx={{ borderRadius: 2, px: 3, fontWeight: 700 }}
+                        sx={{ borderRadius: 2, px: 3, fontWeight: 700, width: { xs: '100%', sm: 'auto' } }}
                         disabled={loading}
                     >
                         Export to PDF
@@ -373,9 +378,9 @@ const Reports = () => {
                 }
             />
 
-            <Paper sx={{ p: 2, mb: 4, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+            <Paper sx={{ p: { xs: 2, sm: 2.5 }, mb: 4, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Grid container spacing={2} alignItems="center">
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} sm={6} md={3}>
                         <TextField
                             select
                             fullWidth
@@ -390,7 +395,7 @@ const Reports = () => {
                             ))}
                         </TextField>
                     </Grid>
-                    <Grid item xs={12} md={2.5}>
+                    <Grid item xs={6} sm={3} md={2.5}>
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                             <DatePicker
                                 label="From"
@@ -401,7 +406,7 @@ const Reports = () => {
                             />
                         </LocalizationProvider>
                     </Grid>
-                    <Grid item xs={12} md={2.5}>
+                    <Grid item xs={6} sm={3} md={2.5}>
                         <LocalizationProvider dateAdapter={AdapterDayjs}>
                             <DatePicker
                                 label="To"
@@ -414,7 +419,7 @@ const Reports = () => {
                     </Grid>
                     {reportType === 'bookings' && (
                         <>
-                            <Grid item xs={12} md={2}>
+                            <Grid item xs={6} sm={6} md={2}>
                                 <TextField
                                     select
                                     fullWidth
@@ -429,7 +434,7 @@ const Reports = () => {
                                     <MenuItem value="Cancelled">Cancelled</MenuItem>
                                 </TextField>
                             </Grid>
-                            <Grid item xs={12} md={2}>
+                            <Grid item xs={6} sm={6} md={2}>
                                 <TextField
                                     select
                                     fullWidth
@@ -490,24 +495,27 @@ const Reports = () => {
                                     ) : filteredBookings.length === 0 ? (
                                         <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>No data for selected filters.</TableCell></TableRow>
                                     ) : filteredBookings.map((b) => {
-                                        const service = services.find(s => s.id === b.service_id);
-                                        const isConfirmedInDb = (b.status === true || b.status === 1);
-                                        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+                                        const service = services.find(s => String(s.id) === String(b.service_id));
+                                        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+                                        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
                                         const isPast = bookingDateTime.isBefore(dayjs());
                                         const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+
+                                        const customerObj = customers.find(c => String(c.id) === String(b.customer_id));
+                                        const staffObj = staff.find(s => String(s.id) === String(b.staff_id));
 
                                         return (
                                             <TableRow key={b.id} hover>
                                                 <TableCell sx={{ fontWeight: 500 }}>{formatDate(b.booking_date)}</TableCell>
                                                 <TableCell>
-                                                    <Typography variant="body2" fontWeight={700}>{customers.find(c => c.id === b.customer_id)?.name || 'Guest'}</Typography>
-                                                    <Typography variant="caption" color="text.secondary">{customers.find(c => c.id === b.customer_id)?.phone}</Typography>
+                                                    <Typography variant="body2" fontWeight={700}>{customerObj?.name || 'Guest'}</Typography>
+                                                    <Typography variant="caption" color="text.secondary">{customerObj?.phone}</Typography>
                                                 </TableCell>
                                                 <TableCell>
                                                     <Typography variant="body2" fontWeight={700}>
                                                         {b.services && b.services.length > 0 
                                                             ? b.services.map(s => s.service_name).join(', ')
-                                                            : (services.find(s => s.id === b.service_id)?.service_name || '—')
+                                                            : (services.find(s => String(s.id) === String(b.service_id))?.service_name || '—')
                                                         }
                                                     </Typography>
                                                     {b.services && b.services.length > 1 && (
@@ -516,7 +524,7 @@ const Reports = () => {
                                                         </Typography>
                                                     )}
                                                 </TableCell>
-                                                <TableCell sx={{ fontWeight: 500 }}>{staff.find(s => s.id === b.staff_id)?.staff_name || '—'}</TableCell>
+                                                <TableCell sx={{ fontWeight: 500 }}>{staffObj?.staff_name || '—'}</TableCell>
                                                 <TableCell sx={{ fontWeight: 500 }}>{b.start_time?.slice(0, 5)} - {b.end_time?.slice(0, 5)}</TableCell>
                                                 <TableCell>
                                                     <Chip label={statusLabel} size="small" variant="outlined" color={statusLabel === 'Completed' ? 'info' : statusLabel === 'Confirmed' ? 'success' : 'error'} sx={{ fontWeight: 700, borderRadius: 1.5 }} />

@@ -57,9 +57,9 @@ const WidgetScript = () => {
                 subtitle="Embed the booking widget directly on your website."
             />
 
-            <Grid container spacing={4}>
+            <Grid container spacing={{ xs: 2.5, md: 4 }}>
                 <Grid item xs={12} md={8}>
-                    <Card sx={{ p: 4 }}>
+                    <Card sx={{ p: { xs: 2.5, sm: 4 }, borderRadius: '16px' }}>
 
                         {/* Step 1 — select business */}
                         <Typography variant="h6" fontWeight={700} gutterBottom>
@@ -115,17 +115,34 @@ const WidgetScript = () => {
                         )}
 
                         {/* Step 2 — script */}
-                        <Typography variant="h6" fontWeight={700} gutterBottom>
-                            2. Copy &amp; Paste Script
-                        </Typography>
-                        <Typography variant="body2" color="text.secondary" paragraph>
-                            Place this tag just before the closing <code>&lt;/body&gt;</code> tag on your website.
-                        </Typography>
+                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: 1.5, mb: 1 }}>
+                            <Box>
+                                <Typography variant="h6" fontWeight={700} gutterBottom>
+                                    2. Copy &amp; Paste Script
+                                </Typography>
+                                <Typography variant="body2" color="text.secondary" paragraph>
+                                    Place this tag just before the closing <code>&lt;/body&gt;</code> tag on your website.
+                                </Typography>
+                            </Box>
+                            {apiKeyValue && (
+                                <CopyToClipboard text={scriptTag} onCopy={() => !isSuspended && handleCopy()}>
+                                    <Button
+                                        variant="contained" size="small"
+                                        startIcon={<CopyIcon />}
+                                        disabled={isSuspended}
+                                        sx={{ borderRadius: 2, fontWeight: 700, px: 2.5, py: 0.8 }}
+                                    >
+                                        Copy Script
+                                    </Button>
+                                </CopyToClipboard>
+                            )}
+                        </Box>
 
                         <Box sx={{
-                            bgcolor: '#0f172a', color: '#94a3b8', p: 3, borderRadius: 2,
-                            position: 'relative', fontFamily: 'monospace', fontSize: '0.875rem',
+                            bgcolor: '#0f172a', color: '#94a3b8', p: { xs: 2, sm: 3 }, borderRadius: 3,
+                            fontFamily: 'monospace', fontSize: { xs: '0.78rem', sm: '0.875rem' },
                             overflowX: 'auto', whiteSpace: 'pre', mb: 3, lineHeight: 1.7,
+                            border: '1px solid rgba(255,255,255,0.1)'
                         }}>
                             {/* Syntax highlight: attribute names in blue, values in green */}
                             {apiKeyValue ? (
@@ -142,26 +159,13 @@ const WidgetScript = () => {
                                     {scriptTag}
                                 </span>
                             )}
-
-                            {apiKeyValue && (
-                                <CopyToClipboard text={scriptTag} onCopy={() => !isSuspended && handleCopy()}>
-                                    <Button
-                                        variant="contained" size="small"
-                                        sx={{ position: 'absolute', top: 12, right: 12 }}
-                                        startIcon={<CopyIcon />}
-                                        disabled={isSuspended}
-                                    >
-                                        Copy
-                                    </Button>
-                                </CopyToClipboard>
-                            )}
                         </Box>
                     </Card>
                 </Grid>
 
                 {/* Integration guide */}
                 <Grid item xs={12} md={4}>
-                    <Card sx={{ p: 3.5, bgcolor: 'rgba(0,0,0,0.2)', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
+                    <Card sx={{ p: { xs: 2.5, sm: 3.5 }, bgcolor: 'rgba(0,0,0,0.2)', boxShadow: 'none', border: '1px solid', borderColor: 'divider', borderRadius: '16px' }}>
                         <Typography variant="h6" fontWeight={700} gutterBottom>
                             Integration Guide
                         </Typography>
@@ -171,10 +175,7 @@ const WidgetScript = () => {
                                     <strong>HTML / Static site:</strong> Paste the script before <code>&lt;/body&gt;</code> in your HTML file.
                                 </Typography>
                             </li>
-
                         </Box>
-
-
                     </Card>
                 </Grid>
             </Grid>

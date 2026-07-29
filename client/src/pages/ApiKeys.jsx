@@ -32,10 +32,6 @@ const ApiKeys = () => {
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    useEffect(() => {
-        setPage(0);
-    }, [selectedBusinessId]);
-
     const filteredKeys = apiKeys.filter(k => {
         const matchesBusiness = selectedBusinessId === 'all' || String(k.business_id) === String(selectedBusinessId);
         return matchesBusiness;
@@ -62,10 +58,18 @@ const ApiKeys = () => {
         defaultValues: { business_id: '' },
     });
 
+    const availableBusinesses = businesses.filter(b => !apiKeys.some(k => String(k.business_id) === String(b.id)));
+
+    const canGenerateKey = selectedBusinessId !== 'all'
+        ? !apiKeys.some(k => String(k.business_id) === String(selectedBusinessId))
+        : availableBusinesses.length > 0;
+
     const handleOpen = (k = null) => {
         setEditId(k?.id || null);
-        const bizId = selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || '');
-        reset(k ? { business_id: k.business_id || '' } : { business_id: bizId });
+        const defaultBizId = selectedBusinessId !== 'all'
+            ? selectedBusinessId
+            : (availableBusinesses[0]?.id || businesses[0]?.id || '');
+        reset(k ? { business_id: k.business_id || '' } : { business_id: defaultBizId });
         setOpen(true);
     };
 
@@ -132,7 +136,7 @@ const ApiKeys = () => {
         <PageTransition>
             <PageHeader title="API Keys" subtitle="Manage your secret keys for widget integration and API access." />
 
-            <Card sx={{ p: 3, mb: 4, display: 'flex', alignItems: 'flex-start', gap: 2, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200' }}>
+            <Card sx={{ p: { xs: 2, sm: 3 }, mb: 4, display: 'flex', alignItems: 'flex-start', gap: 2, bgcolor: 'warning.50', border: '1px solid', borderColor: 'warning.200', borderRadius: '16px' }}>
                 <SecurityIcon sx={{ color: 'warning.main', mt: 0.3, flexShrink: 0 }} />
                 <Box>
                     <Typography variant="subtitle2" color="warning.dark" fontWeight={700}>Security Notice</Typography>
@@ -142,14 +146,23 @@ const ApiKeys = () => {
                 </Box>
             </Card>
 
-            <Box sx={{ display: 'flex', justifyContent: 'flex-end', mb: 3 }}>
-                <Button variant="contained" startIcon={<AddIcon />} onClick={() => handleOpen()} disabled={businesses.length === 0}
-                    title={businesses.length === 0 ? 'Create a business first' : ''}>
-                    Generate New Key
-                </Button>
-            </Box>
+            {canGenerateKey && (
+                <Box sx={{ display: 'flex', justifyContent: { xs: 'stretch', sm: 'flex-end' }, mb: 3 }}>
+                    <Button
+                        variant="contained"
+                        startIcon={<AddIcon />}
+                        onClick={() => handleOpen()}
+                        disabled={businesses.length === 0}
+                        title={businesses.length === 0 ? 'Create a business first' : ''}
+                        sx={{ width: { xs: '100%', sm: 'auto' }, borderRadius: 2.5, fontWeight: 700 }}
+                    >
+                        Generate New Key
+                    </Button>
+                </Box>
+            )}
 
-            <TableContainer component={Paper}>
+            {/* Desktop Table View */}
+            <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
@@ -209,6 +222,64 @@ const ApiKeys = () => {
                     </TableBody>
                 </Table>
             </TableContainer>
+
+            {/* Mobile Card View */}
+            <Box sx={{ display: { xs: 'flex', md: 'none' }, flexDirection: 'column', gap: 2 }}>
+                {loading ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px' }}>
+                        <Typography color="text.secondary">Loading API keys...</Typography>
+                    </Paper>
+                ) : filteredKeys.length === 0 ? (
+                    <Paper sx={{ p: 4, textAlign: 'center', borderRadius: '16px', border: '1px dashed divider' }}>
+                        <Typography color="text.secondary">No API Keys found for the selected business.</Typography>
+                    </Paper>
+                ) : filteredKeys.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((k, index) => {
+                    const biz = businesses.find(b => b.id === k.business_id);
+                    const isVisible = visibleKeys[k.id];
+                    return (
+                        <Card key={k.id} sx={{ p: 2.5, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
+                            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
+                                <Typography variant="subtitle2" fontWeight={800} color="primary.main">
+                                    #{page * rowsPerPage + index + 1} — {biz?.business_name || 'Business'}
+                                </Typography>
+                                <Chip label={k.created_at ? new Date(k.created_at).toLocaleDateString() : '—'} size="small" variant="outlined" sx={{ height: 22, fontSize: '0.7rem' }} />
+                            </Box>
+                            
+                            <Box sx={{ p: 1.5, bgcolor: 'background.default', borderRadius: 2, border: '1px solid', borderColor: 'divider', mb: 2, overflowX: 'auto' }}>
+                                <Typography sx={{ fontFamily: 'monospace', fontSize: '0.78rem', wordBreak: 'break-all' }}>
+                                    {isVisible ? k.api_key : k.api_key?.slice(0, 12) + '••••••••••••••••'}
+                                </Typography>
+                            </Box>
+
+                            <Box sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+                                <Button
+                                    size="small"
+                                    variant="outlined"
+                                    startIcon={isVisible ? <VisibilityOffIcon fontSize="small" /> : <VisibilityIcon fontSize="small" />}
+                                    onClick={() => toggleVisibility(k.id)}
+                                    sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}
+                                >
+                                    {isVisible ? 'Hide' : 'Show'}
+                                </Button>
+                                <CopyToClipboard text={k.api_key} onCopy={() => toast.success('API Key copied!')}>
+                                    <Button
+                                        size="small"
+                                        variant="outlined"
+                                        color="primary"
+                                        startIcon={<CopyIcon fontSize="small" />}
+                                        sx={{ borderRadius: 2, textTransform: 'none', fontSize: '0.75rem' }}
+                                    >
+                                        Copy
+                                    </Button>
+                                </CopyToClipboard>
+                                <IconButton size="small" color="error" onClick={() => handleDeleteClick(k.id)}>
+                                    <DeleteIcon fontSize="small" />
+                                </IconButton>
+                            </Box>
+                        </Card>
+                    );
+                })}
+            </Box>
             <TablePagination
                 rowsPerPageOptions={[5, 10, 20, 30, 50]}
                 component="div"
