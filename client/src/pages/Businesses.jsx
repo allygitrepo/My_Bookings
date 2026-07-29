@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
-    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card, Tooltip, Avatar, Button
+    Switch, FormControlLabel, Box, Typography, Divider, Chip, TablePagination, CircularProgress, Card, Tooltip, Avatar, Button, Autocomplete
 } from '@mui/material';
 import {
     Edit as EditIcon,
@@ -32,6 +32,7 @@ import { validateName, validateEmail, validatePhone, blockEmoji } from '../utils
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 import PhoneInput from '../components/ui/PhoneInput';
 import ConfirmDialog from '../components/ConfirmDialog';
+import locationService from '../utils/locationService';
 
 const INDUSTRY_OPTIONS = [
     { label: 'Healthcare / Hospital', value: 'Healthcare / Hospital', icon: '🏥' },
@@ -77,7 +78,7 @@ const Businesses = () => {
         biz.upi_id?.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
-    const { control, handleSubmit, reset, watch, formState: { errors } } = useForm({
+    const { control, handleSubmit, reset, setValue, watch, formState: { errors } } = useForm({
         defaultValues: {
             upi_id: '',
             sync_email: '',
@@ -100,10 +101,52 @@ const Businesses = () => {
     const hasMultipleLocations = watch('has_multiple_locations');
     const locationType = watch('location_type');
 
-    // Removed local fetchBusinesses as it's now in BusinessContext
+    const [states, setStates] = useState([]);
+    const [cities, setCities] = useState([]);
+    const [selectedState, setSelectedState] = useState(null);
 
-    const handleOpen = (biz = null) => {
+    const fetchStatesData = async () => {
+        try {
+            const data = await locationService.getStates();
+            setStates(data);
+        } catch (error) {
+            console.error('Failed to fetch states', error);
+        }
+    };
+
+    const fetchCitiesData = async (stateCode) => {
+        try {
+            const data = await locationService.getCities(stateCode);
+            setCities(data);
+        } catch (error) {
+            console.error('Failed to fetch cities', error);
+        }
+    };
+
+    useEffect(() => {
+        fetchStatesData();
+    }, []);
+
+    useEffect(() => {
+        if (selectedState?.iso2) {
+            fetchCitiesData(selectedState.iso2);
+        } else {
+            setCities([]);
+        }
+    }, [selectedState]);
+
+    const handleOpen = async (biz = null) => {
         setEditId(biz?.id || null);
+        if (biz && biz.state) {
+            const stateObj = states.find(s => s.name === biz.state);
+            setSelectedState(stateObj || null);
+            if (stateObj) {
+                await fetchCitiesData(stateObj.iso2);
+            }
+        } else {
+            setSelectedState(null);
+            setCities([]);
+        }
         reset(biz ? {
             business_name: biz.business_name || '',
             business_type: biz.business_type || '',
@@ -623,36 +666,32 @@ const Businesses = () => {
                                     name="location_type"
                                     control={control}
                                     render={({ field: { value, onChange } }) => (
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={6}>
-                                                <Paper
-                                                    onClick={() => onChange('Physical')}
-                                                    sx={{
-                                                        p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
-                                                        border: '2px solid', borderColor: value === 'Physical' ? 'primary.main' : 'divider',
-                                                        bgcolor: value === 'Physical' ? 'primary.50' : 'background.paper',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    <LocationIcon color={value === 'Physical' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
-                                                    <Typography variant="body2" fontWeight={700} color={value === 'Physical' ? 'primary' : 'text.secondary'}>Physical</Typography>
-                                                </Paper>
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Paper
-                                                    onClick={() => onChange('Online')}
-                                                    sx={{
-                                                        p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
-                                                        border: '2px solid', borderColor: value === 'Online' ? 'primary.main' : 'divider',
-                                                        bgcolor: value === 'Online' ? 'primary.50' : 'background.paper',
-                                                        transition: 'all 0.2s'
-                                                    }}
-                                                >
-                                                    <OnlineIcon color={value === 'Online' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
-                                                    <Typography variant="body2" fontWeight={700} color={value === 'Online' ? 'primary' : 'text.secondary'}>Online</Typography>
-                                                </Paper>
-                                            </Grid>
-                                        </Grid>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, width: '100%' }}>
+                                            <Paper
+                                                onClick={() => onChange('Physical')}
+                                                sx={{
+                                                    p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
+                                                    border: '2px solid', borderColor: value === 'Physical' ? 'primary.main' : 'divider',
+                                                    bgcolor: value === 'Physical' ? 'primary.50' : 'background.paper',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <LocationIcon color={value === 'Physical' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
+                                                <Typography variant="body2" fontWeight={700} color={value === 'Physical' ? 'primary' : 'text.secondary'}>Physical</Typography>
+                                            </Paper>
+                                            <Paper
+                                                onClick={() => onChange('Online')}
+                                                sx={{
+                                                    p: 1.5, textAlign: 'center', cursor: 'pointer', borderRadius: 2,
+                                                    border: '2px solid', borderColor: value === 'Online' ? 'primary.main' : 'divider',
+                                                    bgcolor: value === 'Online' ? 'primary.50' : 'background.paper',
+                                                    transition: 'all 0.2s'
+                                                }}
+                                            >
+                                                <OnlineIcon color={value === 'Online' ? 'primary' : 'disabled'} sx={{ mb: 0.5 }} />
+                                                <Typography variant="body2" fontWeight={700} color={value === 'Online' ? 'primary' : 'text.secondary'}>Online</Typography>
+                                            </Paper>
+                                        </Box>
                                     )}
                                 />
 
@@ -664,22 +703,64 @@ const Businesses = () => {
                                                 <TextField {...field} fullWidth label="Full Address *" multiline rows={2} placeholder="Shop No. 5, Business Center..."
                                                     error={!!errors.address} helperText={errors.address?.message} />
                                             )} />
-                                        <Grid container spacing={2}>
-                                            <Grid item xs={6}>
-                                                <Controller name="city" control={control}
-                                                    rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'City is required' : false }}
-                                                    render={({ field }) => (
-                                                        <TextField {...field} fullWidth label="City *" error={!!errors.city} helperText={errors.city?.message} />
-                                                    )} />
-                                            </Grid>
-                                            <Grid item xs={6}>
-                                                <Controller name="state" control={control}
-                                                    rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'State is required' : false }}
-                                                    render={({ field }) => (
-                                                        <TextField {...field} fullWidth label="State *" error={!!errors.state} helperText={errors.state?.message} />
-                                                    )} />
-                                            </Grid>
-                                        </Grid>
+                                        <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, width: '100%' }}>
+                                            <Controller name="state" control={control}
+                                                rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'State is required' : false }}
+                                                render={({ field }) => (
+                                                    <Autocomplete
+                                                        fullWidth
+                                                        options={states}
+                                                        getOptionLabel={(option) => option.name || ''}
+                                                        value={states.find(s => s.name === field.value) || null}
+                                                        onChange={(_, v) => {
+                                                            field.onChange(v?.name || '');
+                                                            setSelectedState(v || null);
+                                                            setValue('city', '');
+                                                        }}
+                                                        isOptionEqualToValue={(option, value) => option.name === value?.name}
+                                                        renderInput={(params) => (
+                                                            <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                                        )}
+                                                        slotProps={{
+                                                            paper: {
+                                                                sx: {
+                                                                    borderRadius: 2,
+                                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                                                    '& .MuiAutocomplete-listbox': { maxHeight: 250 },
+                                                                    '& .MuiAutocomplete-option': { fontSize: '0.875rem', py: 1 }
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                )} />
+                                            <Controller name="city" control={control}
+                                                rules={{ required: !hasMultipleLocations && locationType === 'Physical' ? 'City is required' : false }}
+                                                render={({ field }) => (
+                                                    <Autocomplete
+                                                        fullWidth
+                                                        options={cities}
+                                                        getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
+                                                        value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
+                                                        onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
+                                                        isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
+                                                        disabled={!selectedState}
+                                                        noOptionsText={selectedState ? 'No cities found' : 'Select state first'}
+                                                        renderInput={(params) => (
+                                                            <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
+                                                        )}
+                                                        slotProps={{
+                                                            paper: {
+                                                                sx: {
+                                                                    borderRadius: 2,
+                                                                    boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                                                    '& .MuiAutocomplete-listbox': { maxHeight: 250 },
+                                                                    '& .MuiAutocomplete-option': { fontSize: '0.875rem', py: 1 }
+                                                                }
+                                                            }
+                                                        }}
+                                                    />
+                                                )} />
+                                        </Box>
                                     </>
                                 ) : (
                                     <Controller name="meeting_link" control={control}

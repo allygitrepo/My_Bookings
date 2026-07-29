@@ -432,60 +432,64 @@ const Locations = () => {
                                         <TextField {...field} fullWidth label="Address" multiline rows={2} placeholder="Enter full street address" error={!!errors.address} helperText={errors.address?.message} />
                                     )} />
 
-                                {/* State — searchable dropdown */}
-                                <Controller name="state" control={control} rules={{ required: locationType === 'Physical' ? 'State is required' : false }}
-                                    render={({ field }) => (
-                                        <Autocomplete
-                                            fullWidth
-                                            options={states}
-                                            getOptionLabel={(option) => option.name || ''}
-                                            value={states.find(s => s.name === field.value) || null}
-                                            onChange={(_, v) => {
-                                                field.onChange(v?.name || '');
-                                                setSelectedState(v || null);
-                                                setValue('city', ''); // reset city on state change
-                                            }}
-                                            isOptionEqualToValue={(option, value) => option.name === value?.name}
-                                            renderInput={(params) => (
-                                                <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
-                                            )}
-                                            slotProps={{
-                                                paper: {
-                                                    sx: {
-                                                        width: 'auto',
-                                                        minWidth: '100%',
-                                                        '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', sm: '1fr 1fr' }, gap: 2, width: '100%' }}>
+                                    {/* State — searchable dropdown */}
+                                    <Controller name="state" control={control} rules={{ required: locationType === 'Physical' ? 'State is required' : false }}
+                                        render={({ field }) => (
+                                            <Autocomplete
+                                                fullWidth
+                                                options={states}
+                                                getOptionLabel={(option) => option.name || ''}
+                                                value={states.find(s => s.name === field.value) || null}
+                                                onChange={(_, v) => {
+                                                    field.onChange(v?.name || '');
+                                                    setSelectedState(v || null);
+                                                    setValue('city', ''); // reset city on state change
+                                                }}
+                                                isOptionEqualToValue={(option, value) => option.name === value?.name}
+                                                renderInput={(params) => (
+                                                    <TextField {...params} label="State *" error={!!errors.state} helperText={errors.state?.message} />
+                                                )}
+                                                slotProps={{
+                                                    paper: {
+                                                        sx: {
+                                                            borderRadius: 2,
+                                                            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                                            '& .MuiAutocomplete-listbox': { maxHeight: 250 },
+                                                            '& .MuiAutocomplete-option': { fontSize: '0.875rem', py: 1 }
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                        />
-                                    )} />
-                                
-                                <Controller name="city" control={control} rules={{ required: locationType === 'Physical' ? 'City is required' : false }}
-                                    render={({ field }) => (
-                                        <Autocomplete
-                                            fullWidth
-                                            options={cities}
-                                            getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
-                                            value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
-                                            onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
-                                            isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
-                                            disabled={!selectedState}
-                                            noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
-                                            renderInput={(params) => (
-                                                <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
-                                            )}
-                                            slotProps={{
-                                                paper: {
-                                                    sx: {
-                                                        width: 'auto',
-                                                        minWidth: '100%',
-                                                        '& .MuiAutocomplete-listbox': { maxHeight: 250 }
+                                                }}
+                                            />
+                                        )} />
+                                    
+                                    <Controller name="city" control={control} rules={{ required: locationType === 'Physical' ? 'City is required' : false }}
+                                        render={({ field }) => (
+                                            <Autocomplete
+                                                fullWidth
+                                                options={cities}
+                                                getOptionLabel={(option) => typeof option === 'string' ? option : option.name || ''}
+                                                value={cities.find(c => (typeof c === 'string' ? c : c.name) === field.value) || null}
+                                                onChange={(_, v) => field.onChange(typeof v === 'string' ? v : v?.name || '')}
+                                                isOptionEqualToValue={(option, value) => (typeof option === 'string' ? option : option.name) === (typeof value === 'string' ? value : value?.name)}
+                                                disabled={!selectedState}
+                                                noOptionsText={selectedState ? 'No cities found' : 'Select a state first'}
+                                                renderInput={(params) => (
+                                                    <TextField {...params} label="City *" error={!!errors.city} helperText={errors.city?.message || (!selectedState ? 'Select state first' : '')} />
+                                                )}
+                                                slotProps={{
+                                                    paper: {
+                                                        sx: {
+                                                            borderRadius: 2,
+                                                            boxShadow: '0 8px 32px rgba(0,0,0,0.4)',
+                                                            '& .MuiAutocomplete-listbox': { maxHeight: 250 },
+                                                            '& .MuiAutocomplete-option': { fontSize: '0.875rem', py: 1 }
+                                                        }
                                                     }
-                                                }
-                                            }}
-                                        />
-                                    )} />
+                                                }}
+                                            />
+                                        )} />
+                                </Box>
                             </>
                         )}
                     </Box>
