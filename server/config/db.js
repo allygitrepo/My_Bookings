@@ -27,10 +27,12 @@ const connectDB = async () => {
                 const BusinessTemplate = require("../models/businessTemplate.model");
                 const BusinessClosure = require("../models/businessClosure.model");
                 const StaffLeave = require("../models/staffLeave.model");
+                const Booking = require("../models/booking.model");
                 await BusinessTemplate.sync({ alter: true });
                 await BusinessClosure.sync({ alter: true });
                 await StaffLeave.sync({ alter: true });
-                console.log('✅ Targeted business_templates, business_closures, and staff_leaves table sync completed successfully');
+                await Booking.sync({ alter: true });
+                console.log('✅ Targeted business_templates, business_closures, staff_leaves, and bookings table sync completed successfully');
             } catch (targetErr) {
                 console.error('❌ Targeted sync failed:', targetErr);
             }

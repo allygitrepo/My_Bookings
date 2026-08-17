@@ -127,7 +127,8 @@ const bookingController = {
             const row = await Booking.create({
                 ...bookingData,
                 customer_id,
-                business_id
+                business_id,
+                booking_status: bookingData.booking_status || 'Confirmed'
             });
 
             // Store multiple services if provided
@@ -333,6 +334,14 @@ const bookingController = {
             const { business_id: _, ...safeBody } = req.body;
             if (req.body.business_id) {
                 safeBody.business_id = req.body.business_id;
+            }
+
+            if (safeBody.booking_status) {
+                if (safeBody.booking_status === 'Cancelled') {
+                    safeBody.status = false;
+                } else {
+                    safeBody.status = true;
+                }
             }
 
             await row.update(safeBody);

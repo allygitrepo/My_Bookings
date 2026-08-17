@@ -25,7 +25,7 @@ import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import { getBookings } from '../api/booking.api';
+import { getBookings, updateBooking } from '../api/booking.api';
 import { getBusinesses } from '../api/business.api';
 import { getLocations } from '../api/location.api';
 import { getStaff } from '../api/staff.api';
@@ -357,6 +357,29 @@ const Bookings = () => {
     // ... (rest of the filteredBookings logic) ...
 
 
+    const getBookingStatus = (b) => {
+        if (b.booking_status) return b.booking_status;
+        const isConfirmedInDb = (b.status === true || b.status === 1);
+        if (!isConfirmedInDb) return 'Cancelled';
+        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+        if (bookingDateTime.isBefore(dayjs())) return 'Completed';
+        return 'Confirmed';
+    };
+
+    const handleStatusChange = async (bookingId, newStatus) => {
+        try {
+            const res = await updateBooking(bookingId, { booking_status: newStatus });
+            if (res.success) {
+                setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, booking_status: newStatus, status: newStatus !== 'Cancelled' } : b));
+                toast.success(`Booking status updated to ${newStatus}`);
+            } else {
+                toast.error(res.message || 'Failed to update status');
+            }
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
+    };
+
     const filteredBookings = [...bookings].sort((a, b) => {
         const dateA = a.booking_date || "";
         const dateB = b.booking_date || "";
@@ -382,19 +405,10 @@ const Bookings = () => {
         );
 
         // Status Logic
-        const isConfirmedInDb = (b.status === true || b.status === 1);
-        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-        const isPast = bookingDateTime.isBefore(dayjs());
-
-        const isCompleted = isConfirmedInDb && isPast;
-        const isConfirmed = isConfirmedInDb && !isPast;
-        const isCancelled = !isConfirmedInDb;
+        const currentStatus = getBookingStatus(b);
 
         // Status Filter
-        const matchesStatus = filterStatus === 'All' ||
-            (filterStatus === 'Confirmed' && isConfirmed) ||
-            (filterStatus === 'Completed' && isCompleted) ||
-            (filterStatus === 'Cancelled' && isCancelled);
+        const matchesStatus = filterStatus === 'All' || filterStatus === currentStatus;
 
         // Date Filter
         const bDate = dayjs(b.booking_date);
@@ -582,6 +596,7 @@ const Bookings = () => {
                             sx={{ minWidth: { xs: '100%', sm: 140 } }}
                         >
                             <MenuItem value="All">All Status</MenuItem>
+                            <MenuItem value="Pending">Pending</MenuItem>
                             <MenuItem value="Confirmed">Confirmed</MenuItem>
                             <MenuItem value="Completed">Completed</MenuItem>
                             <MenuItem value="Cancelled">Cancelled</MenuItem>
@@ -661,11 +676,7 @@ const Bookings = () => {
                                     const totalAmount = Number(payment?.amount || service?.price || 0);
                                     const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
                                     const remainingAmount = totalAmount - paidAmount;
-                                    const isConfirmedInDb = (b.status === true || b.status === 1);
-                                    const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-                                    const isPast = bookingDateTime.isBefore(dayjs());
-                                    const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                                    const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                                    const currentBookingStatus = getBookingStatus(b);
 
                                     return (
                                         <TableRow key={b.id} hover>
@@ -703,7 +714,38 @@ const Bookings = () => {
                                             <TableCell sx={{ fontWeight: 600 }}>₹{totalAmount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: remainingAmount > 0 ? 'error.main' : 'text.disabled' }}>₹{remainingAmount.toFixed(2)}</TableCell>
-                                            <TableCell><Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 700, borderRadius: 1.5 }} /></TableCell>
+                                            <TableCell>
+                                                <TextField
+                                                    select
+                                                    size="small"
+                                                    value={currentBookingStatus}
+                                                    onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                                    sx={{
+                                                        minWidth: 125,
+                                                        '& .MuiOutlinedInput-root': {
+                                                            borderRadius: 2,
+                                                            height: 32,
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 800,
+                                                            bgcolor: 
+                                                                currentBookingStatus === 'Confirmed' ? 'rgba(34, 197, 94, 0.12)' :
+                                                                currentBookingStatus === 'Completed' ? 'rgba(59, 130, 246, 0.12)' :
+                                                                currentBookingStatus === 'Pending' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                                            color:
+                                                                currentBookingStatus === 'Confirmed' ? 'success.main' :
+                                                                currentBookingStatus === 'Completed' ? 'info.main' :
+                                                                currentBookingStatus === 'Pending' ? 'warning.main' : 'error.main',
+                                                            '& fieldset': { border: 'none' }
+                                                        },
+                                                        '& .MuiSelect-select': { py: '4px', px: '8px' }
+                                                    }}
+                                                >
+                                                    <MenuItem value="Pending" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'warning.main' }}>Pending</MenuItem>
+                                                    <MenuItem value="Confirmed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'success.main' }}>Confirmed</MenuItem>
+                                                    <MenuItem value="Completed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'info.main' }}>Completed</MenuItem>
+                                                    <MenuItem value="Cancelled" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'error.main' }}>Cancelled</MenuItem>
+                                                </TextField>
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -728,15 +770,11 @@ const Bookings = () => {
                             const totalAmount = Number(payment?.amount || service?.price || 0);
                             const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
                             const remainingAmount = totalAmount - paidAmount;
-                            const isConfirmedInDb = (b.status === true || b.status === 1);
-                            const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-                            const isPast = bookingDateTime.isBefore(dayjs());
-                            const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                            const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                            const currentBookingStatus = getBookingStatus(b);
 
                             return (
                                 <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 800 }}>{customer?.name?.charAt(0)}</Avatar>
                                             <Box>
@@ -744,7 +782,36 @@ const Bookings = () => {
                                                 <Typography variant="caption" color="text.secondary">{formatDate(b.booking_date)} • {b.start_time?.slice(0, 5)}</Typography>
                                             </Box>
                                         </Box>
-                                        <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
+                                        <TextField
+                                            select
+                                            size="small"
+                                            value={currentBookingStatus}
+                                            onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                            sx={{
+                                                minWidth: 120,
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    height: 32,
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: 
+                                                        currentBookingStatus === 'Confirmed' ? 'rgba(34, 197, 94, 0.12)' :
+                                                        currentBookingStatus === 'Completed' ? 'rgba(59, 130, 246, 0.12)' :
+                                                        currentBookingStatus === 'Pending' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                                    color:
+                                                        currentBookingStatus === 'Confirmed' ? 'success.main' :
+                                                        currentBookingStatus === 'Completed' ? 'info.main' :
+                                                        currentBookingStatus === 'Pending' ? 'warning.main' : 'error.main',
+                                                    '& fieldset': { border: 'none' }
+                                                },
+                                                '& .MuiSelect-select': { py: '4px', px: '8px' }
+                                            }}
+                                        >
+                                            <MenuItem value="Pending" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'warning.main' }}>Pending</MenuItem>
+                                            <MenuItem value="Confirmed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'success.main' }}>Confirmed</MenuItem>
+                                            <MenuItem value="Completed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'info.main' }}>Completed</MenuItem>
+                                            <MenuItem value="Cancelled" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'error.main' }}>Cancelled</MenuItem>
+                                        </TextField>
                                     </Box>
 
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
