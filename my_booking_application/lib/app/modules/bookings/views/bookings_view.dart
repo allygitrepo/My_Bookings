@@ -4,38 +4,54 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/appColors.dart';
 import '../../../data/models/booking_model.dart';
 import '../controllers/bookings_controller.dart';
+import 'bookings_form.dart';
 
 class BookingsView extends GetView<BookingsController> {
   const BookingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildFilterBar(),
-        Expanded(
-          child: Obx(() {
-            if (controller.isLoading.value && controller.bookings.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (controller.filteredBookings.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            return RefreshIndicator(
-              onRefresh: () async => controller.refreshData(),
-              child: ListView.builder(
-                padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
-                itemCount: controller.filteredBookings.length,
-                itemBuilder: (context, index) {
-                  return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
-                },
-              ),
-            );
-          }),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 110),
+        child: FloatingActionButton.extended(
+          onPressed: () => BookingsForm.show(context),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'New Booking',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          backgroundColor: AppColors.primary,
         ),
-      ],
+      ),
+      body: Column(
+        children: [
+          _buildFilterBar(),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value && controller.bookings.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.filteredBookings.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => controller.refreshData(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 180),
+                  itemCount: controller.filteredBookings.length,
+                  itemBuilder: (context, index) {
+                    return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 

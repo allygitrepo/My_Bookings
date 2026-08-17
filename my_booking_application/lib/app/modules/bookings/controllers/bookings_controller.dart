@@ -1,13 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
 import '../../../data/models/booking_model.dart';
+import '../../../data/models/customer_model.dart';
+import '../../../data/models/location_model.dart';
+import '../../../data/models/service_model.dart';
+import '../../../data/models/staff_model.dart';
+import '../../../data/models/staff_availability_model.dart';
 import '../../../data/services/api_client.dart';
 import '../../../core/constants/apiConstants.dart';
 
 class BookingsController extends GetxController {
   final isLoading = false.obs;
+  final isFormLoading = false.obs;
+  final isSubmitting = false.obs;
+  
   final bookings = <BookingModel>[].obs;
   
+  // Form Dropdown Data
+  final customersList = <CustomerModel>[].obs;
+  final locationsList = <LocationModel>[].obs;
+  final servicesList = <ServiceModel>[].obs;
+  final staffList = <StaffModel>[].obs;
+  final availabilityList = <StaffAvailabilityModel>[].obs;
+
   // Filter
   final selectedStatus = 'all'.obs;
 
@@ -30,9 +45,135 @@ class BookingsController extends GetxController {
         sortBookings();
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to fetch bookings');
+      Get.snackbar('Error', 'Failed to fetch bookings',
+          snackPosition: SnackPosition.BOTTOM);
     } finally {
       isLoading.value = false;
+    }
+  }
+
+  Future<void> fetchFormDropdownData() async {
+    try {
+      isFormLoading.value = true;
+      
+      // Fetch customers, locations, services, staff, and availability in parallel
+      final results = await Future.wait([
+        _apiClient.get(ApiConstants.customers).catchError((_) => null),
+        _apiClient.get(ApiConstants.locations).catchError((_) => null),
+        _apiClient.get(ApiConstants.services).catchError((_) => null),
+        _apiClient.get(ApiConstants.staff).catchError((_) => null),
+        _apiClient.get(ApiConstants.staffAvailability).catchError((_) => null),
+      ]);
+
+      // Customers
+      if (results[0] != null && results[0]?.data['success'] == true) {
+        final List list = results[0]?.data['data'] ?? [];
+        customersList.value = list.map((j) => CustomerModel.fromJson(j)).toList();
+      }
+
+      // Locations
+      if (results[1] != null && results[1]?.data['success'] == true) {
+        final List list = results[1]?.data['data'] ?? [];
+        locationsList.value = list.map((j) => LocationModel.fromJson(j)).toList();
+      }
+
+      // Services
+      if (results[2] != null && results[2]?.data['success'] == true) {
+        final List list = results[2]?.data['data'] ?? [];
+        servicesList.value = list.map((j) => ServiceModel.fromJson(j)).toList();
+      }
+
+      // Staff
+      if (results[3] != null && results[3]?.data['success'] == true) {
+        final List list = results[3]?.data['data'] ?? [];
+        staffList.value = list.map((j) => StaffModel.fromJson(j)).toList();
+      }
+
+      // Availability
+      if (results[4] != null && results[4]?.data['success'] == true) {
+        final List list = results[4]?.data['data'] ?? [];
+        availabilityList.value = list.map((j) => StaffAvailabilityModel.fromJson(j)).toList();
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to load booking form options',
+          snackPosition: SnackPosition.BOTTOM);
+    } finally {
+      isFormLoading.value = false;
+    }
+  }
+
+  Future<bool> createBooking({
+    required bool isNewCustomer,
+    int? customerId,
+    String? newCustomerName,
+    String? newCustomerPhone,
+    String? newCustomerEmail,
+    required int locationId,
+    required List<int> serviceIds,
+    required int staffId,
+    required String bookingDate,
+    required String startTime,
+    required String endTime,
+    required bool isPaid,
+  }) async {
+    try {
+      isSubmitting.value = true;
+
+      final Map<String, dynamic> payload = {
+        'location_id': locationId,
+        'service_ids': serviceIds,
+        'service_id': serviceIds.isNotEmpty ? serviceIds.first : null,
+        'staff_id': staffId,
+        'booking_date': bookingDate,
+        'start_time': startTime,
+        'end_time': endTime,
+        'payment_status': isPaid,
+        'status': true,
+      };
+
+      if (isNewCustomer) {
+        payload['name'] = newCustomerName;
+        payload['phone'] = newCustomerPhone;
+        if (newCustomerEmail != null && newCustomerEmail.isNotEmpty) {
+          payload['email'] = newCustomerEmail;
+        }
+      } else {
+        payload['customer_id'] = customerId;
+      }
+
+      final response = await _apiClient.post(ApiConstants.createBooking, data: payload);
+
+      if (response.data['success'] == true) {
+        Get.snackbar(
+          'Success',
+          'Booking created successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        fetchBookings();
+        return true;
+      } else {
+        Get.snackbar(
+          'Booking Failed',
+          response.data['message'] ?? 'Unable to create booking',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red,
+          colorText: Colors.white,
+        );
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar(
+        'Error',
+        'Failed to create booking. Please try again.',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red,
+        colorText: Colors.white,
+      );
+      return false;
+    } finally {
+      isSubmitting.value = false;
     }
   }
 

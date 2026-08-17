@@ -1,9 +1,9 @@
 class ApiConstants {
-  static const String baseUrl =
-      'https://silverapi.allysoftsolutions.com/mybookings';
+  // static const String baseUrl =
+  //     'https://silverapi.allysoftsolutions.com/mybookings';
   // Update with your server IP if testing on physical device
 
-  // static const String baseUrl = 'http://192.168.1.2:3000/mybookings';
+  static const String baseUrl = 'http://192.168.1.5:3000/mybookings';
 
   // Auth
   static const String login = '/users/login';
@@ -32,4 +32,13 @@ class ApiConstants {
 
   // Services
   static const String services = '/services/all';
+
+  // Locations
+  static const String locations = '/locations/all';
+
+  // Customers
+  static const String customers = '/customers/all';
+
+  // Staff Availability
+  static const String staffAvailability = '/staff-availability/all';
 }
