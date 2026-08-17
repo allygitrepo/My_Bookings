@@ -1,4 +1,4 @@
-const { Booking, Business, Customer, Service, Staff, Location, BookingService, Payment } = require("../models/associations");
+const { Booking, Business, Customer, Service, Staff, Location, BookingService, Payment, BusinessClosure, StaffLeave } = require("../models/associations");
 const { Op } = require("sequelize");
 const { emitToBusiness } = require("../services/socket.service");
 const fcmService = require("../services/fcm.service");
@@ -31,6 +31,74 @@ const bookingController = {
 
             // Extract service_ids and other data
             const { service_ids, ...bookingData } = req.body;
+
+            // --- Check Business Closure ---
+            if (bookingData.booking_date) {
+                const activeClosure = await BusinessClosure.findOne({
+                    where: {
+                        business_id,
+                        status: true,
+                        start_date: { [Op.lte]: bookingData.booking_date },
+                        end_date: { [Op.gte]: bookingData.booking_date }
+                    }
+                });
+
+                if (activeClosure) {
+                    if (activeClosure.is_all_day) {
+                        return res.status(400).json({
+                            success: false,
+                            message: `Business is closed on this date (${bookingData.booking_date}): ${activeClosure.title}${activeClosure.reason ? ' - ' + activeClosure.reason : ''}`
+                        });
+                    } else if (bookingData.start_time && bookingData.end_time && activeClosure.start_time && activeClosure.end_time) {
+                        const bStart = bookingData.start_time;
+                        const bEnd = bookingData.end_time;
+                        const cStart = activeClosure.start_time;
+                        const cEnd = activeClosure.end_time;
+                        if (bStart < cEnd && bEnd > cStart) {
+                            return res.status(400).json({
+                                success: false,
+                                message: `Business is closed during this time slot (${cStart} - ${cEnd}): ${activeClosure.title}`
+                            });
+                        }
+                    }
+                }
+            }
+
+            // --- Check Staff Leave ---
+            if (bookingData.booking_date && bookingData.staff_id) {
+                const activeLeave = await StaffLeave.findOne({
+                    where: {
+                        staff_id: bookingData.staff_id,
+                        status: true,
+                        approval_status: 'Approved',
+                        start_date: { [Op.lte]: bookingData.booking_date },
+                        end_date: { [Op.gte]: bookingData.booking_date }
+                    },
+                    include: [{ model: Staff, attributes: ['staff_name'] }]
+                });
+
+                if (activeLeave) {
+                    const staffName = activeLeave.staff?.staff_name || 'Selected staff member';
+                    if (activeLeave.is_all_day) {
+                        return res.status(400).json({
+                            success: false,
+                            message: `${staffName} is on leave (${activeLeave.leave_type}) on ${bookingData.booking_date}${activeLeave.reason ? ': ' + activeLeave.reason : ''}`
+                        });
+                    } else if (bookingData.start_time && bookingData.end_time && activeLeave.start_time && activeLeave.end_time) {
+                        const bStart = bookingData.start_time;
+                        const bEnd = bookingData.end_time;
+                        const lStart = activeLeave.start_time;
+                        const lEnd = activeLeave.end_time;
+                        if (bStart < lEnd && bEnd > lStart) {
+                            return res.status(400).json({
+                                success: false,
+                                message: `${staffName} is on leave (${activeLeave.leave_type}) during ${lStart} - ${lEnd}`
+                            });
+                        }
+                    }
+                }
+            }
+
             // --- Handle Customer (Find or Create) ---
             let customer_id = bookingData.customer_id;
             if (!customer_id && (bookingData.phone || bookingData.email)) {

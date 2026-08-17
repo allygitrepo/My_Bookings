@@ -89,8 +89,25 @@ UserSubscription.belongsTo(User, { foreignKey: 'user_id' });
 // UserSubscription <-> Package (Many-to-One)
 UserSubscription.belongsTo(Package, { foreignKey: 'package_id', as: 'package' });
 
+const BusinessClosure = require("./businessClosure.model");
+const StaffLeave = require("./staffLeave.model");
+
+// Business <-> BusinessClosure (One-to-Many)
+Business.hasMany(BusinessClosure, { foreignKey: 'business_id', as: 'closures' });
+BusinessClosure.belongsTo(Business, { foreignKey: 'business_id' });
+
+// Staff <-> StaffLeave (One-to-Many)
+Staff.hasMany(StaffLeave, { foreignKey: 'staff_id', as: 'leaves' });
+StaffLeave.belongsTo(Staff, { foreignKey: 'staff_id' });
+
+// Business <-> StaffLeave (One-to-Many)
+Business.hasMany(StaffLeave, { foreignKey: 'business_id', as: 'staffLeaves' });
+StaffLeave.belongsTo(Business, { foreignKey: 'business_id' });
+
 module.exports = { 
     Staff, Location, StaffLocation, StaffAvailability, 
     Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService,
-    Package, UserSubscription, TemplateProject, BusinessTemplate, ApiKey, StaffService
+    Package, UserSubscription, TemplateProject, BusinessTemplate, ApiKey, StaffService,
+    BusinessClosure, StaffLeave
 };
+

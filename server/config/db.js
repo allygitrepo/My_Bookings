@@ -25,8 +25,12 @@ const connectDB = async () => {
             console.warn('⚠️ Standard DB sync failed due to legacy table limits. Syncing BusinessTemplate targetedly...');
             try {
                 const BusinessTemplate = require("../models/businessTemplate.model");
+                const BusinessClosure = require("../models/businessClosure.model");
+                const StaffLeave = require("../models/staffLeave.model");
                 await BusinessTemplate.sync({ alter: true });
-                console.log('✅ Targeted business_templates table sync completed successfully');
+                await BusinessClosure.sync({ alter: true });
+                await StaffLeave.sync({ alter: true });
+                console.log('✅ Targeted business_templates, business_closures, and staff_leaves table sync completed successfully');
             } catch (targetErr) {
                 console.error('❌ Targeted sync failed:', targetErr);
             }

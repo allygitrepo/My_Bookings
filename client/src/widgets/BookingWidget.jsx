@@ -24,6 +24,8 @@ import { getBusinesses } from '../api/business.api';
 import { getBookings, createBooking, deleteBooking } from '../api/booking.api';
 import { createPayment, createRazorpayOrder, verifyRazorpayPayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
+import { getBusinessClosures } from '../api/businessClosure.api';
+import { getStaffLeaves } from '../api/staffLeave.api';
 import axiosInstance from '../api/axiosInstance';
 import toast from 'react-hot-toast';
 import { validateEmail, validateMobile, validateName, blockEmoji } from '../utils/validators';
@@ -162,6 +164,9 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
     const isExtraSmall = typeof window !== 'undefined' && window.innerWidth < 400;
 
+    const [closures, setClosures] = useState([]);
+    const [staffLeaves, setStaffLeaves] = useState([]);
+
     const fetchData = async () => {
         // If it's a public key, set the header for all subsequent Widget requests
         if (businessId && String(businessId).startsWith('pk_live_')) {
@@ -170,8 +175,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
         setLoading(true);
         try {
-            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes, locRes, slRes] = await Promise.all([
-                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses(), getLocations(), getServiceLocations()
+            const [svcRes, staffRes, ssRes, availRes, custRes, keysRes, bookRes, bizRes, locRes, slRes, closuresRes, leavesRes] = await Promise.allSettled([
+                getServices(), getStaff(), getStaffServices(), getStaffAvailability(), getCustomers(), getApiKeys(), getBookings(), getBusinesses(), getLocations(), getServiceLocations(), getBusinessClosures(), getStaffLeaves()
             ]);
 
             let bizId = businessId;
@@ -179,7 +184,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             // If businessId is an API Key (pk_live_...), resolve the numeric ID
             if (businessId && String(businessId).startsWith('pk_live_')) {
-                const matchedKey = keysRes.success ? keysRes.data.find(k => k.api_key === businessId) : null;
+                const matchedKey = (keysRes.status === 'fulfilled' && keysRes.value?.success) ? keysRes.value.data.find(k => k.api_key === businessId) : null;
                 if (matchedKey) {
                     bizId = matchedKey.business_id;
                     console.log('Widget: Resolved API Key to Business ID:', bizId);
@@ -188,7 +193,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     bizId = null; // Don't try to filter using the string key
                 }
             }
-            const effectiveBizId = bizId || (bizRes.success && bizRes.data[0]?.id);
+            const effectiveBizId = bizId || ((bizRes.status === 'fulfilled' && bizRes.value?.success) && bizRes.value.data[0]?.id);
             setResolvedBusinessId(effectiveBizId);
 
             // Quota Check
@@ -210,34 +215,35 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
 
             // Filter data by resolvedBusinessId if provided
-            if (svcRes.success) {
-                console.log('Widget: Fetched Services count:', svcRes.data.length);
+            if (svcRes.status === 'fulfilled' && svcRes.value?.success) {
+                const sData = Array.isArray(svcRes.value.data) ? svcRes.value.data : (svcRes.value.data?.rows || []);
                 const bizServices = bizId
-                    ? svcRes.data.filter(s => String(s.business_id) === String(bizId))
-                    : svcRes.data;
-                console.log('Widget: Filtered Services count:', bizServices.length);
+                    ? sData.filter(s => String(s.business_id) === String(bizId))
+                    : sData;
                 setServices(bizServices);
-            } else {
-                console.error('Widget: Failed to fetch services:', svcRes.message);
             }
-            if (staffRes.success) {
+            if (staffRes.status === 'fulfilled' && staffRes.value?.success) {
+                const stData = Array.isArray(staffRes.value.data) ? staffRes.value.data : (staffRes.value.data?.rows || []);
                 const bizStaff = bizId
-                    ? staffRes.data.filter(s => String(s.business_id) === String(bizId))
-                    : staffRes.data;
+                    ? stData.filter(s => String(s.business_id) === String(bizId))
+                    : stData;
                 setStaff(bizStaff);
             }
-            if (ssRes.success) setStaffServices(ssRes.data);
-            if (availRes.success) setAvailability(availRes.data);
-            if (custRes.success) setCustomers(custRes.data);
-            if (bookRes.success) setBookings(bookRes.data);
-            if (bizRes.success) setBusinesses(bizRes.data);
-            if (locRes.success) {
+            if (ssRes.status === 'fulfilled' && ssRes.value?.success) setStaffServices(Array.isArray(ssRes.value.data) ? ssRes.value.data : (ssRes.value.data?.rows || []));
+            if (availRes.status === 'fulfilled' && availRes.value?.success) setAvailability(Array.isArray(availRes.value.data) ? availRes.value.data : (availRes.value.data?.rows || []));
+            if (custRes.status === 'fulfilled' && custRes.value?.success) setCustomers(Array.isArray(custRes.value.data) ? custRes.value.data : (custRes.value.data?.rows || []));
+            if (bookRes.status === 'fulfilled' && bookRes.value?.success) setBookings(Array.isArray(bookRes.value.data) ? bookRes.value.data : (bookRes.value.data?.rows || []));
+            if (bizRes.status === 'fulfilled' && bizRes.value?.success) setBusinesses(Array.isArray(bizRes.value.data) ? bizRes.value.data : (bizRes.value.data?.rows || []));
+            if (locRes.status === 'fulfilled' && locRes.value?.success) {
+                const lData = Array.isArray(locRes.value.data) ? locRes.value.data : (locRes.value.data?.rows || []);
                 const bizLocs = bizId
-                    ? locRes.data.filter(l => String(l.business_id) === String(bizId))
-                    : locRes.data;
+                    ? lData.filter(l => String(l.business_id) === String(bizId))
+                    : lData;
                 setLocations(bizLocs);
             }
-            if (slRes.success) setServiceLocations(slRes.data);
+            if (slRes.status === 'fulfilled' && slRes.value?.success) setServiceLocations(Array.isArray(slRes.value.data) ? slRes.value.data : (slRes.value.data?.rows || []));
+            if (closuresRes.status === 'fulfilled' && closuresRes.value?.success) setClosures(Array.isArray(closuresRes.value.data) ? closuresRes.value.data : (closuresRes.value.data?.rows || []));
+            if (leavesRes.status === 'fulfilled' && leavesRes.value?.success) setStaffLeaves(Array.isArray(leavesRes.value.data) ? leavesRes.value.data : (leavesRes.value.data?.rows || []));
         } catch (error) {
             console.error('Widget Fetch Error:', error);
         } finally {
@@ -339,7 +345,25 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
         const uniqueSlots = [...new Set(all)].sort();
 
-        // BLOCK ALREADY BOOKED SLOTS & PAST SLOTS FOR TODAY
+        // Check if business is closed all day
+        const isBusinessClosedAllDay = closures.some(c => {
+            if (c.status !== true && String(c.status) !== '1') return false;
+            if (c.is_all_day === false) return false;
+            return c.start_date <= bookingData.date && c.end_date >= bookingData.date;
+        });
+        if (isBusinessClosedAllDay) return [];
+
+        // Check if staff member is on full-day leave
+        const isStaffOnLeaveAllDay = staffLeaves.some(l => {
+            if (String(l.staff_id) !== String(bookingData.staff?.id)) return false;
+            if (l.status !== true && String(l.status) !== '1') return false;
+            if (l.approval_status !== 'Approved') return false;
+            if (l.is_all_day === false) return false;
+            return l.start_date <= bookingData.date && l.end_date >= bookingData.date;
+        });
+        if (isStaffOnLeaveAllDay) return [];
+
+        // BLOCK ALREADY BOOKED SLOTS, PAST SLOTS FOR TODAY, CLOSURES, AND LEAVES
         return uniqueSlots.filter(slot => {
             // Check if slot is in the past (for today)
             const now = new Date();
@@ -351,6 +375,28 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             const slotStart = slot;
             const slotEnd = addMinutes(slot, slotStepMin);
+
+            // Check partial Business Closures
+            const isClosedAtSlot = closures.some(c => {
+                if (c.status !== true && String(c.status) !== '1') return false;
+                if (c.start_date > bookingData.date || c.end_date < bookingData.date) return false;
+                if (c.is_all_day !== false) return true;
+                if (!c.start_time || !c.end_time) return false;
+                return (slotStart < c.end_time && slotEnd > c.start_time);
+            });
+            if (isClosedAtSlot) return false;
+
+            // Check partial Staff Leaves
+            const isStaffOnLeaveAtSlot = staffLeaves.some(l => {
+                if (String(l.staff_id) !== String(bookingData.staff?.id)) return false;
+                if (l.status !== true && String(l.status) !== '1') return false;
+                if (l.approval_status !== 'Approved') return false;
+                if (l.start_date > bookingData.date || l.end_date < bookingData.date) return false;
+                if (l.is_all_day !== false) return true;
+                if (!l.start_time || !l.end_time) return false;
+                return (slotStart < l.end_time && slotEnd > l.start_time);
+            });
+            if (isStaffOnLeaveAtSlot) return false;
 
             const isAlreadyBooked = bookings.some(b => {
                 if (String(b.staff_id) !== String(bookingData.staff.id)) return false;
@@ -367,6 +413,35 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             });
             return !isAlreadyBooked;
         });
+    })();
+
+    const activeClosureNotice = (() => {
+        if (!bookingData.date) return null;
+        const closure = closures.find(c => {
+            if (c.status !== true && String(c.status) !== '1') return false;
+            return c.start_date <= bookingData.date && c.end_date >= bookingData.date;
+        });
+        if (!closure) return null;
+        return {
+            title: closure.title,
+            reason: closure.reason,
+            timing: closure.is_all_day !== false ? 'Closed All Day' : `${closure.start_time} - ${closure.end_time}`
+        };
+    })();
+
+    const activeLeaveNotice = (() => {
+        if (!bookingData.date || !bookingData.staff?.id) return null;
+        const leave = staffLeaves.find(l => {
+            if (String(l.staff_id) !== String(bookingData.staff.id)) return false;
+            if (l.status !== true && String(l.status) !== '1') return false;
+            if (l.approval_status !== 'Approved') return false;
+            return l.start_date <= bookingData.date && l.end_date >= bookingData.date;
+        });
+        if (!leave) return null;
+        return {
+            staffName: bookingData.staff.staff_name,
+            timing: leave.is_all_day !== false ? 'Full Day' : `${leave.start_time} - ${leave.end_time}`
+        };
     })();
 
     // Helper to handle slot selection
@@ -943,14 +1018,18 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                                     const isSelected = bookingData.date === iso;
                                     const isToday = cellDate.getTime() === today.getTime();
+                                    const isClosedDay = closures.some(c => (c.status === true || String(c.status) === '1') && c.start_date <= iso && c.end_date >= iso && c.is_all_day !== false);
+                                    const isOnLeaveDay = staffLeaves.some(l => String(l.staff_id) === String(bookingData.staff?.id) && (l.status === true || String(l.status) === '1') && l.approval_status === 'Approved' && l.start_date <= iso && l.end_date >= iso && l.is_all_day !== false);
+
                                     return (
                                         <Box key={d}
                                             onClick={() => handleCalDay(d)}
                                             sx={{
                                                 textAlign: 'center', py: 0.7,
                                                 borderRadius: 2,
+                                                position: 'relative',
                                                 cursor: isPast ? 'default' : 'pointer',
-                                                bgcolor: isSelected ? '#6366f1' : 'transparent',
+                                                bgcolor: isSelected ? '#6366f1' : (isOnLeaveDay ? 'rgba(245,158,11,0.08)' : isClosedDay ? 'rgba(239,68,68,0.08)' : 'transparent'),
                                                 border: isToday && !isSelected ? '1.5px solid #6366f1' : '1.5px solid transparent',
                                                 transition: 'all 0.12s',
                                                 '&:hover': isPast ? {} : {
@@ -962,10 +1041,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                                 variant="caption"
                                                 fontWeight={isSelected ? 800 : isToday ? 700 : 400}
                                                 sx={{
-                                                    color: isSelected ? 'white' : isPast ? 'text.disabled' : 'text.primary',
+                                                    color: isSelected ? 'white' : isPast ? 'text.disabled' : isOnLeaveDay ? 'warning.main' : isClosedDay ? 'error.main' : 'text.primary',
                                                     fontSize: '0.8rem',
                                                 }}
                                             >{d}</Typography>
+                                            {(isOnLeaveDay || isClosedDay) && (
+                                                <Box sx={{
+                                                    width: 4, height: 4, borderRadius: '50%', mx: 'auto', mt: 0.2,
+                                                    bgcolor: isSelected ? 'white' : isOnLeaveDay ? 'warning.main' : 'error.main'
+                                                }} />
+                                            )}
                                         </Box>
                                     );
                                 })}
@@ -989,13 +1074,38 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     Select multiple slots to fulfill the {formatDuration(totalDuration)} requirement.
                                 </Typography>
                                 {availableSlots.length === 0 ? (
-                                    <Box sx={{ py: 2, textAlign: 'center', bgcolor: 'rgba(239,68,68,0.05)', borderRadius: 2, px: 2 }}>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {matchingRecs.length > 0
-                                                ? `No available time slots left for ${bookingData.staff?.staff_name} on this day.`
-                                                : `${bookingData.staff?.staff_name} is not available on ${getDayNameDisplay(bookingData.date)}s.`
-                                            }
-                                        </Typography>
+                                    <Box sx={{
+                                        py: 2.5, px: 2, textAlign: 'center', borderRadius: 2.5,
+                                        bgcolor: activeLeaveNotice ? 'rgba(245, 158, 11, 0.12)' : activeClosureNotice ? 'rgba(239, 68, 68, 0.12)' : 'rgba(239,68,68,0.05)',
+                                        border: '1px solid',
+                                        borderColor: activeLeaveNotice ? 'rgba(245, 158, 11, 0.4)' : activeClosureNotice ? 'rgba(239, 68, 68, 0.4)' : 'transparent'
+                                    }}>
+                                        {activeLeaveNotice ? (
+                                            <Box>
+                                                <Typography variant="subtitle2" color="warning.main" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    🏖️ {activeLeaveNotice.staffName} is on leave.
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                    {activeLeaveNotice.timing === 'Full Day' ? 'Not available on this date.' : `Unavailable during ${activeLeaveNotice.timing}`}
+                                                </Typography>
+                                            </Box>
+                                        ) : activeClosureNotice ? (
+                                            <Box>
+                                                <Typography variant="subtitle2" color="error.main" fontWeight={700} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 1 }}>
+                                                    🏬 Business Closed: {activeClosureNotice.title}
+                                                </Typography>
+                                                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
+                                                    Timing: {activeClosureNotice.timing} {activeClosureNotice.reason ? `• "${activeClosureNotice.reason}"` : ''}
+                                                </Typography>
+                                            </Box>
+                                        ) : (
+                                            <Typography variant="body2" color="text.secondary">
+                                                {matchingRecs.length > 0
+                                                    ? `No available time slots left for ${bookingData.staff?.staff_name} on this day.`
+                                                    : `${bookingData.staff?.staff_name} is not available on ${getDayNameDisplay(bookingData.date)}s.`
+                                                }
+                                            </Typography>
+                                        )}
                                     </Box>
                                 ) : (
                                     <Grid container spacing={1}>
