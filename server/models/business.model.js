@@ -134,6 +134,42 @@ const Business = sequelize.define(
             type: DataTypes.TEXT,
             allowNull: true
         },
+        razorpay_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        razorpay_key_id: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        razorpay_key_secret: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        stripe_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        stripe_publishable_key: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        stripe_secret_key: {
+            type: DataTypes.STRING,
+            allowNull: true
+        },
+        upi_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        upi_qr_code: {
+            type: DataTypes.TEXT('long'),
+            allowNull: true
+        },
+        cash_on_arrival_enabled: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true
+        },
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

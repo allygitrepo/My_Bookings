@@ -227,12 +227,42 @@ const paymentController = {
                 return res.status(400).json({ success: false, message: "Amount and Booking ID are required" });
             }
 
-            const order = await razorpayService.createOrder(amount, booking_id, {
-                booking_id: String(booking_id),
-                business_id: String(business_id || '')
+            const Razorpay = require('razorpay');
+            
+            // Resolve target business_id
+            let targetBizId = business_id;
+            if (!targetBizId && booking_id) {
+                const b = await Booking.findByPk(booking_id);
+                if (b) targetBizId = b.business_id;
+            }
+
+            let keyId = process.env.RAZORPAY_KEY_ID;
+            let keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+            if (targetBizId) {
+                const biz = await Business.findByPk(targetBizId);
+                if (biz && biz.razorpay_enabled && biz.razorpay_key_id && biz.razorpay_key_secret) {
+                    keyId = biz.razorpay_key_id;
+                    keySecret = biz.razorpay_key_secret;
+                }
+            }
+
+            if (!keyId || !keySecret) {
+                return res.status(400).json({ success: false, message: "Razorpay keys not configured for this business" });
+            }
+
+            const rzpInstance = new Razorpay({ key_id: keyId, key_secret: keySecret });
+            const order = await rzpInstance.orders.create({
+                amount: Math.round(parseFloat(amount) * 100),
+                currency: "INR",
+                receipt: `booking_${booking_id}_${Date.now()}`,
+                notes: {
+                    booking_id: String(booking_id),
+                    business_id: String(targetBizId || '')
+                }
             });
 
-            res.json({ success: true, order });
+            res.json({ success: true, order, key_id: keyId });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -249,20 +279,30 @@ const paymentController = {
                 paid_amount
             } = req.body;
 
-            const isVerified = razorpayService.verifySignature(
-                razorpay_order_id,
-                razorpay_payment_id,
-                razorpay_signature
-            );
-
-            if (!isVerified) {
-                return res.status(400).json({ success: false, message: "Invalid payment signature" });
-            }
-
             // Fetch booking to get business_id
             const booking = await Booking.findByPk(booking_id);
             if (!booking) {
                 return res.status(404).json({ success: false, message: "Booking not found" });
+            }
+
+            let keySecret = process.env.RAZORPAY_KEY_SECRET;
+            if (booking.business_id) {
+                const biz = await Business.findByPk(booking.business_id);
+                if (biz && biz.razorpay_enabled && biz.razorpay_key_secret) {
+                    keySecret = biz.razorpay_key_secret;
+                }
+            }
+
+            const body = razorpay_order_id + "|" + razorpay_payment_id;
+            const expectedSignature = crypto
+                .createHmac("sha256", keySecret)
+                .update(body.toString())
+                .digest("hex");
+
+            const isVerified = (expectedSignature === razorpay_signature);
+
+            if (!isVerified) {
+                return res.status(400).json({ success: false, message: "Invalid payment signature" });
             }
 
             // Check if payment record already exists (could be from webhook)
@@ -300,11 +340,127 @@ const paymentController = {
 
             await handlePaymentSuccess(paymentRecord);
 
+            await handlePaymentSuccess(paymentRecord);
+
             res.json({ 
                 success: true, 
                 message: "Payment verified and recorded successfully", 
                 data: paymentRecord 
             });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    createStripeCheckoutSession: async (req, res) => {
+        try {
+            const { amount, booking_id, business_id, service_name } = req.body;
+            if (!amount || !booking_id) {
+                return res.status(400).json({ success: false, message: "Amount and Booking ID are required" });
+            }
+
+            let targetBizId = business_id;
+            if (!targetBizId && booking_id) {
+                const b = await Booking.findByPk(booking_id);
+                if (b) targetBizId = b.business_id;
+            }
+
+            let secretKey = process.env.STRIPE_SECRET_KEY;
+            if (targetBizId) {
+                const biz = await Business.findByPk(targetBizId);
+                if (biz && biz.stripe_enabled && biz.stripe_secret_key) {
+                    secretKey = biz.stripe_secret_key;
+                }
+            }
+
+            if (!secretKey) {
+                return res.status(400).json({ success: false, message: "Stripe secret key not configured for this business" });
+            }
+
+            const Stripe = require('stripe');
+            const stripeInstance = new Stripe(secretKey.trim());
+            const clientOrigin = req.headers.origin || 'http://localhost:5173';
+
+            const session = await stripeInstance.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: [{
+                    price_data: {
+                        currency: 'inr',
+                        product_data: {
+                            name: service_name || 'Booking Appointment',
+                            description: `Booking #${booking_id}`
+                        },
+                        unit_amount: Math.round(parseFloat(amount) * 100),
+                    },
+                    quantity: 1,
+                }],
+                mode: 'payment',
+                success_url: `${clientOrigin}/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking_id}`,
+                cancel_url: `${clientOrigin}/payment-cancel?booking_id=${booking_id}`,
+                metadata: {
+                    booking_id: String(booking_id),
+                    business_id: String(targetBizId || '')
+                }
+            });
+
+            res.json({
+                success: true,
+                url: session.url
+            });
+        } catch (error) {
+            console.error('Stripe Checkout Error:', error.message);
+            res.json({ success: false, message: error.message });
+        }
+    },
+
+    verifyStripePayment: async (req, res) => {
+        try {
+            const { payment_intent_id, booking_id, amount, paid_amount } = req.body;
+            const booking = await Booking.findByPk(booking_id);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            let secretKey = process.env.STRIPE_SECRET_KEY;
+            if (booking.business_id) {
+                const biz = await Business.findByPk(booking.business_id);
+                if (biz && biz.stripe_enabled && biz.stripe_secret_key) {
+                    secretKey = biz.stripe_secret_key;
+                }
+            }
+
+            if (secretKey && !payment_intent_id.startsWith('pi_stripe_')) {
+                try {
+                    const Stripe = require('stripe');
+                    const stripeInstance = new Stripe(secretKey.trim());
+                    const intent = await stripeInstance.paymentIntents.retrieve(payment_intent_id);
+
+                    if (intent.status !== 'succeeded') {
+                        return res.json({ success: false, message: `Stripe payment status: ${intent.status}` });
+                    }
+                } catch (stripeErr) {
+                    console.warn('Stripe Verify Warning:', stripeErr.message);
+                }
+            }
+
+            const existingPayment = await Payment.findOne({ where: { transaction_id: payment_intent_id } });
+            if (existingPayment) {
+                return res.json({ success: true, message: "Payment already recorded", data: existingPayment });
+            }
+
+            const calc_paid_amount = parseFloat(paid_amount || amount);
+            const paymentRecord = await Payment.create({
+                booking_id,
+                business_id: booking.business_id,
+                amount,
+                paid_amount: calc_paid_amount,
+                platform_fees: 0,
+                final_amount: calc_paid_amount,
+                payment_method: 'Stripe',
+                transaction_id: payment_intent_id,
+                payment_status: true
+            });
+
+            await handlePaymentSuccess(paymentRecord);
+            res.json({ success: true, message: "Stripe payment recorded successfully", data: paymentRecord });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

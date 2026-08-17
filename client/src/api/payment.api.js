@@ -29,3 +29,13 @@ export const verifyRazorpayPayment = async (data) => {
     const response = await axiosInstance.post('/payments/razorpay/verify', data);
     return response.data;
 };
+
+export const createStripeCheckoutSession = async (data) => {
+    const response = await axiosInstance.post('/payments/stripe/create-checkout-session', data);
+    return response.data;
+};
+
+export const verifyStripePayment = async (data) => {
+    const response = await axiosInstance.post('/payments/stripe/verify', data);
+    return response.data;
+};

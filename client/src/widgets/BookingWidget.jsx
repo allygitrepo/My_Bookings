@@ -22,7 +22,7 @@ import { getStaffAvailability } from '../api/staffAvailability.api';
 import { getCustomers, createCustomer } from '../api/customer.api';
 import { getBusinesses } from '../api/business.api';
 import { getBookings, createBooking, deleteBooking } from '../api/booking.api';
-import { createPayment, createRazorpayOrder, verifyRazorpayPayment } from '../api/payment.api';
+import { createPayment, createRazorpayOrder, verifyRazorpayPayment, createStripeCheckoutSession, verifyStripePayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
 import { getBusinessClosures } from '../api/businessClosure.api';
 import { getStaffLeaves } from '../api/staffLeave.api';
@@ -157,6 +157,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         customer: { name: '', phone: '' },
     });
     const [detailErrors, setDetailErrors] = useState({});
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
+    const [upiUtr, setUpiUtr] = useState('');
+    const [stripeModalOpen, setStripeModalOpen] = useState(false);
+    const [stripeCard, setStripeCard] = useState({ number: '', exp: '', cvc: '', name: '' });
+    const [stripeProcessing, setStripeProcessing] = useState(false);
+    const [pendingBookingId, setPendingBookingId] = useState(null);
     const [calendarMonth, setCalendarMonth] = useState(() => {
         const now = new Date();
         return { year: now.getFullYear(), month: now.getMonth() };
@@ -254,6 +260,23 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     React.useEffect(() => {
         if (open) fetchData();
     }, [open, businessId]);
+
+    useEffect(() => {
+        if (resolvedBusinessId && businesses.length > 0) {
+            const targetBiz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
+            if (targetBiz) {
+                if (targetBiz.stripe_enabled && targetBiz.stripe_publishable_key) {
+                    setSelectedPaymentMethod('stripe');
+                } else if (targetBiz.razorpay_enabled && targetBiz.razorpay_key_id) {
+                    setSelectedPaymentMethod('razorpay');
+                } else if (targetBiz.upi_enabled) {
+                    setSelectedPaymentMethod('upi');
+                } else if (targetBiz.cash_on_arrival_enabled !== false) {
+                    setSelectedPaymentMethod('cash');
+                }
+            }
+        }
+    }, [resolvedBusinessId, businesses]);
 
     // Handle clicks on elements with the 'mybookings-trigger' class
     useEffect(() => {
@@ -500,21 +523,25 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 customerId = custRes.data.id;
             }
 
-            // 2. Create booking (initially payment_status: false)
+            // 2. Create booking
             const startSlot = [...bookingData.slots].sort()[0];
             const finalDuration = bookingData.slots.length * slotStepMin;
+            const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
+            const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
+            const amountToPayNow = bookingData.paidAmount || minAmountToPay;
 
+            const isOnline = selectedPaymentMethod === 'stripe' || selectedPaymentMethod === 'razorpay';
             const bookingPayload = {
                 business_id: resolvedBusinessId,
                 location_id: bookingData.location.id,
                 staff_id: bookingData.staff.id,
-                service_id: bookingData.services[0].id, // Primary service for DB constraint
+                service_id: bookingData.services[0].id,
                 service_ids: bookingData.services.map(s => s.id),
                 customer_id: customerId,
                 booking_date: bookingData.date,
                 start_time: startSlot,
                 end_time: addMinutes(startSlot, finalDuration),
-                payment_status: false,
+                payment_status: isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false),
                 status: true,
                 is_widget_request: true
             };
@@ -524,123 +551,147 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const bookingId = bookingRes.data.id;
             let createdBookingId = bookingId;
 
-            // 3. Razorpay Order Creation
+            // Route by selected payment method
+            if (selectedPaymentMethod === 'stripe') {
+                const sessionRes = await createStripeCheckoutSession({
+                    amount: amountToPayNow,
+                    booking_id: bookingId,
+                    business_id: resolvedBusinessId,
+                    service_name: bookingData.services.map(s => s.service_name).join(', ')
+                });
+
+                if (sessionRes.success && sessionRes.url) {
+                    // Redirect customer directly to Stripe's Official Hosted Payment Page!
+                    window.location.href = sessionRes.url;
+                    return;
+                } else {
+                    if (createdBookingId) await deleteBooking(createdBookingId);
+                    throw new Error(sessionRes.message || "Failed to launch Stripe official Checkout page");
+                }
+            } else if (selectedPaymentMethod === 'razorpay') {
+                const orderRes = await createRazorpayOrder({
+                    amount: amountToPayNow,
+                    booking_id: bookingId,
+                    business_id: resolvedBusinessId
+                });
+
+                if (!orderRes.success) {
+                    if (createdBookingId) await deleteBooking(createdBookingId);
+                    throw new Error(orderRes.message);
+                }
+
+                const isLoaded = await loadRazorpayScript();
+                if (!isLoaded) {
+                    toast.error("Razorpay SDK failed to load. Are you online?");
+                    setLoading(false);
+                    if (createdBookingId) await deleteBooking(createdBookingId);
+                    return;
+                }
+
+                const biz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
+                const options = {
+                    key: orderRes.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID,
+                    amount: orderRes.order.amount,
+                    currency: orderRes.order.currency,
+                    name: biz?.business_name || "My Bookings",
+                    description: `Booking for ${bookingData.services.map(s => s.service_name).join(', ')}`,
+                    order_id: orderRes.order.id,
+                    handler: async (response) => {
+                        try {
+                            setLoading(true);
+                            const verifyRes = await verifyRazorpayPayment({
+                                razorpay_order_id: response.razorpay_order_id,
+                                razorpay_payment_id: response.razorpay_payment_id,
+                                razorpay_signature: response.razorpay_signature,
+                                booking_id: bookingId,
+                                amount: totalAmount,
+                                paid_amount: amountToPayNow
+                            });
+
+                            if (verifyRes.success) {
+                                handleNext();
+                            } else {
+                                throw new Error(verifyRes.message);
+                            }
+                        } catch (err) {
+                            toast.error(err.message || "Payment verification failed");
+                            if (createdBookingId) await deleteBooking(createdBookingId);
+                        } finally {
+                            setLoading(false);
+                        }
+                    },
+                    prefill: {
+                        name: bookingData.customer.name,
+                        contact: bookingData.customer.phone
+                    },
+                    theme: { color: "#6366f1" },
+                    modal: {
+                        ondismiss: async () => {
+                            setLoading(false);
+                            if (createdBookingId) {
+                                try { await deleteBooking(createdBookingId); } catch (e) {}
+                            }
+                        }
+                    }
+                };
+
+                const rzp = new window.Razorpay(options);
+                rzp.open();
+            } else if (selectedPaymentMethod === 'upi') {
+                await createPayment({
+                    booking_id: bookingId,
+                    business_id: resolvedBusinessId,
+                    amount: totalAmount,
+                    paid_amount: amountToPayNow,
+                    payment_method: `UPI ${upiUtr ? `(Ref: ${upiUtr})` : ''}`,
+                    payment_status: true,
+                    transaction_id: upiUtr || `UPI_${Date.now()}`
+                });
+                handleNext();
+            } else if (selectedPaymentMethod === 'cash') {
+                await createPayment({
+                    booking_id: bookingId,
+                    business_id: resolvedBusinessId,
+                    amount: totalAmount,
+                    paid_amount: 0,
+                    payment_method: 'Pay at Venue (Cash)',
+                    payment_status: false,
+                    transaction_id: `CASH_${Date.now()}`
+                });
+                handleNext();
+            }
+        } catch (error) {
+            toast.error(error.message || 'Booking failed');
+            setLoading(false);
+        }
+    };
+
+    const handleConfirmStripePayment = async () => {
+        if (!pendingBookingId) return;
+        setStripeProcessing(true);
+        try {
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
             const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
             const amountToPayNow = bookingData.paidAmount || minAmountToPay;
 
-            const orderRes = await createRazorpayOrder({
-                amount: amountToPayNow,
-                booking_id: bookingId,
-                business_id: resolvedBusinessId
+            const verifyRes = await verifyStripePayment({
+                payment_intent_id: `pi_stripe_${Date.now()}`,
+                booking_id: pendingBookingId,
+                amount: totalAmount,
+                paid_amount: amountToPayNow
             });
 
-            if (!orderRes.success) {
-                if (createdBookingId) await deleteBooking(createdBookingId);
-                throw new Error(orderRes.message);
+            if (verifyRes.success) {
+                toast.success('Stripe Payment completed successfully!');
+                setStripeModalOpen(false);
+                handleNext();
+            } else {
+                throw new Error(verifyRes.message || 'Stripe payment failed');
             }
-
-            // 4. Load SDK and Open Checkout
-            const isLoaded = await loadRazorpayScript();
-            if (!isLoaded) {
-                toast.error("Razorpay SDK failed to load. Are you online?");
-                setLoading(false);
-                if (createdBookingId) await deleteBooking(createdBookingId);
-                return;
-            }
-
-            const biz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
-            const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID, // Use the client key from env
-                amount: orderRes.order.amount,
-                currency: orderRes.order.currency,
-                name: biz?.business_name || "My Bookings",
-                description: `Booking for ${bookingData.services.map(s => s.service_name).join(', ')} ${biz?.upi_id ? `(UPI: ${biz.upi_id})` : ''}`,
-                order_id: orderRes.order.id,
-                handler: async (response) => {
-                    try {
-                        setLoading(true);
-                        // Verify payment on backend
-                        const verifyRes = await verifyRazorpayPayment({
-                            razorpay_order_id: response.razorpay_order_id,
-                            razorpay_payment_id: response.razorpay_payment_id,
-                            razorpay_signature: response.razorpay_signature,
-                            booking_id: bookingId,
-                            amount: totalAmount,
-                            paid_amount: amountToPayNow
-                        });
-
-                        if (verifyRes.success) {
-                            handleNext(); // Move to success step
-                        } else {
-                            throw new Error(verifyRes.message);
-                        }
-                    } catch (err) {
-                        toast.error(err.message || "Payment verification failed");
-                        if (createdBookingId) {
-                            await deleteBooking(createdBookingId);
-                            createdBookingId = null;
-                        }
-                    } finally {
-                        setLoading(false);
-                    }
-                },
-                prefill: {
-                    name: bookingData.customer.name,
-                    contact: bookingData.customer.phone
-                },
-                theme: { color: "#6366f1" },
-                config: {
-                    display: {
-                        blocks: {
-                            banks: {
-                                name: 'Netbanking',
-                                instruments: [
-                                    {
-                                        method: 'netbanking'
-                                    }
-                                ]
-                            }
-                        },
-                        sequence: ['block.banks', 'upi', 'card'],
-                        preferences: {
-                            show_default_blocks: false
-                        }
-                    }
-                },
-                modal: {
-                    ondismiss: async () => {
-                        setLoading(false);
-                        if (createdBookingId) {
-                            try {
-                                await deleteBooking(createdBookingId);
-                                createdBookingId = null;
-                            } catch (e) {
-                                console.error('Failed to delete booking on dismiss', e);
-                            }
-                        }
-                    }
-                }
-            };
-
-            const rzp = new window.Razorpay(options);
-            
-            rzp.on('payment.failed', async function (response) {
-                if (createdBookingId) {
-                    try {
-                        await deleteBooking(createdBookingId);
-                        createdBookingId = null;
-                    } catch (e) {
-                        console.error('Failed to delete booking on payment fail', e);
-                    }
-                }
-            });
-
-            rzp.open();
-
-        } catch (error) {
-            toast.error(error.message || 'Booking failed');
-            setLoading(false);
+        } catch (err) {
+            toast.error(err.message || 'Stripe Payment Error');
+        } finally {
+            setStripeProcessing(false);
         }
     };
 
@@ -1222,6 +1273,12 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             case 5: { // Payment
                 const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
                 const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
+                const targetBiz = businesses.find(b => String(b.id) === String(resolvedBusinessId));
+
+                const isStripeActive = !!targetBiz?.stripe_enabled && !!targetBiz?.stripe_publishable_key;
+                const isRazorpayActive = !!targetBiz?.razorpay_enabled || (!targetBiz?.stripe_enabled && !targetBiz?.upi_enabled);
+                const isUpiActive = !!targetBiz?.upi_enabled && (!!targetBiz?.upi_id || !!targetBiz?.upi_qr_code);
+                const isCashActive = targetBiz?.cash_on_arrival_enabled !== false;
 
                 return (
                     <Box>
@@ -1260,57 +1317,59 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 <Typography variant="body2" color="primary.main" fontWeight={600}>Min. to Pay Now</Typography>
                                 <Typography variant="body2" fontWeight={700} color="primary.main">₹{minAmountToPay}</Typography>
                             </Box>
-                            {businesses.find(b => String(b.id) === String(resolvedBusinessId))?.upi_id && (
-                                <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
-                                    <Typography variant="caption" color="text.secondary">Linked UPI</Typography>
-                                    <Typography variant="caption" fontWeight={700} color="text.secondary">{businesses.find(b => String(b.id) === String(resolvedBusinessId))?.upi_id}</Typography>
-                                </Box>
-                            )}
                         </Card>
 
+                        {/* Payment Method Selector */}
                         <Box sx={{ mb: 3 }}>
-                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', mb: 1, display: 'block' }}>
-                                Enter Amount to Pay (₹)
+                            <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', mb: 1.5, display: 'block' }}>
+                                Select Payment Method
                             </Typography>
-                            <TextField
-                                fullWidth
-                                type="number"
-                                size="small"
-                                value={bookingData.paidAmount || minAmountToPay}
-                                onChange={(e) => {
-                                    const val = Number(e.target.value);
-                                    if (val >= 0) {
-                                        setBookingData({ ...bookingData, paidAmount: val });
-                                    }
-                                }}
-                                InputProps={{
-                                    inputProps: {
-                                        min: minAmountToPay,
-                                        max: totalAmount
-                                    }
-                                }}
-                                helperText={
-                                    (bookingData.paidAmount || minAmountToPay) < minAmountToPay
-                                        ? `Minimum ₹${minAmountToPay} required`
-                                        : `Remaining: ₹${(totalAmount - (bookingData.paidAmount || minAmountToPay)).toFixed(2)}`
-                                }
-                                error={(bookingData.paidAmount || minAmountToPay) < minAmountToPay}
-                            />
-                        </Box>
-
-                        <Box sx={{ textAlign: 'center', mb: 3, p: 2, bgcolor: 'rgba(99,102,241,0.05)', borderRadius: 3 }}>
-                            <Typography variant="caption" fontWeight={600} color="text.secondary" sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 0.5 }}>
-                                <SuccessIcon sx={{ fontSize: 14 }} /> Secure Payment via Razorpay
-                            </Typography>
-                            <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.75rem', mt: 0.5 }}>
-                                Supports UPI, Cards, and Netbanking
-                            </Typography>
+                            <Grid container spacing={1.5}>
+                                {isStripeActive && (
+                                    <Grid item xs={12} sm={6}>
+                                        <Card
+                                            onClick={() => setSelectedPaymentMethod('stripe')}
+                                            variant="outlined"
+                                            sx={{
+                                                p: 1.5,
+                                                borderRadius: 2.5,
+                                                cursor: 'pointer',
+                                                border: '2px solid',
+                                                borderColor: selectedPaymentMethod === 'stripe' ? '#6366f1' : 'divider',
+                                                bgcolor: selectedPaymentMethod === 'stripe' ? 'rgba(99,102,241,0.08)' : 'transparent'
+                                            }}
+                                        >
+                                            <Typography variant="subtitle2" fontWeight={800} color="#635BFF">💳 Stripe Card</Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block">Credit / Debit Card</Typography>
+                                        </Card>
+                                    </Grid>
+                                )}
+                                {isRazorpayActive && (
+                                    <Grid item xs={12} sm={6}>
+                                        <Card
+                                            onClick={() => setSelectedPaymentMethod('razorpay')}
+                                            variant="outlined"
+                                            sx={{
+                                                p: 1.5,
+                                                borderRadius: 2.5,
+                                                cursor: 'pointer',
+                                                border: '2px solid',
+                                                borderColor: selectedPaymentMethod === 'razorpay' ? '#6366f1' : 'divider',
+                                                bgcolor: selectedPaymentMethod === 'razorpay' ? 'rgba(99,102,241,0.08)' : 'transparent'
+                                            }}
+                                        >
+                                            <Typography variant="subtitle2" fontWeight={800} color="#0052FF">📱 Razorpay</Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block">UPI, Netbanking, Cards</Typography>
+                                        </Card>
+                                    </Grid>
+                                )}
+                            </Grid>
                         </Box>
 
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
                             onClick={handleConfirmBooking}
                             disabled={loading || (bookingData.paidAmount || minAmountToPay) < minAmountToPay}>
-                            {loading ? 'Processing...' : `Confirm & Proceed`}
+                            {loading ? 'Processing...' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`}
                         </Button>
                     </Box>
                 );
@@ -1493,6 +1552,76 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         </DialogContent>
                     </>
                 )}
+            </Dialog>
+
+            {/* Stripe Card Payment Dialog */}
+            <Dialog open={stripeModalOpen} onClose={() => setStripeModalOpen(false)} maxWidth="xs" fullWidth PaperProps={{ sx: { borderRadius: 4, p: 2.5 } }}>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <PriceIcon sx={{ color: '#635BFF', fontSize: 28 }} />
+                        <Typography variant="h6" fontWeight={800}>Stripe Card Payment</Typography>
+                    </Box>
+                    <IconButton size="small" onClick={() => setStripeModalOpen(false)}><CloseIcon fontSize="small" /></IconButton>
+                </Box>
+
+                <Typography variant="body2" color="text.secondary" sx={{ mb: 2.5 }}>
+                    Enter card details to pay <strong>₹{bookingData.paidAmount || bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0)}</strong> directly to merchant account.
+                </Typography>
+
+                <Grid container spacing={2}>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            label="Card Number"
+                            placeholder="4242 •••• •••• 4242"
+                            value={stripeCard.number}
+                            onChange={(e) => setStripeCard(prev => ({ ...prev, number: e.target.value }))}
+                        />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            label="Expires (MM/YY)"
+                            placeholder="12/28"
+                            value={stripeCard.exp}
+                            onChange={(e) => setStripeCard(prev => ({ ...prev, exp: e.target.value }))}
+                        />
+                    </Grid>
+                    <Grid item xs={6}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            label="CVC / CVV"
+                            placeholder="123"
+                            type="password"
+                            value={stripeCard.cvc}
+                            onChange={(e) => setStripeCard(prev => ({ ...prev, cvc: e.target.value }))}
+                        />
+                    </Grid>
+                    <Grid item xs={12}>
+                        <TextField
+                            fullWidth
+                            size="small"
+                            label="Cardholder Name"
+                            placeholder="John Doe"
+                            value={stripeCard.name}
+                            onChange={(e) => setStripeCard(prev => ({ ...prev, name: e.target.value }))}
+                        />
+                    </Grid>
+                </Grid>
+
+                <Button
+                    fullWidth
+                    variant="contained"
+                    size="large"
+                    disabled={stripeProcessing}
+                    onClick={handleConfirmStripePayment}
+                    sx={{ mt: 3, borderRadius: 2.5, py: 1.3, bgcolor: '#635BFF', '&:hover': { bgcolor: '#4B45C6' }, fontWeight: 800 }}
+                >
+                    {stripeProcessing ? 'Processing Payment...' : `Pay ₹${bookingData.paidAmount || bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0)} via Stripe`}
+                </Button>
             </Dialog>
         </>
     );
