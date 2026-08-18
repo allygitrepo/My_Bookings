@@ -113,9 +113,11 @@ const Payments = () => {
     }).sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     const totalPendingSettlement = filteredPayments.reduce((sum, p) => {
-        if (p.settlement_status === 'unpaid') {
-            const finalPayout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
-            return sum + finalPayout;
+        const actualPaid = parseFloat(p.paid_amount || p.amount || 0);
+        const totalAmt = parseFloat(p.amount || 0);
+        const pendingBal = Math.max(0, totalAmt - actualPaid);
+        if (p.settlement_status === 'unpaid' && pendingBal > 0) {
+            return sum + pendingBal;
         }
         return sum;
     }, 0);
@@ -150,10 +152,21 @@ const Payments = () => {
         setSettling(true);
         try {
             if (targetPaymentId) {
-                const res = await updatePayment(targetPaymentId, { settlement_status: 'paid' });
+                const targetP = payments.find(p => p.id === targetPaymentId);
+                const currentPaid = parseFloat(targetP?.paid_amount || targetP?.amount || 0);
+                const totalAmt = parseFloat(targetP?.amount || 0);
+                const newPaid = Math.min(totalAmt, currentPaid + amt);
+                const newStatus = newPaid >= totalAmt ? 'paid' : 'unpaid';
+
+                const res = await updatePayment(targetPaymentId, { paid_amount: newPaid });
                 if (res.success) {
-                    setPayments(prev => prev.map(p => p.id === targetPaymentId ? { ...p, settlement_status: 'paid' } : p));
-                    toast.success(`Settlement of ₹${amt.toFixed(2)} marked as paid!`);
+                    setPayments(prev => prev.map(p => p.id === targetPaymentId ? {
+                        ...p,
+                        paid_amount: newPaid,
+                        settlement_status: newStatus,
+                        payment_status: true
+                    } : p));
+                    toast.success(`Settled ₹${amt.toFixed(2)} payout! (Paid: ₹${newPaid.toFixed(2)} / ₹${totalAmt.toFixed(2)})`);
                     setSettleDialogOpen(false);
                 } else {
                     toast.error(res.message || 'Failed to settle payment');
@@ -306,7 +319,6 @@ const Payments = () => {
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Customer</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Booking ID</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Payment Method</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Transaction ID</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Total Amount</TableCell>
@@ -321,50 +333,52 @@ const Payments = () => {
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={12} align="center" sx={{ py: 8 }}>
+                                        <TableCell colSpan={11} align="center" sx={{ py: 8 }}>
                                             <CircularProgress size={32} />
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredPayments.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={12} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                                        <TableCell colSpan={11} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                             No payment records found.
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p, index) => {
                                     const booking = bookings.find(b => b.id === p.booking_id);
-                                    const customer = customers.find(c => c.id === booking?.customer_id);
-                                    const netIncome = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
-                                    const pendingAmt = Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.paid_amount || 0));
+                                    const customer = customers.find(c => String(c.id) === String(booking?.customer_id || p.customer_id));
+                                    const totalAmount = parseFloat(p.amount || 0);
+                                    const actualPaidAmount = parseFloat(p.paid_amount || p.amount || 0);
+                                    const pendingAmt = Math.max(0, totalAmount - actualPaidAmount);
+                                    const isSettled = p.settlement_status === 'paid' || pendingAmt === 0;
+                                    const netIncome = Math.max(0, actualPaidAmount - parseFloat(p.platform_fees || 0));
 
                                     return (
                                         <TableRow key={p.id} hover>
                                             <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                             <TableCell sx={{ fontWeight: 700 }}>{customer?.name || '—'}</TableCell>
-                                            <TableCell sx={{ fontWeight: 600, color: 'primary.main' }}>#{p.booking_id}</TableCell>
                                             <TableCell sx={{ fontWeight: 600 }}>{p.payment_method || 'Razorpay'}</TableCell>
                                             <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
-                                            <TableCell sx={{ fontWeight: 600 }}>₹{p.amount}</TableCell>
-                                            <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{p.paid_amount || p.amount}</TableCell>
+                                            <TableCell sx={{ fontWeight: 600 }}>₹{totalAmount}</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{actualPaidAmount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: pendingAmt > 0 ? 'error.main' : 'text.secondary' }}>₹{pendingAmt.toFixed(2)}</TableCell>
                                             <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>₹{netIncome.toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
+                                                    label={isSettled ? 'Settled' : 'Unpaid'}
                                                     size="small"
-                                                    color={p.settlement_status === 'paid' ? 'success' : 'warning'}
-                                                    variant={p.settlement_status === 'paid' ? 'filled' : 'outlined'}
+                                                    color={isSettled ? 'success' : 'warning'}
+                                                    variant={isSettled ? 'filled' : 'outlined'}
                                                     sx={{ fontWeight: 800, borderRadius: 1.5 }}
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ fontWeight: 500 }}>{formatDate(p.created_at)}</TableCell>
                                             <TableCell>
-                                                {p.settlement_status === 'unpaid' ? (
+                                                {!isSettled ? (
                                                     <Button
                                                         size="small"
                                                         variant="contained"
                                                         color="success"
-                                                        onClick={() => handleOpenSettleDialog(p.id, pendingAmt > 0 ? pendingAmt : netIncome)}
+                                                        onClick={() => handleOpenSettleDialog(p.id, pendingAmt)}
                                                         sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 1.5, py: 0.3, px: 1.5, fontSize: '0.75rem' }}
                                                     >
                                                         Settle
@@ -390,16 +404,19 @@ const Payments = () => {
                             </Paper>
                         ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p) => {
                             const booking = bookings.find(b => b.id === p.booking_id);
-                            const customer = customers.find(c => c.id === booking?.customer_id);
-                            const pendingAmt = Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.paid_amount || 0));
+                            const customer = customers.find(c => String(c.id) === String(booking?.customer_id || p.customer_id));
+                            const totalAmount = parseFloat(p.amount || 0);
+                            const actualPaidAmount = parseFloat(p.paid_amount || p.amount || 0);
+                            const pendingAmt = Math.max(0, totalAmount - actualPaidAmount);
+                            const isSettled = p.settlement_status === 'paid' || pendingAmt === 0;
                             return (
                                 <Card key={p.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                                         <Typography variant="subtitle2" fontWeight={800}>{customer?.name || 'Customer'}</Typography>
                                         <Chip
-                                            label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
+                                            label={isSettled ? 'Settled' : 'Unpaid'}
                                             size="small"
-                                            color={p.settlement_status === 'paid' ? 'success' : 'warning'}
+                                            color={isSettled ? 'success' : 'warning'}
                                             sx={{ fontWeight: 800 }}
                                         />
                                     </Box>
@@ -408,19 +425,19 @@ const Payments = () => {
                                     <Divider sx={{ my: 1 }} />
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                         <Typography variant="caption" color="text.secondary">Paid Amount</Typography>
-                                        <Typography variant="subtitle2" fontWeight={900} color="success.main">₹{p.paid_amount || p.amount}</Typography>
+                                        <Typography variant="subtitle2" fontWeight={900} color="success.main">₹{actualPaidAmount}</Typography>
                                     </Box>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                         <Typography variant="caption" color="text.secondary">Pending Amount</Typography>
                                         <Typography variant="subtitle2" fontWeight={900} color={pendingAmt > 0 ? 'error.main' : 'text.secondary'}>₹{pendingAmt.toFixed(2)}</Typography>
                                     </Box>
-                                    {p.settlement_status === 'unpaid' && (
+                                    {!isSettled && (
                                         <Button
                                             size="small"
                                             variant="contained"
                                             color="success"
                                             fullWidth
-                                            onClick={() => handleOpenSettleDialog(p.id, pendingAmt > 0 ? pendingAmt : (parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0)))}
+                                            onClick={() => handleOpenSettleDialog(p.id, pendingAmt)}
                                             sx={{ mt: 1.5, borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
                                         >
                                             Settle Payment

@@ -195,7 +195,26 @@ const paymentController = {
             const row = await Payment.findByPk(req.params.id);
             if (!row) return res.status(404).json({ success: false, message: "Payment not found" });
             const wasPaid = row.payment_status;
-            await row.update(req.body);
+
+            const updateData = { ...req.body };
+            if (updateData.settlement_status === 'paid' && updateData.paid_amount === undefined) {
+                updateData.paid_amount = row.amount;
+                updateData.payment_status = true;
+            } else if (updateData.paid_amount !== undefined) {
+                const currentPaid = parseFloat(row.paid_amount || 0);
+                const settleAmt = parseFloat(updateData.paid_amount);
+                // If paid_amount passed is the increment or target paid amount
+                const newPaid = Math.min(row.amount, settleAmt > currentPaid ? settleAmt : (currentPaid + settleAmt));
+                updateData.paid_amount = newPaid;
+                updateData.payment_status = newPaid > 0;
+                if (newPaid >= row.amount) {
+                    updateData.settlement_status = 'paid';
+                } else {
+                    updateData.settlement_status = 'unpaid';
+                }
+            }
+
+            await row.update(updateData);
             if (row.payment_status && !wasPaid) {
                 await handlePaymentSuccess(row);
             }
@@ -552,9 +571,10 @@ const paymentController = {
             const { payment_ids, business_id, amount } = req.body;
             const { Op } = require("sequelize");
 
+            const { sequelize } = require("../config/db");
             if (Array.isArray(payment_ids) && payment_ids.length > 0 && (!amount || isNaN(parseFloat(amount)))) {
                 const affected = await Payment.update(
-                    { settlement_status: 'paid' },
+                    { settlement_status: 'paid', payment_status: true, paid_amount: sequelize.col('amount') },
                     { where: { id: { [Op.in]: payment_ids }, settlement_status: 'unpaid' } }
                 );
                 return res.json({ success: true, message: "Selected payments settled successfully", updatedCount: affected[0] });
@@ -590,35 +610,43 @@ const paymentController = {
             const enteredAmount = parseFloat(amount);
             if (isNaN(enteredAmount) || enteredAmount <= 0) {
                 const affected = await Payment.update(
-                    { settlement_status: 'paid' },
+                    { settlement_status: 'paid', payment_status: true, paid_amount: sequelize.col('amount') },
                     { where: whereClause }
                 );
                 return res.json({ success: true, message: "Payments settled successfully", updatedCount: affected[0] });
             }
 
             let remainingToSettle = enteredAmount;
-            const idsToSettle = [];
+            const updatedIds = [];
 
             for (const p of unpaidPayments) {
-                const payout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
-                if (remainingToSettle > 0) {
-                    idsToSettle.push(p.id);
-                    remainingToSettle -= payout;
-                }
-            }
+                if (remainingToSettle <= 0) break;
 
-            if (idsToSettle.length > 0) {
-                await Payment.update(
-                    { settlement_status: 'paid' },
-                    { where: { id: { [Op.in]: idsToSettle } } }
-                );
+                const currentPaid = parseFloat(p.paid_amount || 0);
+                const totalAmt = parseFloat(p.amount || 0);
+                const pendingBal = Math.max(0, totalAmt - currentPaid);
+
+                if (pendingBal > 0) {
+                    const settleNow = Math.min(pendingBal, remainingToSettle);
+                    const newPaid = Math.min(totalAmt, currentPaid + settleNow);
+                    const newSettlementStatus = newPaid >= totalAmt ? 'paid' : 'unpaid';
+
+                    await p.update({
+                        paid_amount: newPaid,
+                        payment_status: true,
+                        settlement_status: newSettlementStatus
+                    });
+
+                    remainingToSettle -= settleNow;
+                    updatedIds.push(p.id);
+                }
             }
 
             res.json({
                 success: true,
                 message: `Successfully settled ₹${enteredAmount.toFixed(2)} worth of payouts`,
-                updatedCount: idsToSettle.length,
-                settledIds: idsToSettle
+                updatedCount: updatedIds.length,
+                settledIds: updatedIds
             });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

@@ -5,7 +5,7 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
     TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress,
-    Dialog, DialogTitle, DialogContent, DialogActions
+    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -31,7 +31,7 @@ import { getLocations } from '../api/location.api';
 import { getStaff } from '../api/staff.api';
 import { getServices } from '../api/service.api';
 import { getCustomers } from '../api/customer.api';
-import { getPayments } from '../api/payment.api';
+import { getPayments, updatePayment } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
@@ -259,6 +259,12 @@ const Bookings = () => {
     const [autoSync, setAutoSync] = useState(() => localStorage.getItem('autoSyncEnabled') === 'true');
     const [showFilters, setShowFilters] = useState(true);
 
+    const [settleDialogOpen, setSettleDialogOpen] = useState(false);
+    const [settleBookingId, setSettleBookingId] = useState(null);
+    const [settlePaymentId, setSettlePaymentId] = useState(null);
+    const [settleAmountInput, setSettleAmountInput] = useState('');
+    const [settling, setSettling] = useState(false);
+
     const [syncedIds, setSyncedIds] = useState([]); // No longer needed for logic, but keeping state for compatibility if used elsewhere
     const [isSyncingInProgress, setIsSyncingInProgress] = useState(false);
     const [isGoogleConnected, setIsGoogleConnected] = useState(false);
@@ -388,11 +394,62 @@ const Bookings = () => {
                     ...(isPaidNow !== undefined ? { payment_status: isPaidNow } : {})
                 } : b));
                 toast.success(`Booking status updated to ${newStatus}`);
+
+                if (newStatus === 'Completed') {
+                    const payment = payments.find(p => p.booking_id === bookingId);
+                    if (payment && payment.settlement_status !== 'paid') {
+                        const rem = Math.max(0, parseFloat(payment.amount || 0) - parseFloat(payment.paid_amount || 0)) || payment.amount;
+                        setSettleBookingId(bookingId);
+                        setSettlePaymentId(payment.id);
+                        setSettleAmountInput(rem ? String(rem) : String(payment.amount || ''));
+                        setSettleDialogOpen(true);
+                    }
+                }
             } else {
                 toast.error(res.message || 'Failed to update status');
             }
         } catch (error) {
             toast.error('Failed to update status');
+        }
+    };
+
+    const handleConfirmSettleFromBookings = async () => {
+        const amt = parseFloat(settleAmountInput);
+        if (isNaN(amt) || amt <= 0) {
+            toast.error('Please enter a valid settlement amount');
+            return;
+        }
+
+        setSettling(true);
+        try {
+            const targetP = payments.find(p => p.id === settlePaymentId);
+            const currentPaid = parseFloat(targetP?.paid_amount || targetP?.amount || 0);
+            const totalAmt = parseFloat(targetP?.amount || 0);
+            const newPaid = Math.min(totalAmt, currentPaid + amt);
+            const newStatus = newPaid >= totalAmt ? 'paid' : 'unpaid';
+
+            const res = await updatePayment(settlePaymentId, { paid_amount: newPaid });
+            if (res.success) {
+                setPayments(prev => prev.map(p => p.id === settlePaymentId ? {
+                    ...p,
+                    paid_amount: newPaid,
+                    settlement_status: newStatus,
+                    payment_status: true
+                } : p));
+                setBookings(prev => prev.map(b => b.id === settleBookingId ? {
+                    ...b,
+                    booking_status: 'Completed',
+                    payment_status: true
+                } : b));
+                toast.success(`Payment settled for ₹${amt.toFixed(2)}! (Total Paid: ₹${newPaid.toFixed(2)} / ₹${totalAmt.toFixed(2)})`);
+                setSettleDialogOpen(false);
+            } else {
+                toast.error(res.message || 'Failed to settle payment');
+            }
+        } catch (error) {
+            toast.error('Error settling payment');
+        } finally {
+            setSettling(false);
         }
     };
 
@@ -692,9 +749,10 @@ const Bookings = () => {
                                     const staffMember = staff.find(s => s.id === b.staff_id);
                                     const payment = payments.find(p => p.booking_id === b.id);
 
+                                    const isPaymentSettled = payment?.settlement_status === 'paid' || b.booking_status === 'Completed' || (b.payment_status && payment?.payment_status);
                                     const totalAmount = Number(payment?.amount || service?.price || 0);
-                                    const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                                    const remainingAmount = totalAmount - paidAmount;
+                                    const paidAmount = isPaymentSettled ? totalAmount : Number(payment?.paid_amount || (b.payment_status ? (payment?.amount || service?.price) : 0) || 0);
+                                    const remainingAmount = isPaymentSettled ? 0 : Math.max(0, totalAmount - paidAmount);
                                     const currentBookingStatus = getBookingStatus(b);
 
                                     return (
@@ -786,9 +844,10 @@ const Bookings = () => {
                             const staffMember = staff.find(s => s.id === b.staff_id);
                             const payment = payments.find(p => p.booking_id === b.id);
 
+                            const isPaymentSettled = payment?.settlement_status === 'paid' || b.booking_status === 'Completed' || (b.payment_status && payment?.payment_status);
                             const totalAmount = Number(payment?.amount || service?.price || 0);
-                            const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                            const remainingAmount = totalAmount - paidAmount;
+                            const paidAmount = isPaymentSettled ? totalAmount : Number(payment?.paid_amount || (b.payment_status ? (payment?.amount || service?.price) : 0) || 0);
+                            const remainingAmount = isPaymentSettled ? 0 : Math.max(0, totalAmount - paidAmount);
                             const currentBookingStatus = getBookingStatus(b);
 
                             return (
@@ -893,6 +952,49 @@ const Bookings = () => {
                     />
                 </>
             )}
+            {/* SETTLEMENT DIALOG POPUP */}
+            <Dialog 
+                open={settleDialogOpen} 
+                onClose={() => !settling && setSettleDialogOpen(false)}
+                PaperProps={{ sx: { borderRadius: 3, p: 1, minWidth: { xs: 300, sm: 420 } } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800 }}>Settle Booking Payment Payout</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Booking #{settleBookingId} has been marked as <strong>Completed</strong>. Enter or confirm the payout settlement amount to mark as settled:
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        label="Settlement Amount (₹)"
+                        type="number"
+                        fullWidth
+                        size="small"
+                        value={settleAmountInput}
+                        onChange={(e) => setSettleAmountInput(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button 
+                        onClick={() => setSettleDialogOpen(false)} 
+                        disabled={settling} 
+                        sx={{ fontWeight: 700, textTransform: 'none' }}
+                    >
+                        Skip
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={handleConfirmSettleFromBookings} 
+                        disabled={settling || !settleAmountInput || parseFloat(settleAmountInput) <= 0}
+                        sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
+                    >
+                        {settling ? 'Settling...' : 'Confirm Settlement'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </PageTransition>
     );
 };

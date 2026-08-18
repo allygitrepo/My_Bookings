@@ -527,8 +527,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const startSlot = [...bookingData.slots].sort()[0];
             const finalDuration = bookingData.slots.length * slotStepMin;
             const totalAmount = bookingData.services.reduce((acc, s) => acc + (Number(s.price) || 0), 0);
-            const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.price) || 0), 0);
-            const amountToPayNow = bookingData.paidAmount || minAmountToPay;
+            const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.min_booking_charge) || Number(s.price) || 0), 0);
+            const amountToPayNow = minAmountToPay;
 
             const isOnline = selectedPaymentMethod === 'stripe' || selectedPaymentMethod === 'razorpay';
             const bookingPayload = {
@@ -866,8 +866,19 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                                 <TimeIcon sx={{ fontSize: 13, color: '#6366f1' }} />
                                                 <Typography variant="caption" color="text.secondary" fontWeight={500}>{service.duration_minutes} min</Typography>
                                             </Box>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                                                <Typography variant="caption" fontWeight={700} color="success.main">₹{service.price}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                                {Number(service.minimum_booking_charge || service.min_booking_charge || 0) > 0 && Number(service.minimum_booking_charge || service.min_booking_charge || 0) < Number(service.price || 0) ? (
+                                                    <>
+                                                        <Typography variant="caption" fontWeight={800} color="primary.main" sx={{ bgcolor: 'rgba(99,102,241,0.1)', px: 1, py: 0.2, borderRadius: 1 }}>
+                                                            Min. Pay: ₹{service.minimum_booking_charge || service.min_booking_charge}
+                                                        </Typography>
+                                                        <Typography variant="caption" color="text.secondary" sx={{ textDecoration: 'line-through' }}>
+                                                            ₹{service.price}
+                                                        </Typography>
+                                                    </>
+                                                ) : (
+                                                    <Typography variant="caption" fontWeight={700} color="success.main">₹{service.price}</Typography>
+                                                )}
                                             </Box>
                                         </Box>
                                     </Box>

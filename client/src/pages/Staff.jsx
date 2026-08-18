@@ -4,7 +4,7 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, TextField, Grid, MenuItem, Select, FormControl, InputLabel,
     Box, Typography, Divider, Checkbox, FormControlLabel, Button, TablePagination, Avatar,
-    Autocomplete, Chip, CircularProgress, Card
+    Autocomplete, Chip, CircularProgress, Card, InputAdornment
 } from '@mui/material';
 import { MobileTimePicker } from '@mui/x-date-pickers';
 import {
@@ -131,6 +131,8 @@ const Staff = () => {
             : { business_id: initialBizId, location_ids: [], staff_name: '', role: '', phone: '', slot_duration_minutes: '30', photo: '' }
         );
         setPhotoPreview(s?.photo || null);
+        const presetValues = ['15', '20', '30', '45', '60', '90', '120'];
+        setIsCustomSlotMode(s ? !presetValues.includes(String(s.slot_duration_minutes)) : false);
 
         // Build schedule from existing availability records for this staff
         if (s) {
@@ -327,6 +329,7 @@ const Staff = () => {
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
     const [staffToDelete, setStaffToDelete] = useState(null);
     const [deleteLoading, setDeleteLoading] = useState(false);
+    const [isCustomSlotMode, setIsCustomSlotMode] = useState(false);
 
     const handleDeleteClick = (id) => {
         setStaffToDelete(id);
@@ -864,23 +867,65 @@ const Staff = () => {
                 {/* --- Slot Duration --- */}
                 <FieldSection label="Booking Slot Duration">
                     <Typography variant="caption" color="text.secondary" mb={2} display="block">
-                        Time duration of each bookable slot (e.g. 30 min → 9:00–9:30, 9:30–10:00, …)
+                        Time duration of each bookable slot in minutes (e.g. 10 min, 25 min, 30 min, 45 min, 75 min...)
                     </Typography>
                     <Controller name="slot_duration_minutes" control={control}
-                        render={({ field }) => (
-                            <FormControl fullWidth>
-                                <InputLabel>Slot Duration</InputLabel>
-                                <Select {...field} label="Slot Duration">
-                                    <MenuItem value="15">15 minutes</MenuItem>
-                                    <MenuItem value="20">20 minutes</MenuItem>
-                                    <MenuItem value="30">30 minutes</MenuItem>
-                                    <MenuItem value="45">45 minutes</MenuItem>
-                                    <MenuItem value="60">1 hour</MenuItem>
-                                    <MenuItem value="90">1.5 hours</MenuItem>
-                                    <MenuItem value="120">2 hours</MenuItem>
-                                </Select>
-                            </FormControl>
-                        )} />
+                        render={({ field }) => {
+                            const presetValues = ['15', '20', '30', '45', '60', '90', '120'];
+                            const valStr = String(field.value || '30');
+                            const isPreset = presetValues.includes(valStr);
+
+                            return (
+                                <Grid container spacing={2}>
+                                    <Grid item xs={12} sm={(!isPreset || isCustomSlotMode) ? 6 : 12}>
+                                        <FormControl fullWidth size="small">
+                                            <InputLabel>Preset Duration</InputLabel>
+                                            <Select
+                                                value={isPreset && !isCustomSlotMode ? valStr : 'custom'}
+                                                label="Preset Duration"
+                                                onChange={(e) => {
+                                                    if (e.target.value === 'custom') {
+                                                        setIsCustomSlotMode(true);
+                                                    } else {
+                                                        setIsCustomSlotMode(false);
+                                                        field.onChange(Number(e.target.value));
+                                                    }
+                                                }}
+                                            >
+                                                <MenuItem value="15">15 minutes</MenuItem>
+                                                <MenuItem value="20">20 minutes</MenuItem>
+                                                <MenuItem value="30">30 minutes</MenuItem>
+                                                <MenuItem value="45">45 minutes</MenuItem>
+                                                <MenuItem value="60">1 hour (60 mins)</MenuItem>
+                                                <MenuItem value="90">1.5 hours (90 mins)</MenuItem>
+                                                <MenuItem value="120">2 hours (120 mins)</MenuItem>
+                                                <MenuItem value="custom">✨ Custom Minutes...</MenuItem>
+                                            </Select>
+                                        </FormControl>
+                                    </Grid>
+                                    {(!isPreset || isCustomSlotMode) && (
+                                        <Grid item xs={12} sm={6}>
+                                            <TextField
+                                                label="Custom Duration"
+                                                type="number"
+                                                size="small"
+                                                fullWidth
+                                                value={field.value || ''}
+                                                onChange={(e) => {
+                                                    const v = parseInt(e.target.value, 10);
+                                                    field.onChange(isNaN(v) ? '' : v);
+                                                }}
+                                                inputProps={{ min: 1, max: 1440 }}
+                                                InputProps={{
+                                                    endAdornment: <InputAdornment position="end">mins</InputAdornment>,
+                                                }}
+                                                placeholder="e.g. 25, 40, 50, 75"
+                                            />
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            );
+                        }} />
                 </FieldSection>
             </FormDrawer>
 
