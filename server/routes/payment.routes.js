@@ -11,6 +11,7 @@ router.post("/stripe/verify", authMiddleware, paymentController.verifyStripePaym
 router.get("/all", authMiddleware, paymentController.getAll);
 router.get("/:id", authMiddleware, paymentController.getById);
 router.put("/update/:id", authMiddleware, paymentController.update);
+router.put("/settle", authMiddleware, paymentController.settlePayments);
 router.delete("/delete/:id", authMiddleware, paymentController.delete);
 router.post("/razorpay/webhook", paymentController.handleWebhook);
 

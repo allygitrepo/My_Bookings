@@ -130,26 +130,35 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                                         {day}
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {dayBookings.slice(0, 3).map(b => (
-                                            <Tooltip key={b.id} title={`${b.services && b.services.length > 0 ? b.services.map(s => s.service_name).join(', ') : (services.find(s => s.id === b.service_id)?.service_name || 'Service')} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
-                                                <Box sx={{
-                                                    fontSize: '0.68rem',
-                                                    p: 0.7,
-                                                    borderRadius: 1.5,
-                                                    bgcolor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
-                                                    color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
-                                                    fontWeight: 700,
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    border: '1px solid',
-                                                    borderColor: (b.status === true || b.status === 1) ? 'success.main' : 'error.main',
-                                                    opacity: 0.9
-                                                }}>
-                                                    {b.start_time?.slice(0, 5)} {b.services && b.services.length > 0 ? (b.services.length > 1 ? `${b.services[0].service_name} (+${b.services.length - 1})` : b.services[0].service_name) : services.find(s => s.id === b.service_id)?.service_name}
-                                                </Box>
-                                            </Tooltip>
-                                        ))}
+                                        {dayBookings.slice(0, 3).map(b => {
+                                            const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                            const isPaid = Boolean(b.payment_status);
+                                            const statusKey = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : 'Confirmed');
+                                            const bgCol = statusKey === 'Confirmed' ? 'success.light' : (statusKey === 'Pending' ? 'warning.light' : 'error.light');
+                                            const txtCol = statusKey === 'Confirmed' ? 'success.dark' : (statusKey === 'Pending' ? 'warning.dark' : 'error.dark');
+                                            const borderCol = statusKey === 'Confirmed' ? 'success.main' : (statusKey === 'Pending' ? 'warning.main' : 'error.main');
+
+                                            return (
+                                                <Tooltip key={b.id} title={`${b.services && b.services.length > 0 ? b.services.map(s => s.service_name).join(', ') : (services.find(s => s.id === b.service_id)?.service_name || 'Service')} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'} (${statusKey})`} arrow>
+                                                    <Box sx={{
+                                                        fontSize: '0.68rem',
+                                                        p: 0.7,
+                                                        borderRadius: 1.5,
+                                                        bgcolor: bgCol,
+                                                        color: txtCol,
+                                                        fontWeight: 700,
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        border: '1px solid',
+                                                        borderColor: borderCol,
+                                                        opacity: 0.9
+                                                    }}>
+                                                        {b.start_time?.slice(0, 5)} {b.services && b.services.length > 0 ? (b.services.length > 1 ? `${b.services[0].service_name} (+${b.services.length - 1})` : b.services[0].service_name) : services.find(s => s.id === b.service_id)?.service_name}
+                                                    </Box>
+                                                </Tooltip>
+                                            );
+                                        })}
                                         {dayBookings.length > 3 && (
                                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 800, pl: 0.5, pt: 0.5 }}>
                                                 +{dayBookings.length - 3} more
@@ -358,9 +367,10 @@ const Bookings = () => {
 
 
     const getBookingStatus = (b) => {
-        if (b.booking_status) return b.booking_status;
         const isConfirmedInDb = (b.status === true || b.status === 1);
-        if (!isConfirmedInDb) return 'Cancelled';
+        if (!isConfirmedInDb || b.booking_status === 'Cancelled') return 'Cancelled';
+        if (!b.payment_status) return 'Pending';
+        if (b.booking_status && b.booking_status !== 'Pending') return b.booking_status;
         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
         if (bookingDateTime.isBefore(dayjs())) return 'Completed';
         return 'Confirmed';
@@ -370,7 +380,13 @@ const Bookings = () => {
         try {
             const res = await updateBooking(bookingId, { booking_status: newStatus });
             if (res.success) {
-                setBookings(prev => prev.map(b => b.id === bookingId ? { ...b, booking_status: newStatus, status: newStatus !== 'Cancelled' } : b));
+                const isPaidNow = newStatus === 'Confirmed' ? true : (newStatus === 'Pending' ? false : undefined);
+                setBookings(prev => prev.map(b => b.id === bookingId ? {
+                    ...b,
+                    booking_status: newStatus,
+                    status: newStatus !== 'Cancelled',
+                    ...(isPaidNow !== undefined ? { payment_status: isPaidNow } : {})
+                } : b));
                 toast.success(`Booking status updated to ${newStatus}`);
             } else {
                 toast.error(res.message || 'Failed to update status');
@@ -386,6 +402,9 @@ const Bookings = () => {
         if (dateA !== dateB) return dateB.localeCompare(dateA);
         return (b.start_time || "").localeCompare(a.start_time || "");
     }).filter(b => {
+        // Payment Filter: Only show bookings where payment is done
+        if (!b.payment_status) return false;
+
         // Business Filter
         const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;

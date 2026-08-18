@@ -542,6 +542,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 start_time: startSlot,
                 end_time: addMinutes(startSlot, finalDuration),
                 payment_status: isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false),
+                booking_status: (isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false)) ? 'Confirmed' : 'Pending',
                 status: true,
                 is_widget_request: true
             };

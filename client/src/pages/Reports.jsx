@@ -114,16 +114,19 @@ const Reports = () => {
     const endStr = endDate ? endDate.format('YYYY-MM-DD') : '';
 
     const filteredBookings = bookings.filter(b => {
+        if (!b.payment_status) return false;
         const matchesBusiness = filterBusiness === 'all' || String(b.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
 
         const bDateStr = dayjs(b.booking_date).format('YYYY-MM-DD');
         const matchesDate = !startStr || !endStr || (bDateStr >= startStr && bDateStr <= endStr);
 
-        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+        const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+        const isPaid = Boolean(b.payment_status);
         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
+        if (!bookingDateTime.isValid()) return false;
         const isPast = bookingDateTime.isBefore(dayjs());
-        const status = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+        const status = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
 
         const matchesStatus = filterStatus === 'All' || status === filterStatus;
         const matchesService = filterService === 'All' || 
@@ -496,10 +499,11 @@ const Reports = () => {
                                         <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>No data for selected filters.</TableCell></TableRow>
                                     ) : filteredBookings.map((b) => {
                                         const service = services.find(s => String(s.id) === String(b.service_id));
-                                        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+                                        const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                        const isPaid = Boolean(b.payment_status);
                                         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
                                         const isPast = bookingDateTime.isBefore(dayjs());
-                                        const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                                        const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
 
                                         const customerObj = customers.find(c => String(c.id) === String(b.customer_id));
                                         const staffObj = staff.find(s => String(s.id) === String(b.staff_id));
@@ -554,11 +558,12 @@ const Reports = () => {
                                 </Paper>
                             ) : filteredBookings.map((b) => {
                                 const service = services.find(s => s.id === b.service_id);
-                                const isConfirmedInDb = (b.status === true || b.status === 1);
+                                const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                const isPaid = Boolean(b.payment_status);
                                 const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
                                 const isPast = bookingDateTime.isBefore(dayjs());
-                                const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                                const statusColor = statusLabel === 'Completed' ? 'info' : statusLabel === 'Confirmed' ? 'success' : 'error';
+                                const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
+                                const statusColor = statusLabel === 'Confirmed' ? 'success' : (statusLabel === 'Completed' ? 'info' : (statusLabel === 'Pending' ? 'warning' : 'error'));
 
                                 return (
                                     <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>

@@ -51,7 +51,7 @@ const Booking = sequelize.define(
         },
         booking_status: {
             type: DataTypes.STRING,
-            defaultValue: 'Confirmed',
+            defaultValue: 'Pending',
             allowNull: false
         },
         status: {

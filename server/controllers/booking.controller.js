@@ -124,11 +124,15 @@ const bookingController = {
                 return res.status(400).json({ success: false, message: "Customer identification (ID, Phone, or Email) is required." });
             }
 
+            const isPaymentPaid = bookingData.payment_status === true || bookingData.payment_status === 1;
+            const defaultBookingStatus = isPaymentPaid ? 'Confirmed' : 'Pending';
+
             const row = await Booking.create({
                 ...bookingData,
                 customer_id,
                 business_id,
-                booking_status: bookingData.booking_status || 'Confirmed'
+                payment_status: isPaymentPaid,
+                booking_status: bookingData.booking_status || defaultBookingStatus
             });
 
             // Store multiple services if provided
@@ -246,7 +250,7 @@ const bookingController = {
             const limit = parseInt(req.query.limit) || 100;
             const offset = (page - 1) * limit;
 
-            const whereClause = { status: true };
+            const whereClause = { status: true, payment_status: true };
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
@@ -339,6 +343,12 @@ const bookingController = {
             if (safeBody.booking_status) {
                 if (safeBody.booking_status === 'Cancelled') {
                     safeBody.status = false;
+                } else if (safeBody.booking_status === 'Confirmed') {
+                    safeBody.status = true;
+                    safeBody.payment_status = true;
+                } else if (safeBody.booking_status === 'Pending') {
+                    safeBody.status = true;
+                    safeBody.payment_status = false;
                 } else {
                     safeBody.status = true;
                 }

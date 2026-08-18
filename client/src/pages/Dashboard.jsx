@@ -78,6 +78,7 @@ const Dashboard = () => {
     }, [searchQuery]);
 
     const filteredDashboardBookings = bookings.filter(b => {
+        if (!b.payment_status) return false;
         const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
@@ -295,11 +296,12 @@ const Dashboard = () => {
                             const customer = customers.find(c => c.id === b.customer_id);
                             const staffMember = staff.find(s => s.id === b.staff_id);
                             const service = services.find(s => s.id === b.service_id);
-                            const isConfirmedInDb = (b.status === true || b.status === 1);
+                            const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                            const isPaid = Boolean(b.payment_status);
                             const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
                             const isPast = bookingDateTime < new Date();
-                            const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                            const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                            const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
+                            const statusColor = statusLabel === 'Confirmed' ? 'success' : (statusLabel === 'Completed' ? 'info' : (statusLabel === 'Pending' ? 'warning' : 'error'));
 
                             return (
                                 <TableRow key={b.id} hover>
@@ -364,11 +366,12 @@ const Dashboard = () => {
                     const customer = customers.find(c => c.id === b.customer_id);
                     const staffMember = staff.find(s => s.id === b.staff_id);
                     const service = services.find(s => s.id === b.service_id);
-                    const isConfirmedInDb = (b.status === true || b.status === 1);
+                    const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                    const isPaid = Boolean(b.payment_status);
                     const bookingDateTime = new Date(`${b.booking_date} ${b.end_time || b.start_time}`);
                     const isPast = bookingDateTime < new Date();
-                    const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                    const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                    const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
+                    const statusColor = statusLabel === 'Confirmed' ? 'success' : (statusLabel === 'Completed' ? 'info' : (statusLabel === 'Pending' ? 'warning' : 'error'));
 
                     return (
                         <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>

@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Typography, TablePagination, Box, Grid, Card, Divider, CircularProgress, Button,
-    Tabs, Tab, Switch, FormControlLabel, TextField, InputAdornment, Alert
+    Tabs, Tab, Switch, FormControlLabel, TextField, InputAdornment, Alert,
+    Dialog, DialogTitle, DialogContent, DialogActions
 } from '@mui/material';
 import {
     Payments as PayIcon,
@@ -17,7 +18,7 @@ import {
 } from '@mui/icons-material';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import { getPayments } from '../api/payment.api';
+import { getPayments, updatePayment, settlePayments } from '../api/payment.api';
 import { getBookings } from '../api/booking.api';
 import { getCustomers } from '../api/customer.api';
 import { updateBusiness } from '../api/business.api';
@@ -42,6 +43,10 @@ const Payments = () => {
     const [customers, setCustomers] = useState([]);
     const [loading, setLoading] = useState(true);
     const [savingGateways, setSavingGateways] = useState(false);
+    const [settling, setSettling] = useState(false);
+    const [settleDialogOpen, setSettleDialogOpen] = useState(false);
+    const [settleAmountInput, setSettleAmountInput] = useState('');
+    const [targetPaymentId, setTargetPaymentId] = useState(null);
     const [page, setPage] = useState(0);
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
 
@@ -126,6 +131,54 @@ const Payments = () => {
             toast.error('Failed to fetch payments data');
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleOpenSettleDialog = (paymentId = null, initialAmount = 0) => {
+        setTargetPaymentId(paymentId);
+        setSettleAmountInput(initialAmount ? String(initialAmount) : (totalPendingSettlement ? String(totalPendingSettlement) : ''));
+        setSettleDialogOpen(true);
+    };
+
+    const handleConfirmSettle = async () => {
+        const amt = parseFloat(settleAmountInput);
+        if (isNaN(amt) || amt <= 0) {
+            toast.error('Please enter a valid settlement amount greater than 0');
+            return;
+        }
+
+        setSettling(true);
+        try {
+            if (targetPaymentId) {
+                const res = await updatePayment(targetPaymentId, { settlement_status: 'paid' });
+                if (res.success) {
+                    setPayments(prev => prev.map(p => p.id === targetPaymentId ? { ...p, settlement_status: 'paid' } : p));
+                    toast.success(`Settlement of ₹${amt.toFixed(2)} marked as paid!`);
+                    setSettleDialogOpen(false);
+                } else {
+                    toast.error(res.message || 'Failed to settle payment');
+                }
+            } else {
+                const res = await settlePayments({ 
+                    amount: amt, 
+                    business_id: selectedBusinessId 
+                });
+                if (res.success) {
+                    if (res.settledIds && res.settledIds.length > 0) {
+                        setPayments(prev => prev.map(p => res.settledIds.includes(p.id) ? { ...p, settlement_status: 'paid' } : p));
+                    } else {
+                        await fetchData();
+                    }
+                    toast.success(res.message || `Settled ₹${amt.toFixed(2)} payout successfully!`);
+                    setSettleDialogOpen(false);
+                } else {
+                    toast.error(res.message || 'Failed to settle payments');
+                }
+            }
+        } catch (error) {
+            toast.error('Error settling payment');
+        } finally {
+            setSettling(false);
         }
     };
 
@@ -214,21 +267,35 @@ const Payments = () => {
                             )}
                         </Box>
 
-                        <Box sx={{ 
-                            height: 40, 
-                            borderRadius: '12px', 
-                            bgcolor: 'primary.light', 
-                            color: 'primary.dark', 
-                            px: 2.5, 
-                            display: 'flex', 
-                            alignItems: 'center', 
-                            gap: 1.5,
-                            border: '1px solid',
-                            borderColor: 'primary.main',
-                            fontWeight: 800
-                        }}>
-                            <Typography variant="body2" fontWeight={800}>Pending Settlement Payout:</Typography>
-                            <Typography variant="subtitle2" fontWeight={900}>₹{totalPendingSettlement.toFixed(2)}</Typography>
+                        <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
+                            <Box sx={{ 
+                                height: 40, 
+                                borderRadius: '12px', 
+                                bgcolor: 'primary.light', 
+                                color: 'primary.dark', 
+                                px: 2.5, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: 1.5,
+                                border: '1px solid',
+                                borderColor: 'primary.main',
+                                fontWeight: 800
+                            }}>
+                                <Typography variant="body2" fontWeight={800}>Pending Settlement Payout:</Typography>
+                                <Typography variant="subtitle2" fontWeight={900}>₹{totalPendingSettlement.toFixed(2)}</Typography>
+                            </Box>
+                            {totalPendingSettlement > 0 && (
+                                <Button
+                                    variant="contained"
+                                    color="success"
+                                    size="small"
+                                    disabled={settling}
+                                    onClick={() => handleOpenSettleDialog(null, totalPendingSettlement)}
+                                    sx={{ borderRadius: '10px', height: 40, px: 2.5, fontWeight: 800, textTransform: 'none', boxShadow: '0 4px 12px rgba(34,197,94,0.3)' }}
+                                >
+                                    Settle Payout
+                                </Button>
+                            )}
                         </Box>
                     </Box>
 
@@ -244,21 +311,23 @@ const Payments = () => {
                                     <TableCell sx={{ fontWeight: 700 }}>Transaction ID</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Total Amount</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Paid Amount</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Pending Amount</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Income</TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>Status</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Settlement Status</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>Date</TableCell>
+                                    <TableCell sx={{ fontWeight: 700 }}>Action</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} align="center" sx={{ py: 8 }}>
+                                        <TableCell colSpan={12} align="center" sx={{ py: 8 }}>
                                             <CircularProgress size={32} />
                                         </TableCell>
                                     </TableRow>
                                 ) : filteredPayments.length === 0 ? (
                                     <TableRow>
-                                        <TableCell colSpan={10} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                                        <TableCell colSpan={12} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                             No payment records found.
                                         </TableCell>
                                     </TableRow>
@@ -266,6 +335,7 @@ const Payments = () => {
                                     const booking = bookings.find(b => b.id === p.booking_id);
                                     const customer = customers.find(c => c.id === booking?.customer_id);
                                     const netIncome = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+                                    const pendingAmt = Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.paid_amount || 0));
 
                                     return (
                                         <TableRow key={p.id} hover>
@@ -276,16 +346,33 @@ const Payments = () => {
                                             <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
                                             <TableCell sx={{ fontWeight: 600 }}>₹{p.amount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{p.paid_amount || p.amount}</TableCell>
+                                            <TableCell sx={{ fontWeight: 700, color: pendingAmt > 0 ? 'error.main' : 'text.secondary' }}>₹{pendingAmt.toFixed(2)}</TableCell>
                                             <TableCell sx={{ fontWeight: 800, color: 'primary.main' }}>₹{netIncome.toFixed(2)}</TableCell>
                                             <TableCell>
                                                 <Chip
-                                                    label={p.status || 'Completed'}
+                                                    label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
                                                     size="small"
-                                                    color={p.status === 'Failed' ? 'error' : p.status === 'Pending' ? 'warning' : 'success'}
-                                                    sx={{ fontWeight: 700, borderRadius: 1.5 }}
+                                                    color={p.settlement_status === 'paid' ? 'success' : 'warning'}
+                                                    variant={p.settlement_status === 'paid' ? 'filled' : 'outlined'}
+                                                    sx={{ fontWeight: 800, borderRadius: 1.5 }}
                                                 />
                                             </TableCell>
                                             <TableCell sx={{ fontWeight: 500 }}>{formatDate(p.created_at)}</TableCell>
+                                            <TableCell>
+                                                {p.settlement_status === 'unpaid' ? (
+                                                    <Button
+                                                        size="small"
+                                                        variant="contained"
+                                                        color="success"
+                                                        onClick={() => handleOpenSettleDialog(p.id, pendingAmt > 0 ? pendingAmt : netIncome)}
+                                                        sx={{ textTransform: 'none', fontWeight: 800, borderRadius: 1.5, py: 0.3, px: 1.5, fontSize: '0.75rem' }}
+                                                    >
+                                                        Settle
+                                                    </Button>
+                                                ) : (
+                                                    <Chip label="Settled" size="small" variant="outlined" color="default" sx={{ fontSize: '0.7rem', fontWeight: 700 }} />
+                                                )}
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -304,19 +391,41 @@ const Payments = () => {
                         ) : filteredPayments.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((p) => {
                             const booking = bookings.find(b => b.id === p.booking_id);
                             const customer = customers.find(c => c.id === booking?.customer_id);
+                            const pendingAmt = Math.max(0, parseFloat(p.amount || 0) - parseFloat(p.paid_amount || 0));
                             return (
                                 <Card key={p.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider' }}>
                                     <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 1.5 }}>
                                         <Typography variant="subtitle2" fontWeight={800}>{customer?.name || 'Customer'}</Typography>
-                                        <Chip label={p.status || 'Completed'} size="small" color="success" sx={{ fontWeight: 800 }} />
+                                        <Chip
+                                            label={p.settlement_status === 'paid' ? 'Settled' : 'Unpaid'}
+                                            size="small"
+                                            color={p.settlement_status === 'paid' ? 'success' : 'warning'}
+                                            sx={{ fontWeight: 800 }}
+                                        />
                                     </Box>
                                     <Typography variant="caption" color="text.secondary" display="block">Transaction: {p.transaction_id || '—'}</Typography>
                                     <Typography variant="caption" color="text.secondary" display="block">Date: {formatDate(p.created_at)}</Typography>
                                     <Divider sx={{ my: 1 }} />
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 0.5 }}>
                                         <Typography variant="caption" color="text.secondary">Paid Amount</Typography>
                                         <Typography variant="subtitle2" fontWeight={900} color="success.main">₹{p.paid_amount || p.amount}</Typography>
                                     </Box>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <Typography variant="caption" color="text.secondary">Pending Amount</Typography>
+                                        <Typography variant="subtitle2" fontWeight={900} color={pendingAmt > 0 ? 'error.main' : 'text.secondary'}>₹{pendingAmt.toFixed(2)}</Typography>
+                                    </Box>
+                                    {p.settlement_status === 'unpaid' && (
+                                        <Button
+                                            size="small"
+                                            variant="contained"
+                                            color="success"
+                                            fullWidth
+                                            onClick={() => handleOpenSettleDialog(p.id, pendingAmt > 0 ? pendingAmt : (parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0)))}
+                                            sx={{ mt: 1.5, borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
+                                        >
+                                            Settle Payment
+                                        </Button>
+                                    )}
                                 </Card>
                             );
                         })}
@@ -495,6 +604,52 @@ const Payments = () => {
                     </Box>
                 </Box>
             )}
+            {/* SETTLEMENT AMOUNT MODAL DIALOG */}
+            <Dialog 
+                open={settleDialogOpen} 
+                onClose={() => !settling && setSettleDialogOpen(false)}
+                PaperProps={{ sx: { borderRadius: 3, p: 1, minWidth: { xs: 300, sm: 420 } } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800 }}>Settle Payment Payout</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {targetPaymentId 
+                            ? 'Enter or confirm the settlement amount to mark for this transaction:' 
+                            : `Enter the payout amount (₹) you wish to settle. Total pending payout: ₹${totalPendingSettlement.toFixed(2)}`}
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        label="Settlement Amount (₹)"
+                        type="number"
+                        fullWidth
+                        size="small"
+                        value={settleAmountInput}
+                        onChange={(e) => setSettleAmountInput(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                        }}
+                        helperText={!targetPaymentId ? `Available pending payout: ₹${totalPendingSettlement.toFixed(2)}` : ''}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button 
+                        onClick={() => setSettleDialogOpen(false)} 
+                        disabled={settling} 
+                        sx={{ fontWeight: 700, textTransform: 'none' }}
+                    >
+                        Cancel
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={handleConfirmSettle} 
+                        disabled={settling || !settleAmountInput || parseFloat(settleAmountInput) <= 0}
+                        sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
+                    >
+                        {settling ? 'Processing...' : 'Confirm Settlement'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </PageTransition>
     );
 };

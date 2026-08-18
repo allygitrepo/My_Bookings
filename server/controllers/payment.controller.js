@@ -67,9 +67,9 @@ const handlePaymentSuccess = async (payment) => {
         if (payment.payment_status) {
             const booking = await Booking.findByPk(payment.booking_id);
             if (booking) {
-                // Update booking status
-                if (!booking.payment_status) {
-                    await booking.update({ payment_status: true });
+                // Update booking status to Confirmed upon complete payment
+                if (!booking.payment_status || booking.booking_status !== 'Confirmed') {
+                    await booking.update({ payment_status: true, booking_status: 'Confirmed' });
                 }
 
                 // WhatsApp notification
@@ -542,6 +542,84 @@ const paymentController = {
             }
 
             res.json({ success: true, message: "Webhook processed" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    settlePayments: async (req, res) => {
+        try {
+            const { payment_ids, business_id, amount } = req.body;
+            const { Op } = require("sequelize");
+
+            if (Array.isArray(payment_ids) && payment_ids.length > 0 && (!amount || isNaN(parseFloat(amount)))) {
+                const affected = await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { id: { [Op.in]: payment_ids }, settlement_status: 'unpaid' } }
+                );
+                return res.json({ success: true, message: "Selected payments settled successfully", updatedCount: affected[0] });
+            }
+
+            const whereClause = { settlement_status: 'unpaid' };
+            if (business_id && business_id !== 'all') {
+                whereClause.business_id = business_id;
+            } else if (req.user?.business_id) {
+                whereClause.business_id = req.user.business_id;
+            } else {
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user?.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                if (businessIds.length > 0) {
+                    whereClause.business_id = { [Op.in]: businessIds };
+                }
+            }
+
+            if (Array.isArray(payment_ids) && payment_ids.length > 0) {
+                whereClause.id = { [Op.in]: payment_ids };
+            }
+
+            const unpaidPayments = await Payment.findAll({
+                where: whereClause,
+                order: [['created_at', 'ASC']]
+            });
+
+            if (unpaidPayments.length === 0) {
+                return res.status(400).json({ success: false, message: "No unpaid settlements found" });
+            }
+
+            const enteredAmount = parseFloat(amount);
+            if (isNaN(enteredAmount) || enteredAmount <= 0) {
+                const affected = await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: whereClause }
+                );
+                return res.json({ success: true, message: "Payments settled successfully", updatedCount: affected[0] });
+            }
+
+            let remainingToSettle = enteredAmount;
+            const idsToSettle = [];
+
+            for (const p of unpaidPayments) {
+                const payout = parseFloat(p.paid_amount || p.amount || 0) - parseFloat(p.platform_fees || 0);
+                if (remainingToSettle > 0) {
+                    idsToSettle.push(p.id);
+                    remainingToSettle -= payout;
+                }
+            }
+
+            if (idsToSettle.length > 0) {
+                await Payment.update(
+                    { settlement_status: 'paid' },
+                    { where: { id: { [Op.in]: idsToSettle } } }
+                );
+            }
+
+            res.json({
+                success: true,
+                message: `Successfully settled ₹${enteredAmount.toFixed(2)} worth of payouts`,
+                updatedCount: idsToSettle.length,
+                settledIds: idsToSettle
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }

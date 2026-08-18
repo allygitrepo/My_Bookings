@@ -38,9 +38,11 @@ const PortalBookings = () => {
     }, []);
 
     const filteredBookings = bookings.filter(b => 
-        b.business?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        b.booking_date?.includes(searchTerm) ||
-        b.status_text?.toLowerCase().includes(searchTerm.toLowerCase())
+        Boolean(b.payment_status) && (
+            b.business?.business_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            b.booking_date?.includes(searchTerm) ||
+            b.status_text?.toLowerCase().includes(searchTerm.toLowerCase())
+        )
     );
 
     return (
@@ -111,9 +113,9 @@ const PortalBookings = () => {
                                 <TableCell sx={{ fontWeight: 800 }}>₹{parseFloat(b.total_amount || 0).toLocaleString()}</TableCell>
                                 <TableCell>
                                     <Chip 
-                                        label={b.status ? 'Confirmed' : 'Cancelled'} 
+                                        label={!b.status || b.booking_status === 'Cancelled' ? 'Cancelled' : (!b.payment_status ? 'Pending' : 'Confirmed')} 
                                         size="small" 
-                                        color={b.status ? 'success' : 'error'} 
+                                        color={!b.status || b.booking_status === 'Cancelled' ? 'error' : (!b.payment_status ? 'warning' : 'success')} 
                                         sx={{ fontWeight: 700, borderRadius: 1.5 }}
                                     />
                                 </TableCell>

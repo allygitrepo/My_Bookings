@@ -15,6 +15,11 @@ export const updatePayment = async (id, data) => {
     return response.data;
 };
 
+export const settlePayments = async (data) => {
+    const response = await axiosInstance.put('/payments/settle', data);
+    return response.data;
+};
+
 export const deletePayment = async (id) => {
     const response = await axiosInstance.delete(`/payments/delete/${id}`);
     return response.data;
