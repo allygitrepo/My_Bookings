@@ -13,15 +13,49 @@ import 'app/data/services/fcm_service.dart';
 import 'app/core/themes/light_theme.dart';
 import 'app/core/themes/dark_theme.dart';
 
+import 'package:flutter/services.dart';
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await GetStorage.init();
+
+  // Set system UI overlay style for transparent status bar
+  SystemChrome.setSystemUIOverlayStyle(
+    const SystemUiOverlayStyle(
+      statusBarColor: Colors.transparent,
+      statusBarIconBrightness: Brightness.dark,
+      statusBarBrightness: Brightness.light,
+    ),
+  );
+
+  try {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  } catch (e) {
+    debugPrint('Firebase initialization error: $e');
+  }
+
+  try {
+    await GetStorage.init();
+  } catch (e) {
+    debugPrint('GetStorage initialization error: $e');
+  }
+
+  // Register core services in dependency order
   await Get.putAsync(() => AuthService().init());
   await Get.putAsync(() => ApiClient().init());
   await Get.putAsync(() => NotificationService().init());
-  await Get.putAsync(() => FCMService().init());
-  await Get.putAsync(() => SocketService().init());
+
+  try {
+    await Get.putAsync(() => FCMService().init());
+  } catch (e) {
+    debugPrint('FCMService initialization error: $e');
+  }
+
+  try {
+    await Get.putAsync(() => SocketService().init());
+  } catch (e) {
+    debugPrint('SocketService initialization error: $e');
+  }
+
   runApp(const MyApp());
 }
 
