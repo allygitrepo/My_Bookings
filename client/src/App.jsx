@@ -32,6 +32,8 @@ import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
 import WhatsApp from './pages/WhatsApp';
 import Documentation from './pages/Documentation';
+import StripeSuccess from './pages/StripeSuccess';
+import StripeCancel from './pages/StripeCancel';
 
 
 import { GoogleOAuthProvider } from '@react-oauth/google';
@@ -107,6 +109,8 @@ function App() {
                   <Route path="/docs" element={<Documentation />} />
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
+                  <Route path="/payment-success" element={<StripeSuccess />} />
+                  <Route path="/payment-cancel" element={<StripeCancel />} />
 
                   {/* Protected Dashboard Routes */}
                     <Route element={<AuthGuard><MainLayout /></AuthGuard>}>

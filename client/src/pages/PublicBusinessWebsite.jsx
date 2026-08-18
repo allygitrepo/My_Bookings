@@ -144,7 +144,7 @@ const PublicBusinessWebsite = ({ subPath }) => {
         <PageTransition>
             {renderTemplate()}
             {!isCustomTemplate && (
-                <BookingWidget businessId={businessData.business.api_key || businessData.business.id} />
+                <BookingWidget businessId={businessData.business.api_key || businessData.business.id} allowSkipPayment={false} />
             )}
         </PageTransition>
     );

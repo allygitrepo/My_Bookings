@@ -49,6 +49,11 @@ const Booking = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false
         },
+        booking_status: {
+            type: DataTypes.STRING,
+            defaultValue: 'Pending',
+            allowNull: false
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

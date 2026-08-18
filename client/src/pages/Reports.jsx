@@ -114,16 +114,19 @@ const Reports = () => {
     const endStr = endDate ? endDate.format('YYYY-MM-DD') : '';
 
     const filteredBookings = bookings.filter(b => {
+        if (!b.payment_status) return false;
         const matchesBusiness = filterBusiness === 'all' || String(b.business_id) === String(filterBusiness);
         if (!matchesBusiness) return false;
 
         const bDateStr = dayjs(b.booking_date).format('YYYY-MM-DD');
         const matchesDate = !startStr || !endStr || (bDateStr >= startStr && bDateStr <= endStr);
 
-        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+        const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+        const isPaid = Boolean(b.payment_status);
         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
+        if (!bookingDateTime.isValid()) return false;
         const isPast = bookingDateTime.isBefore(dayjs());
-        const status = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+        const status = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
 
         const matchesStatus = filterStatus === 'All' || status === filterStatus;
         const matchesService = filterService === 'All' || 
@@ -140,9 +143,69 @@ const Reports = () => {
         return !startStr || !endStr || (pDateStr >= startStr && pDateStr <= endStr);
     }).sort((a, b) => dayjs(a.created_at).diff(dayjs(b.created_at)));
 
+    const statementEntries = [];
+    filteredPayments.forEach(p => {
+        const booking = bookings.find(b => b.id === p.booking_id);
+        const customer = customers.find(c => c.id === booking?.customer_id);
+
+        const initialPaid = Number(p.paid_amount || p.amount || 0);
+        const initialFees = Number(p.platform_fees || 0);
+        const initialIncome = Math.max(0, initialPaid - initialFees);
+
+        // Entry 1: Booking Payment Deposit Entry
+        statementEntries.push({
+            id: `orig_${p.id}`,
+            date: p.created_at,
+            customer_name: customer?.name || '—',
+            customer_phone: customer?.phone || '',
+            transaction_id: p.transaction_id || '—',
+            method: p.payment_method || 'Online',
+            type: 'Booking Payment',
+            paid_amount: initialPaid,
+            platform_fees: initialFees,
+            final_amount: initialIncome,
+            status: p.payment_status ? 'Paid' : 'Pending',
+            is_settlement: false
+        });
+
+        // Entry 2: Bank Settlement Payout Entry (If settled)
+        if (p.settlement_status === 'paid') {
+            const totalAmt = Number(p.amount || 0);
+            const settledPayout = Math.max(0, totalAmt - initialPaid);
+            const payoutAmount = settledPayout > 0 ? settledPayout : initialPaid;
+
+            statementEntries.push({
+                id: `settle_${p.id}`,
+                date: p.updated_at || p.created_at,
+                customer_name: `${customer?.name || 'Customer'} (Settlement Payout)`,
+                customer_phone: customer?.phone || '',
+                transaction_id: `STL-${p.transaction_id || p.id}`,
+                method: 'Bank Settlement Payout',
+                type: 'Payout Settlement',
+                paid_amount: payoutAmount,
+                platform_fees: 0,
+                final_amount: payoutAmount,
+                status: 'Settled',
+                is_settlement: true
+            });
+        }
+    });
+
+    statementEntries.sort((a, b) => dayjs(b.date).diff(dayjs(a.date)));
+
     const ledgerData = customers.map(customer => {
-        const customerBookings = filteredBookings.filter(b => String(b.customer_id) === String(customer.id));
-        const customerPayments = payments.filter(p => p.booking_id && customerBookings.some(b => String(b.id) === String(p.booking_id)));
+        const customerBookings = bookings.filter(b => {
+            const matchesCustomer = String(b.customer_id) === String(customer.id);
+            const matchesBusiness = filterBusiness === 'all' || String(b.business_id) === String(filterBusiness);
+            return matchesCustomer && matchesBusiness;
+        });
+
+        const customerPayments = payments.filter(p => {
+            const matchesCustomer = String(p.customer_id) === String(customer.id) ||
+                customerBookings.some(b => String(b.id) === String(p.booking_id));
+            const matchesBusiness = filterBusiness === 'all' || String(p.business_id) === String(filterBusiness);
+            return matchesCustomer && matchesBusiness;
+        });
 
         const totalDue = customerBookings.reduce((sum, b) => {
             const payment = payments.find(p => String(p.booking_id) === String(b.id));
@@ -152,16 +215,21 @@ const Reports = () => {
             return sum + Number(payment?.amount || servicePrice || 0);
         }, 0);
 
-        const totalPaid = customerPayments.reduce((sum, p) => sum + Number(p.paid_amount || p.amount || 0), 0);
+        const totalPaid = customerPayments.reduce((sum, p) => {
+            const paid = Number(p.paid_amount !== undefined && p.paid_amount !== null ? p.paid_amount : (p.payment_status ? p.amount : 0));
+            return sum + paid;
+        }, 0);
+
+        const balance = Math.max(0, totalDue - totalPaid);
 
         return {
             ...customer,
             bookingsCount: customerBookings.length,
             totalDue,
             totalPaid,
-            balance: totalDue - totalPaid
+            balance
         };
-    }).filter(c => c.bookingsCount > 0);
+    }).filter(c => c.bookingsCount > 0 || c.totalDue > 0 || c.totalPaid > 0 || c.balance > 0);
 
     // PDF Utilities
     const toBase64 = (url) => fetch(url)
@@ -245,45 +313,38 @@ const Reports = () => {
             body.push([
                 { content: `Total Bookings: ${filteredBookings.length}`, colSpan: 7, styles: { fontStyle: 'bold', fillColor: [240, 240, 240], halign: 'center' } }
             ]);
-
         } else if (reportType === 'payments') {
-            headers = [['Date', 'Customer', 'Method', 'Paid Amt', 'Platform Fees', 'Final Income', 'Status']];
+            headers = [['Date & Time', 'Customer', 'Transaction ID', 'Method', 'Paid Amt', 'Platform Fees', 'Final Income', 'Status']];
 
             let totalPaid = 0;
             let totalCharges = 0;
             let totalIncome = 0;
 
-            body = filteredPayments.map(p => {
-                const booking = bookings.find(b => b.id === p.booking_id);
-                const customer = customers.find(c => c.id === booking?.customer_id);
-                const paidAmt = Number(p.paid_amount || 0);
-                const charge = Number(p.platform_fees || 0);
-                const income = Number(p.final_amount || 0);
-
-                totalPaid += paidAmt;
-                totalCharges += charge;
-                totalIncome += income;
+            body = statementEntries.map(entry => {
+                totalPaid += entry.paid_amount;
+                totalCharges += entry.platform_fees;
+                totalIncome += entry.final_amount;
 
                 return [
-                    dayjs(p.created_at).format('DD/MM/YYYY'),
-                    customer?.name || '—',
-                    p.payment_method || '—',
-                    `rs.${paidAmt.toFixed(2)}`,
-                    `rs.${charge.toFixed(2)}`,
-                    `rs.${income.toFixed(2)}`,
-                    p.payment_status ? 'Paid' : 'Pend.'
+                    dayjs(entry.date).format('DD/MM/YYYY HH:mm'),
+                    entry.customer_name,
+                    entry.transaction_id,
+                    entry.method,
+                    `rs.${entry.paid_amount.toFixed(2)}`,
+                    `rs.${entry.platform_fees.toFixed(2)}`,
+                    `rs.${entry.final_amount.toFixed(2)}`,
+                    entry.status
                 ];
             });
 
             // Add Total Row
             body.push([
-                { content: `Total Transactions: ${filteredPayments.length}`, colSpan: 3, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
+                { content: `Total Statement Entries: ${statementEntries.length}`, colSpan: 4, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
                 { content: `rs.${totalPaid.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
                 { content: `rs.${totalCharges.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
                 { content: `rs.${totalIncome.toFixed(2)}`, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } },
                 { content: '', styles: { fillColor: [240, 240, 240] } }
             ]);
-
         } else {
             headers = [['Customer', 'Appts', 'Total Due', 'Paid', 'Pending']];
 
@@ -496,10 +557,11 @@ const Reports = () => {
                                         <TableRow><TableCell colSpan={6} align="center" sx={{ py: 3 }}>No data for selected filters.</TableCell></TableRow>
                                     ) : filteredBookings.map((b) => {
                                         const service = services.find(s => String(s.id) === String(b.service_id));
-                                        const isConfirmedInDb = (b.status === true || b.status === 1 || b.status === '1');
+                                        const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                        const isPaid = Boolean(b.payment_status);
                                         const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time || '00:00'}`);
                                         const isPast = bookingDateTime.isBefore(dayjs());
-                                        const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
+                                        const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
 
                                         const customerObj = customers.find(c => String(c.id) === String(b.customer_id));
                                         const staffObj = staff.find(s => String(s.id) === String(b.staff_id));
@@ -554,11 +616,12 @@ const Reports = () => {
                                 </Paper>
                             ) : filteredBookings.map((b) => {
                                 const service = services.find(s => s.id === b.service_id);
-                                const isConfirmedInDb = (b.status === true || b.status === 1);
+                                const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                const isPaid = Boolean(b.payment_status);
                                 const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
                                 const isPast = bookingDateTime.isBefore(dayjs());
-                                const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                                const statusColor = statusLabel === 'Completed' ? 'info' : statusLabel === 'Confirmed' ? 'success' : 'error';
+                                const statusLabel = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : (isPast ? 'Completed' : 'Confirmed'));
+                                const statusColor = statusLabel === 'Confirmed' ? 'success' : (statusLabel === 'Completed' ? 'info' : (statusLabel === 'Pending' ? 'warning' : 'error'));
 
                                 return (
                                     <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
@@ -606,13 +669,16 @@ const Reports = () => {
                                     ) : filteredPayments.map((p) => {
                                         const booking = bookings.find(b => b.id === p.booking_id);
                                         const customer = customers.find(c => c.id === booking?.customer_id);
-                                        const paidAmt = Number(p.paid_amount || 0);
+                                        const isSettled = p.settlement_status === 'paid';
+                                        const paidAmt = Number(isSettled ? (p.amount || p.paid_amount || 0) : (p.paid_amount || p.amount || 0));
                                         const charge = Number(p.platform_fees || 0);
-                                        const income = Number(p.final_amount || 0);
+                                        const income = Math.max(0, paidAmt - charge);
+                                        const statusLabel = isSettled ? 'Settled' : (p.payment_status ? 'Paid' : 'Pending');
+                                        const statusColor = isSettled ? 'success' : (p.payment_status ? 'success' : 'warning');
 
                                         return (
                                             <TableRow key={p.id} hover>
-                                                <TableCell sx={{ fontWeight: 500 }}>{dayjs(p.created_at).format('DD/MM/YYYY')}</TableCell>
+                                                <TableCell sx={{ fontWeight: 500 }}>{dayjs(p.created_at).format('DD/MM/YYYY hh:mm A')}</TableCell>
                                                 <TableCell>
                                                     <Typography variant="body2" fontWeight={700}>{customer?.name || '—'}</Typography>
                                                     <Typography variant="caption" color="text.secondary">{customer?.phone}</Typography>
@@ -620,10 +686,10 @@ const Reports = () => {
                                                 <TableCell sx={{ fontFamily: 'monospace', fontSize: '0.8rem' }}>{p.transaction_id || '—'}</TableCell>
                                                 <TableCell sx={{ fontWeight: 500 }}>{p.payment_method}</TableCell>
                                                 <TableCell align="right" sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmt.toFixed(2)}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>₹{Number(p.platform_fees || 0).toFixed(2)}</TableCell>
-                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>₹{Number(p.final_amount || 0).toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 600, color: 'error.main' }}>₹{charge.toFixed(2)}</TableCell>
+                                                <TableCell align="right" sx={{ fontWeight: 800, color: 'primary.main' }}>₹{income.toFixed(2)}</TableCell>
                                                 <TableCell>
-                                                    <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                                                    <Chip label={statusLabel} size="small" color={statusColor} variant="outlined" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
                                                 </TableCell>
                                             </TableRow>
                                         );
@@ -643,16 +709,20 @@ const Reports = () => {
                             ) : filteredPayments.map((p) => {
                                 const booking = bookings.find(b => b.id === p.booking_id);
                                 const customer = customers.find(c => c.id === booking?.customer_id);
+                                const isSettled = p.settlement_status === 'paid';
+                                const paidAmt = Number(isSettled ? (p.amount || p.paid_amount || 0) : (p.paid_amount || p.amount || 0));
+                                const statusLabel = isSettled ? 'Settled' : (p.payment_status ? 'Paid' : 'Pending');
+                                const statusColor = isSettled ? 'success' : (p.payment_status ? 'success' : 'warning');
                                 return (
                                     <Card key={p.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                            <Typography variant="subtitle2" fontWeight={800}>{dayjs(p.created_at).format('DD/MM/YYYY')}</Typography>
-                                            <Chip label={p.payment_status ? 'Paid' : 'Pending'} size="small" color={p.payment_status ? 'success' : 'warning'} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
+                                            <Typography variant="subtitle2" fontWeight={800}>{dayjs(p.created_at).format('DD/MM/YYYY hh:mm A')}</Typography>
+                                            <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
                                         </Box>
                                         <Typography variant="body2" fontWeight={700} sx={{ mb: 1 }}>{customer?.name || '—'}</Typography>
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                             <Typography variant="caption" color="text.secondary">Txn: {p.transaction_id?.slice(-8) || '—'}</Typography>
-                                            <Typography variant="body1" fontWeight={900} color="success.main">₹{p.paid_amount}</Typography>
+                                            <Typography variant="body1" fontWeight={900} color="success.main">₹{paidAmt.toFixed(2)}</Typography>
                                         </Box>
                                     </Card>
                                 );

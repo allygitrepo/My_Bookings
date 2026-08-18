@@ -5,7 +5,8 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
     TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress,
-    Dialog, DialogTitle, DialogContent, DialogActions
+    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment,
+    FormControl, InputLabel, Select, Alert
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -18,20 +19,21 @@ import {
     AccessTimeOutlined as ClockIcon,
     CheckCircleOutline as CheckCircleIcon,
     SyncDisabledOutlined as SyncDisabledIcon,
+    Add as AddIcon
 } from '@mui/icons-material';
-import { Switch, FormControlLabel } from '@mui/material';
+import { Switch, FormControlLabel, Checkbox } from '@mui/material';
 import { useGoogleLogin } from '@react-oauth/google';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import { getBookings } from '../api/booking.api';
+import { getBookings, updateBooking, createBooking } from '../api/booking.api';
 import { getBusinesses } from '../api/business.api';
 import { getLocations } from '../api/location.api';
 import { getStaff } from '../api/staff.api';
 import { getServices } from '../api/service.api';
 import { getCustomers } from '../api/customer.api';
-import { getPayments } from '../api/payment.api';
+import { getPayments, updatePayment } from '../api/payment.api';
 import toast from 'react-hot-toast';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
@@ -130,26 +132,35 @@ const CalendarView = ({ bookings, customers, services, staff }) => {
                                         {day}
                                     </Typography>
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
-                                        {dayBookings.slice(0, 3).map(b => (
-                                            <Tooltip key={b.id} title={`${b.services && b.services.length > 0 ? b.services.map(s => s.service_name).join(', ') : (services.find(s => s.id === b.service_id)?.service_name || 'Service')} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'}`} arrow>
-                                                <Box sx={{
-                                                    fontSize: '0.68rem',
-                                                    p: 0.7,
-                                                    borderRadius: 1.5,
-                                                    bgcolor: (b.status === true || b.status === 1) ? 'success.light' : 'error.light',
-                                                    color: (b.status === true || b.status === 1) ? 'success.dark' : 'error.dark',
-                                                    fontWeight: 700,
-                                                    whiteSpace: 'nowrap',
-                                                    overflow: 'hidden',
-                                                    textOverflow: 'ellipsis',
-                                                    border: '1px solid',
-                                                    borderColor: (b.status === true || b.status === 1) ? 'success.main' : 'error.main',
-                                                    opacity: 0.9
-                                                }}>
-                                                    {b.start_time?.slice(0, 5)} {b.services && b.services.length > 0 ? (b.services.length > 1 ? `${b.services[0].service_name} (+${b.services.length - 1})` : b.services[0].service_name) : services.find(s => s.id === b.service_id)?.service_name}
-                                                </Box>
-                                            </Tooltip>
-                                        ))}
+                                        {dayBookings.slice(0, 3).map(b => {
+                                            const isCancelled = b.status === false || b.status === 0 || b.booking_status === 'Cancelled';
+                                            const isPaid = Boolean(b.payment_status);
+                                            const statusKey = isCancelled ? 'Cancelled' : (!isPaid ? 'Pending' : 'Confirmed');
+                                            const bgCol = statusKey === 'Confirmed' ? 'success.light' : (statusKey === 'Pending' ? 'warning.light' : 'error.light');
+                                            const txtCol = statusKey === 'Confirmed' ? 'success.dark' : (statusKey === 'Pending' ? 'warning.dark' : 'error.dark');
+                                            const borderCol = statusKey === 'Confirmed' ? 'success.main' : (statusKey === 'Pending' ? 'warning.main' : 'error.main');
+
+                                            return (
+                                                <Tooltip key={b.id} title={`${b.services && b.services.length > 0 ? b.services.map(s => s.service_name).join(', ') : (services.find(s => s.id === b.service_id)?.service_name || 'Service')} - ${customers.find(c => c.id === b.customer_id)?.name || 'Guest'} (${statusKey})`} arrow>
+                                                    <Box sx={{
+                                                        fontSize: '0.68rem',
+                                                        p: 0.7,
+                                                        borderRadius: 1.5,
+                                                        bgcolor: bgCol,
+                                                        color: txtCol,
+                                                        fontWeight: 700,
+                                                        whiteSpace: 'nowrap',
+                                                        overflow: 'hidden',
+                                                        textOverflow: 'ellipsis',
+                                                        border: '1px solid',
+                                                        borderColor: borderCol,
+                                                        opacity: 0.9
+                                                    }}>
+                                                        {b.start_time?.slice(0, 5)} {b.services && b.services.length > 0 ? (b.services.length > 1 ? `${b.services[0].service_name} (+${b.services.length - 1})` : b.services[0].service_name) : services.find(s => s.id === b.service_id)?.service_name}
+                                                    </Box>
+                                                </Tooltip>
+                                            );
+                                        })}
                                         {dayBookings.length > 3 && (
                                             <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.65rem', fontWeight: 800, pl: 0.5, pt: 0.5 }}>
                                                 +{dayBookings.length - 3} more
@@ -249,6 +260,91 @@ const Bookings = () => {
     const [endDate, setEndDate] = useState(null);
     const [autoSync, setAutoSync] = useState(() => localStorage.getItem('autoSyncEnabled') === 'true');
     const [showFilters, setShowFilters] = useState(true);
+
+    const [settleDialogOpen, setSettleDialogOpen] = useState(false);
+    const [settleBookingId, setSettleBookingId] = useState(null);
+    const [settlePaymentId, setSettlePaymentId] = useState(null);
+    const [settleAmountInput, setSettleAmountInput] = useState('');
+    const [settling, setSettling] = useState(false);
+
+    // New Booking Modal State
+    const [newBookingOpen, setNewBookingOpen] = useState(false);
+    const [newBookingForm, setNewBookingForm] = useState({
+        customer_id: '',
+        customer_name: '',
+        customer_phone: '',
+        location_id: '',
+        staff_id: '',
+        service_ids: [],
+        booking_date: dayjs().format('YYYY-MM-DD'),
+        start_time: '10:00',
+        end_time: '11:00',
+        skip_payment: true,
+        paid_amount: 0
+    });
+    const [savingBooking, setSavingBooking] = useState(false);
+
+    const handleOpenNewBookingModal = () => {
+        setNewBookingForm({
+            customer_id: customers[0]?.id || '',
+            customer_name: '',
+            customer_phone: '',
+            location_id: locations[0]?.id || '',
+            staff_id: staff[0]?.id || '',
+            service_ids: services[0] ? [services[0].id] : [],
+            booking_date: dayjs().format('YYYY-MM-DD'),
+            start_time: '10:00',
+            end_time: '11:00',
+            skip_payment: true,
+            paid_amount: 0
+        });
+        setNewBookingOpen(true);
+    };
+
+    const handleCreatePortalBooking = async () => {
+        if (!newBookingForm.location_id || !newBookingForm.staff_id || newBookingForm.service_ids.length === 0) {
+            toast.error('Please select location, staff, and at least one service');
+            return;
+        }
+        if (!newBookingForm.customer_id && (!newBookingForm.customer_name || !newBookingForm.customer_phone)) {
+            toast.error('Please select an existing customer or enter customer name & phone');
+            return;
+        }
+
+        setSavingBooking(true);
+        try {
+            const payload = {
+                business_id: selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || 1),
+                location_id: newBookingForm.location_id,
+                staff_id: newBookingForm.staff_id,
+                service_id: newBookingForm.service_ids[0],
+                service_ids: newBookingForm.service_ids,
+                booking_date: newBookingForm.booking_date,
+                start_time: newBookingForm.start_time,
+                end_time: newBookingForm.end_time,
+                customer_id: newBookingForm.customer_id || undefined,
+                name: newBookingForm.customer_name || undefined,
+                phone: newBookingForm.customer_phone || undefined,
+                skip_payment: newBookingForm.skip_payment,
+                booking_status: 'Confirmed',
+                payment_status: true,
+                is_portal_request: true
+            };
+
+            const res = await createBooking(payload);
+            if (res.success) {
+                toast.success('Booking confirmed & created successfully!');
+                setNewBookingOpen(false);
+                fetchData();
+            } else {
+                toast.error(res.message || 'Failed to create booking');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error creating booking');
+        } finally {
+            setSavingBooking(false);
+        }
+    };
 
     const [syncedIds, setSyncedIds] = useState([]); // No longer needed for logic, but keeping state for compatibility if used elsewhere
     const [isSyncingInProgress, setIsSyncingInProgress] = useState(false);
@@ -357,12 +453,96 @@ const Bookings = () => {
     // ... (rest of the filteredBookings logic) ...
 
 
+    const getBookingStatus = (b) => {
+        const isConfirmedInDb = (b.status === true || b.status === 1);
+        if (!isConfirmedInDb || b.booking_status === 'Cancelled') return 'Cancelled';
+        if (!b.payment_status) return 'Pending';
+        if (b.booking_status && b.booking_status !== 'Pending') return b.booking_status;
+        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
+        if (bookingDateTime.isBefore(dayjs())) return 'Completed';
+        return 'Confirmed';
+    };
+
+    const handleStatusChange = async (bookingId, newStatus) => {
+        try {
+            const res = await updateBooking(bookingId, { booking_status: newStatus });
+            if (res.success) {
+                const isPaidNow = newStatus === 'Confirmed' ? true : (newStatus === 'Pending' ? false : undefined);
+                setBookings(prev => prev.map(b => b.id === bookingId ? {
+                    ...b,
+                    booking_status: newStatus,
+                    status: newStatus !== 'Cancelled',
+                    ...(isPaidNow !== undefined ? { payment_status: isPaidNow } : {})
+                } : b));
+                toast.success(`Booking status updated to ${newStatus}`);
+
+                if (newStatus === 'Completed') {
+                    const payment = payments.find(p => p.booking_id === bookingId);
+                    if (payment && payment.settlement_status !== 'paid') {
+                        const rem = Math.max(0, parseFloat(payment.amount || 0) - parseFloat(payment.paid_amount || 0)) || payment.amount;
+                        setSettleBookingId(bookingId);
+                        setSettlePaymentId(payment.id);
+                        setSettleAmountInput(rem ? String(rem) : String(payment.amount || ''));
+                        setSettleDialogOpen(true);
+                    }
+                }
+            } else {
+                toast.error(res.message || 'Failed to update status');
+            }
+        } catch (error) {
+            toast.error('Failed to update status');
+        }
+    };
+
+    const handleConfirmSettleFromBookings = async () => {
+        const amt = parseFloat(settleAmountInput);
+        if (isNaN(amt) || amt <= 0) {
+            toast.error('Please enter a valid settlement amount');
+            return;
+        }
+
+        setSettling(true);
+        try {
+            const targetP = payments.find(p => p.id === settlePaymentId);
+            const currentPaid = parseFloat(targetP?.paid_amount || targetP?.amount || 0);
+            const totalAmt = parseFloat(targetP?.amount || 0);
+            const newPaid = Math.min(totalAmt, currentPaid + amt);
+            const newStatus = newPaid >= totalAmt ? 'paid' : 'unpaid';
+
+            const res = await updatePayment(settlePaymentId, { paid_amount: newPaid });
+            if (res.success) {
+                setPayments(prev => prev.map(p => p.id === settlePaymentId ? {
+                    ...p,
+                    paid_amount: newPaid,
+                    settlement_status: newStatus,
+                    payment_status: true
+                } : p));
+                setBookings(prev => prev.map(b => b.id === settleBookingId ? {
+                    ...b,
+                    booking_status: 'Completed',
+                    payment_status: true
+                } : b));
+                toast.success(`Payment settled for ₹${amt.toFixed(2)}! (Total Paid: ₹${newPaid.toFixed(2)} / ₹${totalAmt.toFixed(2)})`);
+                setSettleDialogOpen(false);
+            } else {
+                toast.error(res.message || 'Failed to settle payment');
+            }
+        } catch (error) {
+            toast.error('Error settling payment');
+        } finally {
+            setSettling(false);
+        }
+    };
+
     const filteredBookings = [...bookings].sort((a, b) => {
         const dateA = a.booking_date || "";
         const dateB = b.booking_date || "";
         if (dateA !== dateB) return dateB.localeCompare(dateA);
         return (b.start_time || "").localeCompare(a.start_time || "");
     }).filter(b => {
+        // Payment Filter: Only show bookings where payment is done
+        if (!b.payment_status) return false;
+
         // Business Filter
         const matchesBusiness = selectedBusinessId === 'all' || String(b.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
@@ -382,19 +562,10 @@ const Bookings = () => {
         );
 
         // Status Logic
-        const isConfirmedInDb = (b.status === true || b.status === 1);
-        const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-        const isPast = bookingDateTime.isBefore(dayjs());
-
-        const isCompleted = isConfirmedInDb && isPast;
-        const isConfirmed = isConfirmedInDb && !isPast;
-        const isCancelled = !isConfirmedInDb;
+        const currentStatus = getBookingStatus(b);
 
         // Status Filter
-        const matchesStatus = filterStatus === 'All' ||
-            (filterStatus === 'Confirmed' && isConfirmed) ||
-            (filterStatus === 'Completed' && isCompleted) ||
-            (filterStatus === 'Cancelled' && isCancelled);
+        const matchesStatus = filterStatus === 'All' || filterStatus === currentStatus;
 
         // Date Filter
         const bDate = dayjs(b.booking_date);
@@ -419,9 +590,17 @@ const Bookings = () => {
                         Bookings
                     </Box>
                 }
-                subtitle="All customer appointments. Bookings are created via the widget."
+                subtitle="All customer appointments. Bookings are created via the widget or portal."
                 extraActions={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={handleOpenNewBookingModal}
+                            sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
+                        >
+                            + New Booking
+                        </Button>
                         {usage && usage.limits.bookings !== -1 && (
                             <Box sx={{ minWidth: 140, display: { xs: 'none', lg: 'block' } }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -446,55 +625,6 @@ const Bookings = () => {
                                 />
                             </Box>
                         )}
-                        {/* 
-                        // Calendar Sync Disabled
-                        isGoogleConnected && (
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={isSyncEnabled}
-                                        onChange={handleToggleSync}
-                                        size="small"
-                                        color="primary"
-                                    />
-                                }
-                                label={
-                                    <Typography variant="caption" sx={{ fontWeight: 600, color: isSyncEnabled ? 'primary.main' : 'text.secondary' }}>
-                                        {isSyncEnabled ? 'Auto Sync ON' : 'Auto Sync OFF'}
-                                    </Typography>
-                                }
-                                sx={{ mr: 1 }}
-                            />
-                        ) */}
-                        {/* 
-                        // Calendar Sync Disabled
-                        isGoogleConnected ? (
-                            <Tooltip 
-                                title={businesses[0]?.sync_email || 'Account details unavailable. Re-link to verify email.'} 
-                                arrow 
-                                placement="top"
-                            >
-                                <Chip 
-                                    label="Google Calendar Linked" 
-                                    color="success" 
-                                    variant="outlined" 
-                                    icon={<SyncIcon />}
-                                    size="small"
-                                    sx={{ borderRadius: 2, fontWeight: 600, cursor: 'help' }}
-                                />
-                            </Tooltip>
-                        ) : (
-                            <Button
-                                variant="contained"
-                                size="small"
-                                color="warning"
-                                startIcon={<SyncIcon />}
-                                onClick={() => login()}
-                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                            >
-                                Link Google Calendar
-                            </Button>
-                        ) */}
                         <Button
                             variant="outlined"
                             size="small"
@@ -531,7 +661,6 @@ const Bookings = () => {
                                 <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Calendar
                             </ToggleButton>
-
                         </ToggleButtonGroup>
                     </Box>
                 }
@@ -582,6 +711,7 @@ const Bookings = () => {
                             sx={{ minWidth: { xs: '100%', sm: 140 } }}
                         >
                             <MenuItem value="All">All Status</MenuItem>
+                            <MenuItem value="Pending">Pending</MenuItem>
                             <MenuItem value="Confirmed">Confirmed</MenuItem>
                             <MenuItem value="Completed">Completed</MenuItem>
                             <MenuItem value="Cancelled">Cancelled</MenuItem>
@@ -658,14 +788,11 @@ const Bookings = () => {
                                     const staffMember = staff.find(s => s.id === b.staff_id);
                                     const payment = payments.find(p => p.booking_id === b.id);
 
+                                    const isPaymentSettled = payment?.settlement_status === 'paid' || b.booking_status === 'Completed' || (b.payment_status && payment?.payment_status);
                                     const totalAmount = Number(payment?.amount || service?.price || 0);
-                                    const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                                    const remainingAmount = totalAmount - paidAmount;
-                                    const isConfirmedInDb = (b.status === true || b.status === 1);
-                                    const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-                                    const isPast = bookingDateTime.isBefore(dayjs());
-                                    const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                                    const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                                    const paidAmount = isPaymentSettled ? totalAmount : Number(payment?.paid_amount || (b.payment_status ? (payment?.amount || service?.price) : 0) || 0);
+                                    const remainingAmount = isPaymentSettled ? 0 : Math.max(0, totalAmount - paidAmount);
+                                    const currentBookingStatus = getBookingStatus(b);
 
                                     return (
                                         <TableRow key={b.id} hover>
@@ -703,7 +830,38 @@ const Bookings = () => {
                                             <TableCell sx={{ fontWeight: 600 }}>₹{totalAmount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: 'success.main' }}>₹{paidAmount}</TableCell>
                                             <TableCell sx={{ fontWeight: 700, color: remainingAmount > 0 ? 'error.main' : 'text.disabled' }}>₹{remainingAmount.toFixed(2)}</TableCell>
-                                            <TableCell><Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 700, borderRadius: 1.5 }} /></TableCell>
+                                            <TableCell>
+                                                <TextField
+                                                    select
+                                                    size="small"
+                                                    value={currentBookingStatus}
+                                                    onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                                    sx={{
+                                                        minWidth: 125,
+                                                        '& .MuiOutlinedInput-root': {
+                                                            borderRadius: 2,
+                                                            height: 32,
+                                                            fontSize: '0.75rem',
+                                                            fontWeight: 800,
+                                                            bgcolor: 
+                                                                currentBookingStatus === 'Confirmed' ? 'rgba(34, 197, 94, 0.12)' :
+                                                                currentBookingStatus === 'Completed' ? 'rgba(59, 130, 246, 0.12)' :
+                                                                currentBookingStatus === 'Pending' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                                            color:
+                                                                currentBookingStatus === 'Confirmed' ? 'success.main' :
+                                                                currentBookingStatus === 'Completed' ? 'info.main' :
+                                                                currentBookingStatus === 'Pending' ? 'warning.main' : 'error.main',
+                                                            '& fieldset': { border: 'none' }
+                                                        },
+                                                        '& .MuiSelect-select': { py: '4px', px: '8px' }
+                                                    }}
+                                                >
+                                                    <MenuItem value="Pending" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'warning.main' }}>Pending</MenuItem>
+                                                    <MenuItem value="Confirmed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'success.main' }}>Confirmed</MenuItem>
+                                                    <MenuItem value="Completed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'info.main' }}>Completed</MenuItem>
+                                                    <MenuItem value="Cancelled" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'error.main' }}>Cancelled</MenuItem>
+                                                </TextField>
+                                            </TableCell>
                                         </TableRow>
                                     );
                                 })}
@@ -725,18 +883,15 @@ const Bookings = () => {
                             const staffMember = staff.find(s => s.id === b.staff_id);
                             const payment = payments.find(p => p.booking_id === b.id);
 
+                            const isPaymentSettled = payment?.settlement_status === 'paid' || b.booking_status === 'Completed' || (b.payment_status && payment?.payment_status);
                             const totalAmount = Number(payment?.amount || service?.price || 0);
-                            const paidAmount = Number(payment?.paid_amount || (b.payment_status ? service?.price : 0) || 0);
-                            const remainingAmount = totalAmount - paidAmount;
-                            const isConfirmedInDb = (b.status === true || b.status === 1);
-                            const bookingDateTime = dayjs(`${b.booking_date} ${b.end_time || b.start_time}`);
-                            const isPast = bookingDateTime.isBefore(dayjs());
-                            const statusLabel = isConfirmedInDb ? (isPast ? 'Completed' : 'Confirmed') : 'Cancelled';
-                            const statusColor = isConfirmedInDb ? (isPast ? 'info' : 'success') : 'error';
+                            const paidAmount = isPaymentSettled ? totalAmount : Number(payment?.paid_amount || (b.payment_status ? (payment?.amount || service?.price) : 0) || 0);
+                            const remainingAmount = isPaymentSettled ? 0 : Math.max(0, totalAmount - paidAmount);
+                            const currentBookingStatus = getBookingStatus(b);
 
                             return (
                                 <Card key={b.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
-                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 2 }}>
+                                    <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
                                             <Avatar sx={{ bgcolor: 'primary.main', fontWeight: 800 }}>{customer?.name?.charAt(0)}</Avatar>
                                             <Box>
@@ -744,7 +899,36 @@ const Bookings = () => {
                                                 <Typography variant="caption" color="text.secondary">{formatDate(b.booking_date)} • {b.start_time?.slice(0, 5)}</Typography>
                                             </Box>
                                         </Box>
-                                        <Chip label={statusLabel} size="small" color={statusColor} sx={{ fontWeight: 800, borderRadius: 1.5 }} />
+                                        <TextField
+                                            select
+                                            size="small"
+                                            value={currentBookingStatus}
+                                            onChange={(e) => handleStatusChange(b.id, e.target.value)}
+                                            sx={{
+                                                minWidth: 120,
+                                                '& .MuiOutlinedInput-root': {
+                                                    borderRadius: 2,
+                                                    height: 32,
+                                                    fontSize: '0.75rem',
+                                                    fontWeight: 800,
+                                                    bgcolor: 
+                                                        currentBookingStatus === 'Confirmed' ? 'rgba(34, 197, 94, 0.12)' :
+                                                        currentBookingStatus === 'Completed' ? 'rgba(59, 130, 246, 0.12)' :
+                                                        currentBookingStatus === 'Pending' ? 'rgba(245, 158, 11, 0.12)' : 'rgba(239, 68, 68, 0.12)',
+                                                    color:
+                                                        currentBookingStatus === 'Confirmed' ? 'success.main' :
+                                                        currentBookingStatus === 'Completed' ? 'info.main' :
+                                                        currentBookingStatus === 'Pending' ? 'warning.main' : 'error.main',
+                                                    '& fieldset': { border: 'none' }
+                                                },
+                                                '& .MuiSelect-select': { py: '4px', px: '8px' }
+                                            }}
+                                        >
+                                            <MenuItem value="Pending" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'warning.main' }}>Pending</MenuItem>
+                                            <MenuItem value="Confirmed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'success.main' }}>Confirmed</MenuItem>
+                                            <MenuItem value="Completed" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'info.main' }}>Completed</MenuItem>
+                                            <MenuItem value="Cancelled" sx={{ fontWeight: 700, fontSize: '0.8rem', color: 'error.main' }}>Cancelled</MenuItem>
+                                        </TextField>
                                     </Box>
 
                                     <Grid container spacing={2} sx={{ mb: 2 }}>
@@ -807,6 +991,218 @@ const Bookings = () => {
                     />
                 </>
             )}
+            {/* SETTLEMENT DIALOG POPUP */}
+            <Dialog 
+                open={settleDialogOpen} 
+                onClose={() => !settling && setSettleDialogOpen(false)}
+                PaperProps={{ sx: { borderRadius: 3, p: 1, minWidth: { xs: 300, sm: 420 } } }}
+            >
+                <DialogTitle sx={{ fontWeight: 800 }}>Settle Booking Payment Payout</DialogTitle>
+                <DialogContent>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        Booking #{settleBookingId} has been marked as <strong>Completed</strong>. Enter or confirm the payout settlement amount to mark as settled:
+                    </Typography>
+                    <TextField
+                        autoFocus
+                        label="Settlement Amount (₹)"
+                        type="number"
+                        fullWidth
+                        size="small"
+                        value={settleAmountInput}
+                        onChange={(e) => setSettleAmountInput(e.target.value)}
+                        InputProps={{
+                            startAdornment: <InputAdornment position="start">₹</InputAdornment>,
+                        }}
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button 
+                        onClick={() => setSettleDialogOpen(false)} 
+                        disabled={settling} 
+                        sx={{ fontWeight: 700, textTransform: 'none' }}
+                    >
+                        Skip
+                    </Button>
+                    <Button 
+                        variant="contained" 
+                        color="success" 
+                        onClick={handleConfirmSettleFromBookings} 
+                        disabled={settling || !settleAmountInput || parseFloat(settleAmountInput) <= 0}
+                        sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
+                    >
+                        {settling ? 'Settling...' : 'Confirm Settlement'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            {/* CREATE PORTAL BOOKING MODAL */}
+            <Dialog open={newBookingOpen} onClose={() => !savingBooking && setNewBookingOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+                <DialogTitle sx={{ fontWeight: 800 }}>Create New Booking (Portal)</DialogTitle>
+                <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+                    {/* Customer Select / Quick Create */}
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Customer</InputLabel>
+                        <Select
+                            value={newBookingForm.customer_id}
+                            label="Customer"
+                            onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_id: e.target.value }))}
+                        >
+                            <MenuItem value="">+ New Customer (Enter Name & Phone below)</MenuItem>
+                            {customers.map(c => (
+                                <MenuItem key={c.id} value={c.id}>{c.name} ({c.phone || 'No phone'})</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    {!newBookingForm.customer_id && (
+                        <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Customer Name *"
+                                    size="small"
+                                    fullWidth
+                                    value={newBookingForm.customer_name}
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_name: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Phone Number *"
+                                    size="small"
+                                    fullWidth
+                                    value={newBookingForm.customer_phone}
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_phone: e.target.value }))}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+
+                    {/* Location & Staff */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Location *</InputLabel>
+                                <Select
+                                    value={newBookingForm.location_id}
+                                    label="Location *"
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, location_id: e.target.value }))}
+                                >
+                                    {locations.map(l => (
+                                        <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={6}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Staff *</InputLabel>
+                                <Select
+                                    value={newBookingForm.staff_id}
+                                    label="Staff *"
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, staff_id: e.target.value }))}
+                                >
+                                    {staff.map(s => (
+                                        <MenuItem key={s.id} value={s.id}>{s.staff_name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                    </Grid>
+
+                    {/* Service Select */}
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Services *</InputLabel>
+                        <Select
+                            multiple
+                            value={newBookingForm.service_ids}
+                            label="Services *"
+                            onChange={(e) => setNewBookingForm(prev => ({ ...prev, service_ids: e.target.value }))}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                        <Chip key={value} label={services.find(s => s.id === value)?.service_name || value} size="small" />
+                                    ))}
+                                </Box>
+                            )}
+                        >
+                            {services.map(svc => (
+                                <MenuItem key={svc.id} value={svc.id}>
+                                    {svc.service_name} — ₹{svc.price} ({svc.duration_minutes} min)
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    {/* Date & Time */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="Booking Date *"
+                                type="date"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.booking_date}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, booking_date: e.target.value }))}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="Start Time *"
+                                type="time"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.start_time}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, start_time: e.target.value }))}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="End Time *"
+                                type="time"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.end_time}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, end_time: e.target.value }))}
+                            />
+                        </Grid>
+                    </Grid>
+
+                    <Divider />
+
+                    {/* Skip Payment Checkbox */}
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={newBookingForm.skip_payment}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, skip_payment: e.target.checked }))}
+                                color="success"
+                            />
+                        }
+                        label={
+                            <Box>
+                                <Typography variant="body2" fontWeight={700}>Skip Payment & Confirm Booking</Typography>
+                                <Typography variant="caption" color="text.secondary">Confirms booking immediately. Payment balance will be tracked as Pay at Venue / Cash in Payments.</Typography>
+                            </Box>
+                        }
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setNewBookingOpen(false)} disabled={savingBooking} sx={{ fontWeight: 700, textTransform: 'none' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleCreatePortalBooking}
+                        disabled={savingBooking}
+                        sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
+                    >
+                        {savingBooking ? 'Creating...' : 'Confirm & Create Booking'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </PageTransition>
     );
 };

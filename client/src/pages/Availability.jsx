@@ -271,12 +271,30 @@ const Availability = () => {
         }
     };
 
-    const sortedWeekly = [...filteredAvailability].sort((a, b) => {
-        const sa = staffList.find(s => s.id === a.staff_id)?.staff_name || '';
-        const sb = staffList.find(s => s.id === b.staff_id)?.staff_name || '';
-        if (sa !== sb) return sa.localeCompare(sb);
-        return DAYS.indexOf(a.day_of_week) - DAYS.indexOf(b.day_of_week);
-    });
+    const groupedStaffAvailability = staffList.filter(staff => {
+        if (filterStaff !== 'all' && String(staff.id) !== String(filterStaff)) return false;
+        const matchesSearch = !searchQuery || staff.staff_name.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesSearch;
+    }).map(staff => {
+        const staffRecords = availability.filter(a => String(a.staff_id) === String(staff.id));
+        const sortedRecords = [...staffRecords].sort((a, b) => {
+            const indexA = DAYS.findIndex(d => d.toLowerCase() === a.day_of_week.toLowerCase());
+            const indexB = DAYS.findIndex(d => d.toLowerCase() === b.day_of_week.toLowerCase());
+            return indexA - indexB;
+        });
+
+        const totalWeeklyMinutes = sortedRecords.reduce((total, a) => {
+            const [sh, sm] = (a.start_time || '00:00').split(':').map(Number);
+            const [eh, em] = (a.end_time || '00:00').split(':').map(Number);
+            return total + Math.max(0, (eh * 60 + em) - (sh * 60 + sm));
+        }, 0);
+
+        return {
+            staff,
+            records: sortedRecords,
+            totalWeeklyMinutes
+        };
+    }).filter(item => item.records.length > 0 || filterStaff !== 'all');
 
     // -------------------------------------------------------------
     // TAB 1: Staff Leaves Handlers
@@ -537,57 +555,76 @@ const Availability = () => {
                                 <TableRow>
                                     <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }}>Staff Member</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Day of Week</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Start Time</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>End Time</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Duration</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Weekly Schedule</TableCell>
+                                    <TableCell sx={{ fontWeight: 600 }}>Total Weekly Hours</TableCell>
                                     <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
                                 </TableRow>
                             </TableHead>
                             <TableBody>
                                 {loading ? (
                                     <TableRow>
-                                        <TableCell colSpan={7} align="center" sx={{ py: 8 }}>
+                                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
                                             <Typography color="text.secondary">Loading availability records...</Typography>
                                         </TableCell>
                                     </TableRow>
-                                ) : filteredAvailability.length === 0 ? (
-                                    <TableRow><TableCell colSpan={7} align="center" sx={{ py: 8, color: 'text.secondary' }}>
+                                ) : groupedStaffAvailability.length === 0 ? (
+                                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8, color: 'text.secondary' }}>
                                         <ScheduleIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
                                         <Typography variant="body2" color="text.secondary">
-                                            {searchQuery ? 'No availability records match your search.' : 'No availability records yet.'}
+                                            {searchQuery ? 'No availability records match your search.' : 'No availability records found.'}
                                         </Typography>
                                         <Typography variant="caption" color="text.disabled">Add availability when creating or editing staff members.</Typography>
                                     </TableCell></TableRow>
-                                ) : sortedWeekly.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((a, idx) => {
-                                    const staffMember = staffList.find(s => s.id === a.staff_id);
-                                    const [sh, sm] = (a.start_time || '00:00').split(':').map(Number);
-                                    const [eh, em] = (a.end_time || '00:00').split(':').map(Number);
-                                    const durationMin = (eh * 60 + em) - (sh * 60 + sm);
-                                    const durationLabel = durationMin > 0 ? `${Math.floor(durationMin / 60)}h ${durationMin % 60}m` : '—';
+                                ) : groupedStaffAvailability.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item, idx) => {
+                                    const { staff, records, totalWeeklyMinutes } = item;
+                                    const hours = Math.floor(totalWeeklyMinutes / 60);
+                                    const mins = totalWeeklyMinutes % 60;
+                                    const durationLabel = totalWeeklyMinutes > 0 ? `${hours}h ${mins}m / week` : 'No schedule';
+
                                     return (
-                                        <TableRow key={a.id || idx} hover>
+                                        <TableRow key={staff.id} hover>
                                             <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + idx + 1}</TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar sx={{ width: 30, height: 30, fontSize: '0.75rem', bgcolor: 'primary.main' }}>
-                                                        {staffMember?.staff_name?.charAt(0)}
+                                                    <Avatar sx={{ width: 34, height: 34, fontSize: '0.8rem', bgcolor: 'primary.main', fontWeight: 700 }}>
+                                                        {staff.staff_name?.charAt(0)}
                                                     </Avatar>
-                                                    <Typography variant="body2" fontWeight={500}>{staffMember?.staff_name || '—'}</Typography>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={700}>{staff.staff_name || '—'}</Typography>
+                                                        <Typography variant="caption" color="text.secondary">{staff.role || 'Staff Member'}</Typography>
+                                                    </Box>
                                                 </Box>
                                             </TableCell>
                                             <TableCell>
-                                                <Chip label={a.day_of_week} size="small" color={dayColors[a.day_of_week] || 'default'} variant="outlined" />
+                                                {records.length === 0 ? (
+                                                    <Typography variant="caption" color="text.secondary">No schedule configured</Typography>
+                                                ) : (
+                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
+                                                        {records.map((a, rIdx) => {
+                                                            const formattedDay = a.day_of_week.charAt(0).toUpperCase() + a.day_of_week.slice(1).toLowerCase();
+                                                            const dayAbbrev = formattedDay.slice(0, 3);
+                                                            const timeLabel = `${a.start_time?.slice(0, 5)} - ${a.end_time?.slice(0, 5)}`;
+                                                            return (
+                                                                <Chip
+                                                                    key={a.id || rIdx}
+                                                                    label={`${dayAbbrev}: ${timeLabel}`}
+                                                                    size="small"
+                                                                    color={dayColors[formattedDay] || 'primary'}
+                                                                    variant="outlined"
+                                                                    sx={{ fontWeight: 700, fontSize: '0.72rem', borderRadius: 1.5 }}
+                                                                />
+                                                            );
+                                                        })}
+                                                    </Box>
+                                                )}
                                             </TableCell>
-                                            <TableCell sx={{ fontWeight: 500 }}>{a.start_time}</TableCell>
-                                            <TableCell sx={{ fontWeight: 500 }}>{a.end_time}</TableCell>
                                             <TableCell>
-                                                <Box sx={{ px: 1.5, py: 0.3, display: 'inline-block', borderRadius: 1, bgcolor: 'success.50', color: 'success.dark', fontSize: '0.75rem', fontWeight: 600 }}>
+                                                <Box sx={{ px: 1.5, py: 0.4, display: 'inline-block', borderRadius: 1.5, bgcolor: totalWeeklyMinutes > 0 ? 'success.50' : 'action.selected', color: totalWeeklyMinutes > 0 ? 'success.dark' : 'text.secondary', fontSize: '0.78rem', fontWeight: 700 }}>
                                                     {durationLabel}
                                                 </Box>
                                             </TableCell>
                                             <TableCell align="right">
-                                                <IconButton size="small" color="primary" onClick={() => handleEditWeekly(staffMember)} disabled={isSuspended}>
+                                                <IconButton size="small" color="primary" onClick={() => handleEditWeekly(staff)} disabled={isSuspended}>
                                                     <EditIcon fontSize="small" />
                                                 </IconButton>
                                             </TableCell>
@@ -600,7 +637,7 @@ const Availability = () => {
                     <TablePagination
                         rowsPerPageOptions={[5, 10, 20, 30, 50]}
                         component="div"
-                        count={sortedWeekly.length}
+                        count={groupedStaffAvailability.length}
                         rowsPerPage={rowsPerPage}
                         page={page}
                         onPageChange={(e, p) => setPage(p)}

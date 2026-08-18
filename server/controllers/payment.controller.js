@@ -67,9 +67,9 @@ const handlePaymentSuccess = async (payment) => {
         if (payment.payment_status) {
             const booking = await Booking.findByPk(payment.booking_id);
             if (booking) {
-                // Update booking status
-                if (!booking.payment_status) {
-                    await booking.update({ payment_status: true });
+                // Update booking status to Confirmed upon complete payment
+                if (!booking.payment_status || booking.booking_status !== 'Confirmed') {
+                    await booking.update({ payment_status: true, booking_status: 'Confirmed' });
                 }
 
                 // WhatsApp notification
@@ -195,7 +195,26 @@ const paymentController = {
             const row = await Payment.findByPk(req.params.id);
             if (!row) return res.status(404).json({ success: false, message: "Payment not found" });
             const wasPaid = row.payment_status;
-            await row.update(req.body);
+
+            const updateData = { ...req.body };
+            if (updateData.settlement_status === 'paid' && updateData.paid_amount === undefined) {
+                updateData.paid_amount = row.amount;
+                updateData.payment_status = true;
+            } else if (updateData.paid_amount !== undefined) {
+                const currentPaid = parseFloat(row.paid_amount || 0);
+                const settleAmt = parseFloat(updateData.paid_amount);
+                // If paid_amount passed is the increment or target paid amount
+                const newPaid = Math.min(row.amount, settleAmt > currentPaid ? settleAmt : (currentPaid + settleAmt));
+                updateData.paid_amount = newPaid;
+                updateData.payment_status = newPaid > 0;
+                if (newPaid >= row.amount) {
+                    updateData.settlement_status = 'paid';
+                } else {
+                    updateData.settlement_status = 'unpaid';
+                }
+            }
+
+            await row.update(updateData);
             if (row.payment_status && !wasPaid) {
                 await handlePaymentSuccess(row);
             }
@@ -227,12 +246,42 @@ const paymentController = {
                 return res.status(400).json({ success: false, message: "Amount and Booking ID are required" });
             }
 
-            const order = await razorpayService.createOrder(amount, booking_id, {
-                booking_id: String(booking_id),
-                business_id: String(business_id || '')
+            const Razorpay = require('razorpay');
+            
+            // Resolve target business_id
+            let targetBizId = business_id;
+            if (!targetBizId && booking_id) {
+                const b = await Booking.findByPk(booking_id);
+                if (b) targetBizId = b.business_id;
+            }
+
+            let keyId = process.env.RAZORPAY_KEY_ID;
+            let keySecret = process.env.RAZORPAY_KEY_SECRET;
+
+            if (targetBizId) {
+                const biz = await Business.findByPk(targetBizId);
+                if (biz && biz.razorpay_enabled && biz.razorpay_key_id && biz.razorpay_key_secret) {
+                    keyId = biz.razorpay_key_id;
+                    keySecret = biz.razorpay_key_secret;
+                }
+            }
+
+            if (!keyId || !keySecret) {
+                return res.status(400).json({ success: false, message: "Razorpay keys not configured for this business" });
+            }
+
+            const rzpInstance = new Razorpay({ key_id: keyId, key_secret: keySecret });
+            const order = await rzpInstance.orders.create({
+                amount: Math.round(parseFloat(amount) * 100),
+                currency: "INR",
+                receipt: `booking_${booking_id}_${Date.now()}`,
+                notes: {
+                    booking_id: String(booking_id),
+                    business_id: String(targetBizId || '')
+                }
             });
 
-            res.json({ success: true, order });
+            res.json({ success: true, order, key_id: keyId });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -249,20 +298,30 @@ const paymentController = {
                 paid_amount
             } = req.body;
 
-            const isVerified = razorpayService.verifySignature(
-                razorpay_order_id,
-                razorpay_payment_id,
-                razorpay_signature
-            );
-
-            if (!isVerified) {
-                return res.status(400).json({ success: false, message: "Invalid payment signature" });
-            }
-
             // Fetch booking to get business_id
             const booking = await Booking.findByPk(booking_id);
             if (!booking) {
                 return res.status(404).json({ success: false, message: "Booking not found" });
+            }
+
+            let keySecret = process.env.RAZORPAY_KEY_SECRET;
+            if (booking.business_id) {
+                const biz = await Business.findByPk(booking.business_id);
+                if (biz && biz.razorpay_enabled && biz.razorpay_key_secret) {
+                    keySecret = biz.razorpay_key_secret;
+                }
+            }
+
+            const body = razorpay_order_id + "|" + razorpay_payment_id;
+            const expectedSignature = crypto
+                .createHmac("sha256", keySecret)
+                .update(body.toString())
+                .digest("hex");
+
+            const isVerified = (expectedSignature === razorpay_signature);
+
+            if (!isVerified) {
+                return res.status(400).json({ success: false, message: "Invalid payment signature" });
             }
 
             // Check if payment record already exists (could be from webhook)
@@ -300,11 +359,127 @@ const paymentController = {
 
             await handlePaymentSuccess(paymentRecord);
 
+            await handlePaymentSuccess(paymentRecord);
+
             res.json({ 
                 success: true, 
                 message: "Payment verified and recorded successfully", 
                 data: paymentRecord 
             });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    createStripeCheckoutSession: async (req, res) => {
+        try {
+            const { amount, booking_id, business_id, service_name } = req.body;
+            if (!amount || !booking_id) {
+                return res.status(400).json({ success: false, message: "Amount and Booking ID are required" });
+            }
+
+            let targetBizId = business_id;
+            if (!targetBizId && booking_id) {
+                const b = await Booking.findByPk(booking_id);
+                if (b) targetBizId = b.business_id;
+            }
+
+            let secretKey = process.env.STRIPE_SECRET_KEY;
+            if (targetBizId) {
+                const biz = await Business.findByPk(targetBizId);
+                if (biz && biz.stripe_enabled && biz.stripe_secret_key) {
+                    secretKey = biz.stripe_secret_key;
+                }
+            }
+
+            if (!secretKey) {
+                return res.status(400).json({ success: false, message: "Stripe secret key not configured for this business" });
+            }
+
+            const Stripe = require('stripe');
+            const stripeInstance = new Stripe(secretKey.trim());
+            const clientOrigin = req.headers.origin || 'http://localhost:5173';
+
+            const session = await stripeInstance.checkout.sessions.create({
+                payment_method_types: ['card'],
+                line_items: [{
+                    price_data: {
+                        currency: 'inr',
+                        product_data: {
+                            name: service_name || 'Booking Appointment',
+                            description: `Booking #${booking_id}`
+                        },
+                        unit_amount: Math.round(parseFloat(amount) * 100),
+                    },
+                    quantity: 1,
+                }],
+                mode: 'payment',
+                success_url: `${clientOrigin}/payment-success?session_id={CHECKOUT_SESSION_ID}&booking_id=${booking_id}`,
+                cancel_url: `${clientOrigin}/payment-cancel?booking_id=${booking_id}`,
+                metadata: {
+                    booking_id: String(booking_id),
+                    business_id: String(targetBizId || '')
+                }
+            });
+
+            res.json({
+                success: true,
+                url: session.url
+            });
+        } catch (error) {
+            console.error('Stripe Checkout Error:', error.message);
+            res.json({ success: false, message: error.message });
+        }
+    },
+
+    verifyStripePayment: async (req, res) => {
+        try {
+            const { payment_intent_id, booking_id, amount, paid_amount } = req.body;
+            const booking = await Booking.findByPk(booking_id);
+            if (!booking) return res.status(404).json({ success: false, message: "Booking not found" });
+
+            let secretKey = process.env.STRIPE_SECRET_KEY;
+            if (booking.business_id) {
+                const biz = await Business.findByPk(booking.business_id);
+                if (biz && biz.stripe_enabled && biz.stripe_secret_key) {
+                    secretKey = biz.stripe_secret_key;
+                }
+            }
+
+            if (secretKey && !payment_intent_id.startsWith('pi_stripe_')) {
+                try {
+                    const Stripe = require('stripe');
+                    const stripeInstance = new Stripe(secretKey.trim());
+                    const intent = await stripeInstance.paymentIntents.retrieve(payment_intent_id);
+
+                    if (intent.status !== 'succeeded') {
+                        return res.json({ success: false, message: `Stripe payment status: ${intent.status}` });
+                    }
+                } catch (stripeErr) {
+                    console.warn('Stripe Verify Warning:', stripeErr.message);
+                }
+            }
+
+            const existingPayment = await Payment.findOne({ where: { transaction_id: payment_intent_id } });
+            if (existingPayment) {
+                return res.json({ success: true, message: "Payment already recorded", data: existingPayment });
+            }
+
+            const calc_paid_amount = parseFloat(paid_amount || amount);
+            const paymentRecord = await Payment.create({
+                booking_id,
+                business_id: booking.business_id,
+                amount,
+                paid_amount: calc_paid_amount,
+                platform_fees: 0,
+                final_amount: calc_paid_amount,
+                payment_method: 'Stripe',
+                transaction_id: payment_intent_id,
+                payment_status: true
+            });
+
+            await handlePaymentSuccess(paymentRecord);
+            res.json({ success: true, message: "Stripe payment recorded successfully", data: paymentRecord });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
@@ -386,6 +561,93 @@ const paymentController = {
             }
 
             res.json({ success: true, message: "Webhook processed" });
+        } catch (error) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    },
+
+    settlePayments: async (req, res) => {
+        try {
+            const { payment_ids, business_id, amount } = req.body;
+            const { Op } = require("sequelize");
+
+            const { sequelize } = require("../config/db");
+            if (Array.isArray(payment_ids) && payment_ids.length > 0 && (!amount || isNaN(parseFloat(amount)))) {
+                const affected = await Payment.update(
+                    { settlement_status: 'paid', payment_status: true, paid_amount: sequelize.col('amount') },
+                    { where: { id: { [Op.in]: payment_ids }, settlement_status: 'unpaid' } }
+                );
+                return res.json({ success: true, message: "Selected payments settled successfully", updatedCount: affected[0] });
+            }
+
+            const whereClause = { settlement_status: 'unpaid' };
+            if (business_id && business_id !== 'all') {
+                whereClause.business_id = business_id;
+            } else if (req.user?.business_id) {
+                whereClause.business_id = req.user.business_id;
+            } else {
+                const Business = require("../models/business.model");
+                const businesses = await Business.findAll({ where: { user_id: req.user?.user_id, status: true }, attributes: ['id'] });
+                const businessIds = businesses.map(b => b.id);
+                if (businessIds.length > 0) {
+                    whereClause.business_id = { [Op.in]: businessIds };
+                }
+            }
+
+            if (Array.isArray(payment_ids) && payment_ids.length > 0) {
+                whereClause.id = { [Op.in]: payment_ids };
+            }
+
+            const unpaidPayments = await Payment.findAll({
+                where: whereClause,
+                order: [['created_at', 'ASC']]
+            });
+
+            if (unpaidPayments.length === 0) {
+                return res.status(400).json({ success: false, message: "No unpaid settlements found" });
+            }
+
+            const enteredAmount = parseFloat(amount);
+            if (isNaN(enteredAmount) || enteredAmount <= 0) {
+                const affected = await Payment.update(
+                    { settlement_status: 'paid', payment_status: true, paid_amount: sequelize.col('amount') },
+                    { where: whereClause }
+                );
+                return res.json({ success: true, message: "Payments settled successfully", updatedCount: affected[0] });
+            }
+
+            let remainingToSettle = enteredAmount;
+            const updatedIds = [];
+
+            for (const p of unpaidPayments) {
+                if (remainingToSettle <= 0) break;
+
+                const currentPaid = parseFloat(p.paid_amount || 0);
+                const totalAmt = parseFloat(p.amount || 0);
+                const pendingBal = Math.max(0, totalAmt - currentPaid);
+
+                if (pendingBal > 0) {
+                    const settleNow = Math.min(pendingBal, remainingToSettle);
+                    const newPaid = Math.min(totalAmt, currentPaid + settleNow);
+                    const newSettlementStatus = newPaid >= totalAmt ? 'paid' : 'unpaid';
+
+                    await p.update({
+                        paid_amount: newPaid,
+                        payment_status: true,
+                        settlement_status: newSettlementStatus
+                    });
+
+                    remainingToSettle -= settleNow;
+                    updatedIds.push(p.id);
+                }
+            }
+
+            res.json({
+                success: true,
+                message: `Successfully settled ₹${enteredAmount.toFixed(2)} worth of payouts`,
+                updatedCount: updatedIds.length,
+                settledIds: updatedIds
+            });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
         }
