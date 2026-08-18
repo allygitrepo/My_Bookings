@@ -5,7 +5,8 @@ import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
     Paper, Chip, Box, Typography, Avatar, ToggleButton, ToggleButtonGroup, IconButton, Tooltip, Button, TablePagination,
     TextField, MenuItem, Card, CircularProgress, Grid, Divider, LinearProgress,
-    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment
+    Dialog, DialogTitle, DialogContent, DialogActions, InputAdornment,
+    FormControl, InputLabel, Select
 } from '@mui/material';
 import {
     CalendarMonth as CalendarIcon,
@@ -18,14 +19,15 @@ import {
     AccessTimeOutlined as ClockIcon,
     CheckCircleOutline as CheckCircleIcon,
     SyncDisabledOutlined as SyncDisabledIcon,
+    Add as AddIcon
 } from '@mui/icons-material';
-import { Switch, FormControlLabel } from '@mui/material';
+import { Switch, FormControlLabel, Checkbox } from '@mui/material';
 import { useGoogleLogin } from '@react-oauth/google';
 import { DatePicker, LocalizationProvider } from '@mui/x-date-pickers';
 import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
 import PageHeader from '../components/PageHeader';
 import PageTransition from '../components/PageTransition';
-import { getBookings, updateBooking } from '../api/booking.api';
+import { getBookings, updateBooking, createBooking } from '../api/booking.api';
 import { getBusinesses } from '../api/business.api';
 import { getLocations } from '../api/location.api';
 import { getStaff } from '../api/staff.api';
@@ -264,6 +266,85 @@ const Bookings = () => {
     const [settlePaymentId, setSettlePaymentId] = useState(null);
     const [settleAmountInput, setSettleAmountInput] = useState('');
     const [settling, setSettling] = useState(false);
+
+    // New Booking Modal State
+    const [newBookingOpen, setNewBookingOpen] = useState(false);
+    const [newBookingForm, setNewBookingForm] = useState({
+        customer_id: '',
+        customer_name: '',
+        customer_phone: '',
+        location_id: '',
+        staff_id: '',
+        service_ids: [],
+        booking_date: dayjs().format('YYYY-MM-DD'),
+        start_time: '10:00',
+        end_time: '11:00',
+        skip_payment: true,
+        paid_amount: 0
+    });
+    const [savingBooking, setSavingBooking] = useState(false);
+
+    const handleOpenNewBookingModal = () => {
+        setNewBookingForm({
+            customer_id: customers[0]?.id || '',
+            customer_name: '',
+            customer_phone: '',
+            location_id: locations[0]?.id || '',
+            staff_id: staff[0]?.id || '',
+            service_ids: services[0] ? [services[0].id] : [],
+            booking_date: dayjs().format('YYYY-MM-DD'),
+            start_time: '10:00',
+            end_time: '11:00',
+            skip_payment: true,
+            paid_amount: 0
+        });
+        setNewBookingOpen(true);
+    };
+
+    const handleCreatePortalBooking = async () => {
+        if (!newBookingForm.location_id || !newBookingForm.staff_id || newBookingForm.service_ids.length === 0) {
+            toast.error('Please select location, staff, and at least one service');
+            return;
+        }
+        if (!newBookingForm.customer_id && (!newBookingForm.customer_name || !newBookingForm.customer_phone)) {
+            toast.error('Please select an existing customer or enter customer name & phone');
+            return;
+        }
+
+        setSavingBooking(true);
+        try {
+            const payload = {
+                business_id: selectedBusinessId !== 'all' ? selectedBusinessId : (businesses[0]?.id || 1),
+                location_id: newBookingForm.location_id,
+                staff_id: newBookingForm.staff_id,
+                service_id: newBookingForm.service_ids[0],
+                service_ids: newBookingForm.service_ids,
+                booking_date: newBookingForm.booking_date,
+                start_time: newBookingForm.start_time,
+                end_time: newBookingForm.end_time,
+                customer_id: newBookingForm.customer_id || undefined,
+                name: newBookingForm.customer_name || undefined,
+                phone: newBookingForm.customer_phone || undefined,
+                skip_payment: newBookingForm.skip_payment,
+                booking_status: 'Confirmed',
+                payment_status: true,
+                is_portal_request: true
+            };
+
+            const res = await createBooking(payload);
+            if (res.success) {
+                toast.success('Booking confirmed & created successfully!');
+                setNewBookingOpen(false);
+                fetchData();
+            } else {
+                toast.error(res.message || 'Failed to create booking');
+            }
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Error creating booking');
+        } finally {
+            setSavingBooking(false);
+        }
+    };
 
     const [syncedIds, setSyncedIds] = useState([]); // No longer needed for logic, but keeping state for compatibility if used elsewhere
     const [isSyncingInProgress, setIsSyncingInProgress] = useState(false);
@@ -509,9 +590,17 @@ const Bookings = () => {
                         Bookings
                     </Box>
                 }
-                subtitle="All customer appointments. Bookings are created via the widget."
+                subtitle="All customer appointments. Bookings are created via the widget or portal."
                 extraActions={
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Button
+                            variant="contained"
+                            startIcon={<AddIcon />}
+                            onClick={handleOpenNewBookingModal}
+                            sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
+                        >
+                            + New Booking
+                        </Button>
                         {usage && usage.limits.bookings !== -1 && (
                             <Box sx={{ minWidth: 140, display: { xs: 'none', lg: 'block' } }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
@@ -536,55 +625,6 @@ const Bookings = () => {
                                 />
                             </Box>
                         )}
-                        {/* 
-                        // Calendar Sync Disabled
-                        isGoogleConnected && (
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={isSyncEnabled}
-                                        onChange={handleToggleSync}
-                                        size="small"
-                                        color="primary"
-                                    />
-                                }
-                                label={
-                                    <Typography variant="caption" sx={{ fontWeight: 600, color: isSyncEnabled ? 'primary.main' : 'text.secondary' }}>
-                                        {isSyncEnabled ? 'Auto Sync ON' : 'Auto Sync OFF'}
-                                    </Typography>
-                                }
-                                sx={{ mr: 1 }}
-                            />
-                        ) */}
-                        {/* 
-                        // Calendar Sync Disabled
-                        isGoogleConnected ? (
-                            <Tooltip 
-                                title={businesses[0]?.sync_email || 'Account details unavailable. Re-link to verify email.'} 
-                                arrow 
-                                placement="top"
-                            >
-                                <Chip 
-                                    label="Google Calendar Linked" 
-                                    color="success" 
-                                    variant="outlined" 
-                                    icon={<SyncIcon />}
-                                    size="small"
-                                    sx={{ borderRadius: 2, fontWeight: 600, cursor: 'help' }}
-                                />
-                            </Tooltip>
-                        ) : (
-                            <Button
-                                variant="contained"
-                                size="small"
-                                color="warning"
-                                startIcon={<SyncIcon />}
-                                onClick={() => login()}
-                                sx={{ borderRadius: 2, textTransform: 'none', fontWeight: 600 }}
-                            >
-                                Link Google Calendar
-                            </Button>
-                        ) */}
                         <Button
                             variant="outlined"
                             size="small"
@@ -621,7 +661,6 @@ const Bookings = () => {
                                 <CalendarViewIcon sx={{ mr: 1, fontSize: 18 }} />
                                 Calendar
                             </ToggleButton>
-
                         </ToggleButtonGroup>
                     </Box>
                 }
@@ -992,6 +1031,175 @@ const Bookings = () => {
                         sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
                     >
                         {settling ? 'Settling...' : 'Confirm Settlement'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+            {/* CREATE PORTAL BOOKING MODAL */}
+            <Dialog open={newBookingOpen} onClose={() => !savingBooking && setNewBookingOpen(false)} maxWidth="sm" fullWidth PaperProps={{ sx: { borderRadius: 3, p: 1 } }}>
+                <DialogTitle sx={{ fontWeight: 800 }}>Create New Booking (Portal)</DialogTitle>
+                <DialogContent dividers sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 2 }}>
+                    {/* Customer Select / Quick Create */}
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Customer</InputLabel>
+                        <Select
+                            value={newBookingForm.customer_id}
+                            label="Customer"
+                            onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_id: e.target.value }))}
+                        >
+                            <MenuItem value="">+ New Customer (Enter Name & Phone below)</MenuItem>
+                            {customers.map(c => (
+                                <MenuItem key={c.id} value={c.id}>{c.name} ({c.phone || 'No phone'})</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    {!newBookingForm.customer_id && (
+                        <Grid container spacing={2}>
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Customer Name *"
+                                    size="small"
+                                    fullWidth
+                                    value={newBookingForm.customer_name}
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_name: e.target.value }))}
+                                />
+                            </Grid>
+                            <Grid item xs={6}>
+                                <TextField
+                                    label="Phone Number *"
+                                    size="small"
+                                    fullWidth
+                                    value={newBookingForm.customer_phone}
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, customer_phone: e.target.value }))}
+                                />
+                            </Grid>
+                        </Grid>
+                    )}
+
+                    {/* Location & Staff */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={6}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Location *</InputLabel>
+                                <Select
+                                    value={newBookingForm.location_id}
+                                    label="Location *"
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, location_id: e.target.value }))}
+                                >
+                                    {locations.map(l => (
+                                        <MenuItem key={l.id} value={l.id}>{l.location_name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid item xs={6}>
+                            <FormControl fullWidth size="small">
+                                <InputLabel>Staff *</InputLabel>
+                                <Select
+                                    value={newBookingForm.staff_id}
+                                    label="Staff *"
+                                    onChange={(e) => setNewBookingForm(prev => ({ ...prev, staff_id: e.target.value }))}
+                                >
+                                    {staff.map(s => (
+                                        <MenuItem key={s.id} value={s.id}>{s.staff_name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                    </Grid>
+
+                    {/* Service Select */}
+                    <FormControl fullWidth size="small">
+                        <InputLabel>Services *</InputLabel>
+                        <Select
+                            multiple
+                            value={newBookingForm.service_ids}
+                            label="Services *"
+                            onChange={(e) => setNewBookingForm(prev => ({ ...prev, service_ids: e.target.value }))}
+                            renderValue={(selected) => (
+                                <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                    {selected.map((value) => (
+                                        <Chip key={value} label={services.find(s => s.id === value)?.service_name || value} size="small" />
+                                    ))}
+                                </Box>
+                            )}
+                        >
+                            {services.map(svc => (
+                                <MenuItem key={svc.id} value={svc.id}>
+                                    {svc.service_name} — ₹{svc.price} ({svc.duration_minutes} min)
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+
+                    {/* Date & Time */}
+                    <Grid container spacing={2}>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="Booking Date *"
+                                type="date"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.booking_date}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, booking_date: e.target.value }))}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="Start Time *"
+                                type="time"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.start_time}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, start_time: e.target.value }))}
+                            />
+                        </Grid>
+                        <Grid item xs={4}>
+                            <TextField
+                                label="End Time *"
+                                type="time"
+                                size="small"
+                                fullWidth
+                                InputLabelProps={{ shrink: true }}
+                                value={newBookingForm.end_time}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, end_time: e.target.value }))}
+                            />
+                        </Grid>
+                    </Grid>
+
+                    <Divider />
+
+                    {/* Skip Payment Checkbox */}
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={newBookingForm.skip_payment}
+                                onChange={(e) => setNewBookingForm(prev => ({ ...prev, skip_payment: e.target.checked }))}
+                                color="success"
+                            />
+                        }
+                        label={
+                            <Box>
+                                <Typography variant="body2" fontWeight={700}>Skip Payment & Confirm Booking</Typography>
+                                <Typography variant="caption" color="text.secondary">Confirms booking immediately. Payment balance will be tracked as Pay at Venue / Cash in Payments.</Typography>
+                            </Box>
+                        }
+                    />
+                </DialogContent>
+                <DialogActions sx={{ px: 3, pb: 2 }}>
+                    <Button onClick={() => setNewBookingOpen(false)} disabled={savingBooking} sx={{ fontWeight: 700, textTransform: 'none' }}>
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleCreatePortalBooking}
+                        disabled={savingBooking}
+                        sx={{ fontWeight: 800, textTransform: 'none', borderRadius: 2, px: 3 }}
+                    >
+                        {savingBooking ? 'Creating...' : 'Confirm & Create Booking'}
                     </Button>
                 </DialogActions>
             </Dialog>

@@ -124,7 +124,8 @@ const bookingController = {
                 return res.status(400).json({ success: false, message: "Customer identification (ID, Phone, or Email) is required." });
             }
 
-            const isPaymentPaid = bookingData.payment_status === true || bookingData.payment_status === 1;
+            const isSkipPayment = req.body.skip_payment === true || req.body.is_portal_request === true || req.body.booking_status === 'Confirmed';
+            const isPaymentPaid = isSkipPayment || bookingData.payment_status === true || bookingData.payment_status === 1;
             const defaultBookingStatus = isPaymentPaid ? 'Confirmed' : 'Pending';
 
             const row = await Booking.create({
@@ -147,6 +148,32 @@ const bookingController = {
                 await BookingService.create({
                     booking_id: row.id,
                     service_id: req.body.service_id
+                });
+            }
+
+            // Create Payment record for portal/skip_payment bookings so pending amount can be settled in Payments & Reports
+            if (isSkipPayment) {
+                let totalPrice = 0;
+                if (service_ids && Array.isArray(service_ids) && service_ids.length > 0) {
+                    const svcs = await Service.findAll({ where: { id: { [Op.in]: service_ids } } });
+                    totalPrice = svcs.reduce((sum, s) => sum + Number(s.price || 0), 0);
+                } else if (bookingData.service_id) {
+                    const svc = await Service.findByPk(bookingData.service_id);
+                    totalPrice = Number(svc?.price || 0);
+                }
+
+                const paidAmt = Number(req.body.paid_amount || 0);
+                await Payment.create({
+                    business_id,
+                    booking_id: row.id,
+                    customer_id,
+                    amount: totalPrice || 0,
+                    paid_amount: paidAmt,
+                    platform_fees: 0,
+                    payment_method: req.body.payment_method || 'Pay at Venue / Cash',
+                    payment_status: true,
+                    settlement_status: paidAmt >= totalPrice && totalPrice > 0 ? 'paid' : 'unpaid',
+                    transaction_id: `MANUAL-${Date.now()}`
                 });
             }
 

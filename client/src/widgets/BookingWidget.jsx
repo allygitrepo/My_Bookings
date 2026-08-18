@@ -500,7 +500,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         return true;
     })();
 
-    const handleConfirmBooking = async () => {
+    const handleConfirmBooking = async (skipPayment = false) => {
         setLoading(true);
         try {
             // 1. Find or create customer
@@ -530,7 +530,8 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.min_booking_charge) || Number(s.price) || 0), 0);
             const amountToPayNow = minAmountToPay;
 
-            const isOnline = selectedPaymentMethod === 'stripe' || selectedPaymentMethod === 'razorpay';
+            const isSkip = skipPayment === true || selectedPaymentMethod === 'venue';
+            const isOnline = !isSkip && (selectedPaymentMethod === 'stripe' || selectedPaymentMethod === 'razorpay');
             const bookingPayload = {
                 business_id: resolvedBusinessId,
                 location_id: bookingData.location.id,
@@ -541,8 +542,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                 booking_date: bookingData.date,
                 start_time: startSlot,
                 end_time: addMinutes(startSlot, finalDuration),
-                payment_status: isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false),
-                booking_status: (isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false)) ? 'Confirmed' : 'Pending',
+                payment_status: isSkip ? true : (isOnline ? false : (selectedPaymentMethod === 'upi' ? true : false)),
+                booking_status: 'Confirmed',
+                skip_payment: isSkip,
+                payment_method: isSkip ? 'Pay at Venue / Cash' : selectedPaymentMethod,
                 status: true,
                 is_widget_request: true
             };
@@ -551,6 +554,14 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             if (!bookingRes.success) throw new Error(bookingRes.message);
             const bookingId = bookingRes.data.id;
             let createdBookingId = bookingId;
+
+            // Direct confirm for skip payment / pay at venue
+            if (isSkip) {
+                setActiveStep(6);
+                setLoading(false);
+                toast.success("Booking confirmed successfully!");
+                return;
+            }
 
             // Route by selected payment method
             if (selectedPaymentMethod === 'stripe') {
@@ -1375,14 +1386,39 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         </Card>
                                     </Grid>
                                 )}
+                                <Grid item xs={12} sm={6}>
+                                    <Card
+                                        onClick={() => setSelectedPaymentMethod('venue')}
+                                        variant="outlined"
+                                        sx={{
+                                            p: 1.5,
+                                            borderRadius: 2.5,
+                                            cursor: 'pointer',
+                                            border: '2px solid',
+                                            borderColor: selectedPaymentMethod === 'venue' ? '#10b981' : 'divider',
+                                            bgcolor: selectedPaymentMethod === 'venue' ? 'rgba(16,185,129,0.08)' : 'transparent'
+                                        }}
+                                    >
+                                        <Typography variant="subtitle2" fontWeight={800} color="#10b981">💵 Pay at Venue / Cash</Typography>
+                                        <Typography variant="caption" color="text.secondary" display="block">Skip Online Payment</Typography>
+                                    </Card>
+                                </Grid>
                             </Grid>
                         </Box>
 
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
-                            onClick={handleConfirmBooking}
-                            disabled={loading || (bookingData.paidAmount || minAmountToPay) < minAmountToPay}>
-                            {loading ? 'Processing...' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`}
+                            onClick={() => handleConfirmBooking(selectedPaymentMethod === 'venue')}
+                            disabled={loading}>
+                            {loading ? 'Processing...' : (selectedPaymentMethod === 'venue' ? 'Confirm Booking (Pay at Venue)' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`)}
                         </Button>
+
+                        {selectedPaymentMethod !== 'venue' && (
+                            <Button fullWidth variant="outlined" color="success" size="large" sx={{ mt: 1.5, borderRadius: 2, py: 1.2, fontWeight: 700, textTransform: 'none' }}
+                                onClick={() => handleConfirmBooking(true)}
+                                disabled={loading}>
+                                ⚡ Skip Payment & Confirm Booking
+                            </Button>
+                        )}
                     </Box>
                 );
             }
