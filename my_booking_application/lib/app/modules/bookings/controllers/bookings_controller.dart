@@ -6,6 +6,8 @@ import '../../../data/models/location_model.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/models/staff_model.dart';
 import '../../../data/models/staff_availability_model.dart';
+import '../../../data/models/staff_leave_model.dart';
+import '../../../data/models/business_closure_model.dart';
 import '../../../data/services/api_client.dart';
 import '../../../core/constants/apiConstants.dart';
 
@@ -22,6 +24,8 @@ class BookingsController extends GetxController {
   final servicesList = <ServiceModel>[].obs;
   final staffList = <StaffModel>[].obs;
   final availabilityList = <StaffAvailabilityModel>[].obs;
+  final staffLeavesList = <StaffLeaveModel>[].obs;
+  final businessClosuresList = <BusinessClosureModel>[].obs;
 
   // Filter
   final selectedStatus = 'all'.obs;
@@ -56,43 +60,57 @@ class BookingsController extends GetxController {
     try {
       isFormLoading.value = true;
       
-      // Fetch customers, locations, services, staff, and availability in parallel
+      // Fetch customers, locations, services, staff, availability, staff leaves, and closures in parallel
       final results = await Future.wait([
         _apiClient.get(ApiConstants.customers).catchError((_) => null),
         _apiClient.get(ApiConstants.locations).catchError((_) => null),
         _apiClient.get(ApiConstants.services).catchError((_) => null),
         _apiClient.get(ApiConstants.staff).catchError((_) => null),
         _apiClient.get(ApiConstants.staffAvailability).catchError((_) => null),
+        _apiClient.get(ApiConstants.staffLeaves).catchError((_) => null),
+        _apiClient.get(ApiConstants.businessClosures).catchError((_) => null),
       ]);
 
       // Customers
-      if (results[0] != null && results[0]?.data['success'] == true) {
-        final List list = results[0]?.data['data'] ?? [];
+      if (results[0] != null && results[0]!.data['success'] == true) {
+        final List list = results[0]!.data['data'] ?? [];
         customersList.value = list.map((j) => CustomerModel.fromJson(j)).toList();
       }
 
       // Locations
-      if (results[1] != null && results[1]?.data['success'] == true) {
-        final List list = results[1]?.data['data'] ?? [];
+      if (results[1] != null && results[1]!.data['success'] == true) {
+        final List list = results[1]!.data['data'] ?? [];
         locationsList.value = list.map((j) => LocationModel.fromJson(j)).toList();
       }
 
       // Services
-      if (results[2] != null && results[2]?.data['success'] == true) {
-        final List list = results[2]?.data['data'] ?? [];
+      if (results[2] != null && results[2]!.data['success'] == true) {
+        final List list = results[2]!.data['data'] ?? [];
         servicesList.value = list.map((j) => ServiceModel.fromJson(j)).toList();
       }
 
       // Staff
-      if (results[3] != null && results[3]?.data['success'] == true) {
-        final List list = results[3]?.data['data'] ?? [];
+      if (results[3] != null && results[3]!.data['success'] == true) {
+        final List list = results[3]!.data['data'] ?? [];
         staffList.value = list.map((j) => StaffModel.fromJson(j)).toList();
       }
 
       // Availability
-      if (results[4] != null && results[4]?.data['success'] == true) {
-        final List list = results[4]?.data['data'] ?? [];
+      if (results[4] != null && results[4]!.data['success'] == true) {
+        final List list = results[4]!.data['data'] ?? [];
         availabilityList.value = list.map((j) => StaffAvailabilityModel.fromJson(j)).toList();
+      }
+
+      // Staff Leaves
+      if (results[5] != null && results[5]!.data['success'] == true) {
+        final List list = results[5]!.data['data'] ?? [];
+        staffLeavesList.value = list.map((j) => StaffLeaveModel.fromJson(j)).toList();
+      }
+
+      // Business Closures
+      if (results[6] != null && results[6]!.data['success'] == true) {
+        final List list = results[6]!.data['data'] ?? [];
+        businessClosuresList.value = list.map((j) => BusinessClosureModel.fromJson(j)).toList();
       }
     } catch (e) {
       Get.snackbar('Error', 'Failed to load booking form options',

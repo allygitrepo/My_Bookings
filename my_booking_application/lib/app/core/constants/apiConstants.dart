@@ -41,4 +41,8 @@ class ApiConstants {
 
   // Staff Availability
   static const String staffAvailability = '/staff-availability/all';
+
+  // Staff Leaves & Business Closures
+  static const String staffLeaves = '/staff-leaves/all';
+  static const String businessClosures = '/business-closures/all';
 }

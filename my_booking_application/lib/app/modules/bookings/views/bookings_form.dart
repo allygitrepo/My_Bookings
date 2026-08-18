@@ -6,6 +6,8 @@ import '../../../data/models/customer_model.dart';
 import '../../../data/models/location_model.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/models/staff_model.dart';
+import '../../../data/models/staff_leave_model.dart';
+import '../../../data/models/business_closure_model.dart';
 import '../controllers/bookings_controller.dart';
 
 class BookingsForm extends StatefulWidget {
@@ -122,9 +124,50 @@ class _BookingsFormState extends State<BookingsForm> {
     }
   }
 
+  // --- LEAVE MASTER & CLOSURE CHECKS ---
+  BusinessClosureModel? _getActiveBusinessClosure() {
+    final String selectedDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    for (var closure in controller.businessClosuresList) {
+      if (closure.startDate == null || closure.endDate == null) continue;
+      if (selectedDateStr.compareTo(closure.startDate!) >= 0 && selectedDateStr.compareTo(closure.endDate!) <= 0) {
+        return closure;
+      }
+    }
+    return null;
+  }
+
+  StaffLeaveModel? _getActiveStaffLeave() {
+    if (_selectedStaff == null) return null;
+    final String selectedDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+    for (var leave in controller.staffLeavesList) {
+      if (leave.staffId != _selectedStaff!.id) continue;
+      if (leave.approvalStatus?.toLowerCase() == 'rejected') continue;
+      if (leave.startDate == null || leave.endDate == null) continue;
+      if (selectedDateStr.compareTo(leave.startDate!) >= 0 && selectedDateStr.compareTo(leave.endDate!) <= 0) {
+        return leave;
+      }
+    }
+    return null;
+  }
+
   List<String> _getAvailableSlots() {
     if (_selectedStaff == null) return [];
 
+    final String selectedDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
+
+    // 1. Business Closure Check (Full Day)
+    final closure = _getActiveBusinessClosure();
+    if (closure != null && closure.isAllDay == true) {
+      return [];
+    }
+
+    // 2. Staff Leave Check (Full Day)
+    final staffLeave = _getActiveStaffLeave();
+    if (staffLeave != null && staffLeave.isAllDay == true) {
+      return [];
+    }
+
+    // 3. Weekly Availability
     final dayName = DateFormat('EEEE').format(_selectedDate).toLowerCase();
 
     final matchingAvailabilities = controller.availabilityList.where((a) {
@@ -139,7 +182,6 @@ class _BookingsFormState extends State<BookingsForm> {
     if (matchingAvailabilities.isEmpty) return [];
 
     final int stepMin = _selectedStaff!.slotDurationMinutes ?? 30;
-
     final List<String> slots = [];
 
     for (var avail in matchingAvailabilities) {
@@ -164,11 +206,11 @@ class _BookingsFormState extends State<BookingsForm> {
 
     slots.sort();
 
-    final String selectedDateStr = DateFormat('yyyy-MM-dd').format(_selectedDate);
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
     final nowTimeStr = DateFormat('HH:mm:ss').format(DateTime.now());
 
     return slots.where((slot) {
+      // Past time check for today
       if (selectedDateStr == todayStr && slot.compareTo(nowTimeStr) < 0) {
         return false;
       }
@@ -176,6 +218,25 @@ class _BookingsFormState extends State<BookingsForm> {
       final slotStartMins = _parseMins(slot);
       final slotEndMins = slotStartMins + stepMin;
 
+      // Business Closure Check (Timed)
+      if (closure != null && closure.isAllDay != true && closure.startTime != null && closure.endTime != null) {
+        final cStartMins = _parseMins(closure.startTime!);
+        final cEndMins = _parseMins(closure.endTime!);
+        if (slotStartMins < cEndMins && slotEndMins > cStartMins) {
+          return false;
+        }
+      }
+
+      // Staff Leave Check (Timed)
+      if (staffLeave != null && staffLeave.isAllDay != true && staffLeave.startTime != null && staffLeave.endTime != null) {
+        final lStartMins = _parseMins(staffLeave.startTime!);
+        final lEndMins = _parseMins(staffLeave.endTime!);
+        if (slotStartMins < lEndMins && slotEndMins > lStartMins) {
+          return false;
+        }
+      }
+
+      // Existing Bookings Overlap Check
       final isBooked = controller.bookings.any((b) {
         if (b.staffId != _selectedStaff!.id) return false;
         if (b.bookingDate != selectedDateStr) return false;
@@ -252,6 +313,22 @@ class _BookingsFormState extends State<BookingsForm> {
 
     if (_selectedStaff == null) {
       Get.snackbar('Error', 'Please select a staff member',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    // Business closure check before submit
+    final closure = _getActiveBusinessClosure();
+    if (closure != null && closure.isAllDay == true) {
+      Get.snackbar('Business Closed', 'Business is closed on this date (${closure.title ?? 'Holiday'})',
+          snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
+      return;
+    }
+
+    // Staff leave check before submit
+    final staffLeave = _getActiveStaffLeave();
+    if (staffLeave != null && staffLeave.isAllDay == true) {
+      Get.snackbar('Staff On Leave', '${_selectedStaff?.staffName} is on leave (${staffLeave.leaveType ?? 'Leave'}) on this date',
           snackPosition: SnackPosition.BOTTOM, backgroundColor: Colors.red, colorText: Colors.white);
       return;
     }
@@ -346,6 +423,8 @@ class _BookingsFormState extends State<BookingsForm> {
                     );
                   }
 
+                  final closure = _getActiveBusinessClosure();
+                  final staffLeave = _getActiveStaffLeave();
                   final availableSlots = _getAvailableSlots();
 
                   final currentCustomerValue = controller.customersList.any((c) => c.id == _selectedCustomer?.id)
@@ -366,6 +445,31 @@ class _BookingsFormState extends State<BookingsForm> {
                       controller: scrollController,
                       padding: const EdgeInsets.all(20),
                       children: [
+                        // --- BUSINESS CLOSURE WARNING BANNER ---
+                        if (closure != null) ...[
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.red.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.red.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.event_busy, color: Colors.red, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    'Business Closure: ${closure.title ?? 'Holiday'} (${closure.isAllDay == true ? "Closed All Day" : "${closure.startTime} - ${closure.endTime}"})',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                        ],
+
                         // --- CUSTOMER SECTION ---
                         _buildSectionHeader('Customer Details', Icons.person_outline),
                         const SizedBox(height: 8),
@@ -490,6 +594,31 @@ class _BookingsFormState extends State<BookingsForm> {
                           }),
                         ),
 
+                        // --- STAFF LEAVE WARNING BANNER ---
+                        if (staffLeave != null) ...[
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: Colors.orange.withOpacity(0.1),
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                            ),
+                            child: Row(
+                              children: [
+                                const Icon(Icons.beach_access, color: Colors.orange, size: 20),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    '${_selectedStaff?.staffName} is on leave (${staffLeave.leaveType ?? 'Leave'}) ${staffLeave.isAllDay == true ? 'All Day' : 'during ${staffLeave.startTime} - ${staffLeave.endTime}'}',
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+
                         const SizedBox(height: 24),
 
                         // --- DATE & AVAILABLE SLOTS SECTION ---
@@ -529,6 +658,22 @@ class _BookingsFormState extends State<BookingsForm> {
                             child: Text(
                               'Please select a staff member to see available time slots.',
                               style: TextStyle(fontSize: 13, color: Colors.grey, fontStyle: FontStyle.italic),
+                            ),
+                          ),
+                        ] else if (closure != null && closure.isAllDay == true) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No slots available. Business is closed for ${closure.title ?? 'Holiday'}.',
+                              style: const TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ] else if (staffLeave != null && staffLeave.isAllDay == true) ...[
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
+                            child: Text(
+                              'No slots available. ${_selectedStaff?.staffName} is on leave (${staffLeave.leaveType}).',
+                              style: const TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ] else if (availableSlots.isEmpty) ...[
