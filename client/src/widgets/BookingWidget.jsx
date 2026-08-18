@@ -116,7 +116,22 @@ const formatDuration = (mins) => {
     return m > 0 ? `${h} hr ${m} min` : `${h === 1 ? '1 hr' : `${h} hrs`}`;
 };
 
-const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false, isExpired: externalIsExpired = null }) => {
+const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false, isExpired: externalIsExpired = null, allowSkipPayment = undefined }) => {
+    const isPortalDomain = (() => {
+        if (typeof window === 'undefined') return false;
+        const origin = window.location.origin.toLowerCase();
+        const hostname = window.location.hostname.toLowerCase();
+        const pathname = window.location.pathname.toLowerCase();
+
+        // Must NOT be on website generator page or template site pages
+        if (pathname.includes('/website-generator') || pathname.includes('/site/') || pathname.includes('/templates/')) return false;
+
+        // Check if origin/hostname is either portal domain or localhost
+        const isPortal = hostname === 'localhost' || hostname === '127.0.0.1' || origin.includes('mybookings.allysoftsolutions.com');
+        return isPortal;
+    })();
+
+    const canShowSkipPayment = allowSkipPayment !== undefined ? allowSkipPayment : isPortalDomain;
     const [services, setServices] = useState([]);
     const [businesses, setBusinesses] = useState([]);
     const [staff, setStaff] = useState([]);
@@ -530,7 +545,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             const minAmountToPay = bookingData.services.reduce((acc, s) => acc + (Number(s.minimum_booking_charge) || Number(s.min_booking_charge) || Number(s.price) || 0), 0);
             const amountToPayNow = minAmountToPay;
 
-            const isSkip = skipPayment === true || selectedPaymentMethod === 'venue';
+            const isSkip = canShowSkipPayment && (skipPayment === true || selectedPaymentMethod === 'venue');
             const isOnline = !isSkip && (selectedPaymentMethod === 'stripe' || selectedPaymentMethod === 'razorpay');
             const bookingPayload = {
                 business_id: resolvedBusinessId,
@@ -1386,33 +1401,35 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         </Card>
                                     </Grid>
                                 )}
-                                <Grid item xs={12} sm={6}>
-                                    <Card
-                                        onClick={() => setSelectedPaymentMethod('venue')}
-                                        variant="outlined"
-                                        sx={{
-                                            p: 1.5,
-                                            borderRadius: 2.5,
-                                            cursor: 'pointer',
-                                            border: '2px solid',
-                                            borderColor: selectedPaymentMethod === 'venue' ? '#10b981' : 'divider',
-                                            bgcolor: selectedPaymentMethod === 'venue' ? 'rgba(16,185,129,0.08)' : 'transparent'
-                                        }}
-                                    >
-                                        <Typography variant="subtitle2" fontWeight={800} color="#10b981">💵 Pay at Venue / Cash</Typography>
-                                        <Typography variant="caption" color="text.secondary" display="block">Skip Online Payment</Typography>
-                                    </Card>
-                                </Grid>
+                                {canShowSkipPayment && (
+                                    <Grid item xs={12} sm={6}>
+                                        <Card
+                                            onClick={() => setSelectedPaymentMethod('venue')}
+                                            variant="outlined"
+                                            sx={{
+                                                p: 1.5,
+                                                borderRadius: 2.5,
+                                                cursor: 'pointer',
+                                                border: '2px solid',
+                                                borderColor: selectedPaymentMethod === 'venue' ? '#10b981' : 'divider',
+                                                bgcolor: selectedPaymentMethod === 'venue' ? 'rgba(16,185,129,0.08)' : 'transparent'
+                                            }}
+                                        >
+                                            <Typography variant="subtitle2" fontWeight={800} color="#10b981">💵 Pay at Venue / Cash</Typography>
+                                            <Typography variant="caption" color="text.secondary" display="block">Skip Online Payment</Typography>
+                                        </Card>
+                                    </Grid>
+                                )}
                             </Grid>
                         </Box>
 
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
-                            onClick={() => handleConfirmBooking(selectedPaymentMethod === 'venue')}
+                            onClick={() => handleConfirmBooking(canShowSkipPayment && selectedPaymentMethod === 'venue')}
                             disabled={loading}>
-                            {loading ? 'Processing...' : (selectedPaymentMethod === 'venue' ? 'Confirm Booking (Pay at Venue)' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`)}
+                            {loading ? 'Processing...' : (canShowSkipPayment && selectedPaymentMethod === 'venue' ? 'Confirm Booking (Pay at Venue)' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`)}
                         </Button>
 
-                        {selectedPaymentMethod !== 'venue' && (
+                        {canShowSkipPayment && selectedPaymentMethod !== 'venue' && (
                             <Button fullWidth variant="outlined" color="success" size="large" sx={{ mt: 1.5, borderRadius: 2, py: 1.2, fontWeight: 700, textTransform: 'none' }}
                                 onClick={() => handleConfirmBooking(true)}
                                 disabled={loading}>
