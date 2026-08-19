@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import '../../core/constants/appColors.dart';
 import '../../data/services/notification_service.dart';
 import 'package:get/get.dart';
 
@@ -20,6 +21,7 @@ class CustomHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
     const primaryPurple = Color(0xFF3B32B4);
     final glassWhite = Colors.white.withOpacity(0.15);
 
@@ -30,9 +32,10 @@ class CustomHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
         right: 20,
         bottom: 20,
       ),
-      decoration: const BoxDecoration(
-        color: primaryPurple,
-        borderRadius: BorderRadius.vertical(bottom: Radius.circular(32)),
+      decoration: BoxDecoration(
+        color: isDark ? AppColors.surfaceDark : primaryPurple,
+        borderRadius: const BorderRadius.vertical(bottom: Radius.circular(32)),
+        border: isDark ? Border.all(color: Colors.white10) : null,
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -114,7 +117,7 @@ class CustomHomeAppBar extends StatelessWidget implements PreferredSizeWidget {
                     style: TextStyle(color: Colors.white.withOpacity(0.7), fontSize: 14),
                   ),
                   Text(
-                    'Hello, $ownerName 👋',
+                    'Hello, $ownerName',
                     style: const TextStyle(
                       color: Colors.white,
                       fontSize: 20,

@@ -18,13 +18,19 @@ class StaffAvailabilityModel {
   });
 
   StaffAvailabilityModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    staffId = json['staff_id'];
-    locationId = json['location_id'];
-    dayOfWeek = json['day_of_week'];
-    startTime = json['start_time'];
-    endTime = json['end_time'];
-    status = json['status'] is bool ? json['status'] : json['status'] == 1;
+    id = json['id'] is int
+        ? json['id']
+        : (json['id'] != null ? int.tryParse(json['id'].toString()) : null);
+    staffId = json['staff_id'] is int
+        ? json['staff_id']
+        : (json['staff_id'] != null ? int.tryParse(json['staff_id'].toString()) : null);
+    locationId = json['location_id'] is int
+        ? json['location_id']
+        : (json['location_id'] != null ? int.tryParse(json['location_id'].toString()) : null);
+    dayOfWeek = json['day_of_week']?.toString();
+    startTime = json['start_time']?.toString();
+    endTime = json['end_time']?.toString();
+    status = json['status'] == true || json['status'] == 1 || json['status'] == '1' || json['status'] == 'true';
   }
 
   Map<String, dynamic> toJson() {

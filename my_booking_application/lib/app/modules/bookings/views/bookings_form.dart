@@ -38,7 +38,6 @@ class _BookingsFormState extends State<BookingsForm> {
   CustomerModel? _selectedCustomer;
   final TextEditingController _nameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
-  final TextEditingController _emailController = TextEditingController();
 
   // Selections
   LocationModel? _selectedLocation;
@@ -53,13 +52,51 @@ class _BookingsFormState extends State<BookingsForm> {
 
   // Payment
   bool _isPaid = false;
+  String _selectedPaymentMethod = 'Cash';
+  final TextEditingController _paidAmountController = TextEditingController();
+
+  double get _totalPrice {
+    return _selectedServices.fold(0.0, (sum, s) => sum + (s.price ?? 0.0));
+  }
 
   @override
   void dispose() {
     _nameController.dispose();
     _phoneController.dispose();
-    _emailController.dispose();
+    _paidAmountController.dispose();
     super.dispose();
+  }
+
+  List<StaffModel> _getFilteredStaffForSelectedServices() {
+    var list = controller.staffList.toList();
+
+    // Filter by location first if selected
+    if (_selectedLocation != null) {
+      list = list.where((staff) {
+        if (staff.locations == null || staff.locations!.isEmpty) return true;
+        return staff.locations!.any((l) => l.id == _selectedLocation!.id);
+      }).toList();
+    }
+
+    // Filter by selected services if any are selected
+    if (_selectedServices.isNotEmpty) {
+      final selectedServiceIds = _selectedServices.map((s) => s.id!).toSet();
+      list = list.where((staff) {
+        final staffSvcIds = (staff.serviceIds ?? []).toSet();
+        if (staffSvcIds.isEmpty) {
+          final mappingSvcIds = controller.staffServicesList
+              .where((ss) => ss['staff_id'] == staff.id)
+              .map((ss) => int.tryParse(ss['service_id'].toString()) ?? 0)
+              .where((id) => id > 0)
+              .toSet();
+          if (mappingSvcIds.isEmpty) return true;
+          return selectedServiceIds.any((id) => mappingSvcIds.contains(id));
+        }
+        return selectedServiceIds.any((id) => staffSvcIds.contains(id));
+      }).toList();
+    }
+
+    return list;
   }
 
   void _onServiceSelected(ServiceModel service, bool isSelected) {
@@ -71,6 +108,16 @@ class _BookingsFormState extends State<BookingsForm> {
       } else {
         _selectedServices.removeWhere((s) => s.id == service.id);
       }
+
+      // Automatically unselect staff if they do not offer the newly selected services
+      if (_selectedStaff != null) {
+        final availableStaff = _getFilteredStaffForSelectedServices();
+        if (!availableStaff.any((s) => s.id == _selectedStaff!.id)) {
+          _selectedStaff = null;
+          _selectedSlotStr = null;
+        }
+      }
+
       _autoCalculateEndTime();
     });
   }
@@ -339,12 +386,16 @@ class _BookingsFormState extends State<BookingsForm> {
       return;
     }
 
+    final double paidAmt = _isPaid
+        ? (double.tryParse(_paidAmountController.text.trim()) ?? _totalPrice)
+        : 0.0;
+
     final success = await controller.createBooking(
       isNewCustomer: _isNewCustomer,
       customerId: _selectedCustomer?.id,
       newCustomerName: _nameController.text.trim(),
       newCustomerPhone: _phoneController.text.trim(),
-      newCustomerEmail: _emailController.text.trim(),
+      newCustomerEmail: null,
       locationId: _selectedLocation!.id!,
       serviceIds: _selectedServices.map((s) => s.id!).toList(),
       staffId: _selectedStaff!.id!,
@@ -352,6 +403,9 @@ class _BookingsFormState extends State<BookingsForm> {
       startTime: _formatTimeOfDay(_startTime),
       endTime: _formatTimeOfDay(_endTime),
       isPaid: _isPaid,
+      paymentMethod: _selectedPaymentMethod,
+      paidAmount: paidAmt,
+      totalAmount: _totalPrice,
     );
 
     if (success && mounted) {
@@ -361,6 +415,9 @@ class _BookingsFormState extends State<BookingsForm> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.navy300 : AppColors.primary;
+
     return DraggableScrollableSheet(
       initialChildSize: 0.88,
       minChildSize: 0.5,
@@ -379,7 +436,7 @@ class _BookingsFormState extends State<BookingsForm> {
                 width: 40,
                 height: 5,
                 decoration: BoxDecoration(
-                  color: Colors.grey.withOpacity(0.3),
+                  color: isDark ? Colors.white24 : Colors.grey.shade300,
                   borderRadius: BorderRadius.circular(10),
                 ),
               ),
@@ -399,13 +456,13 @@ class _BookingsFormState extends State<BookingsForm> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.close),
+                      icon: Icon(Icons.close, color: isDark ? Colors.white70 : Colors.black87),
                       onPressed: () => Navigator.pop(context),
                     ),
                   ],
                 ),
               ),
-              const Divider(height: 1),
+              Divider(height: 1, color: isDark ? Colors.white12 : Colors.black12),
 
               // Form content
               Expanded(
@@ -435,8 +492,10 @@ class _BookingsFormState extends State<BookingsForm> {
                       ? controller.locationsList.firstWhere((l) => l.id == _selectedLocation?.id)
                       : null;
 
-                  final currentStaffValue = controller.staffList.any((s) => s.id == _selectedStaff?.id)
-                      ? controller.staffList.firstWhere((s) => s.id == _selectedStaff?.id)
+                  final filteredStaffList = _getFilteredStaffForSelectedServices();
+
+                  final currentStaffValue = filteredStaffList.any((s) => s.id == _selectedStaff?.id)
+                      ? filteredStaffList.firstWhere((s) => s.id == _selectedStaff?.id)
                       : null;
 
                   return Form(
@@ -450,18 +509,18 @@ class _BookingsFormState extends State<BookingsForm> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.red.withOpacity(0.1),
+                              color: Colors.red.withOpacity(isDark ? 0.2 : 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.red.withOpacity(0.3)),
+                              border: Border.all(color: Colors.red.withOpacity(0.4)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.event_busy, color: Colors.red, size: 20),
+                                const Icon(Icons.event_busy, color: Colors.redAccent, size: 20),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     'Business Closure: ${closure.title ?? 'Holiday'} (${closure.isAllDay == true ? "Closed All Day" : "${closure.startTime} - ${closure.endTime}"})',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.red),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.redAccent),
                                   ),
                                 ),
                               ],
@@ -471,7 +530,7 @@ class _BookingsFormState extends State<BookingsForm> {
                         ],
 
                         // --- CUSTOMER SECTION ---
-                        _buildSectionHeader('Customer Details', Icons.person_outline),
+                        _buildSectionHeader(context, 'Customer Details', Icons.person_outline, isDark, primaryColor),
                         const SizedBox(height: 8),
                         Row(
                           children: [
@@ -479,6 +538,13 @@ class _BookingsFormState extends State<BookingsForm> {
                               child: ChoiceChip(
                                 label: const Center(child: Text('Existing Customer')),
                                 selected: !_isNewCustomer,
+                                selectedColor: primaryColor,
+                                labelStyle: TextStyle(
+                                  color: !_isNewCustomer
+                                      ? Colors.white
+                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                  fontWeight: !_isNewCustomer ? FontWeight.bold : FontWeight.normal,
+                                ),
                                 onSelected: (selected) {
                                   if (selected) setState(() => _isNewCustomer = false);
                                 },
@@ -489,6 +555,13 @@ class _BookingsFormState extends State<BookingsForm> {
                               child: ChoiceChip(
                                 label: const Center(child: Text('+ New Customer')),
                                 selected: _isNewCustomer,
+                                selectedColor: primaryColor,
+                                labelStyle: TextStyle(
+                                  color: _isNewCustomer
+                                      ? Colors.white
+                                      : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                  fontWeight: _isNewCustomer ? FontWeight.bold : FontWeight.normal,
+                                ),
                                 onSelected: (selected) {
                                   if (selected) setState(() => _isNewCustomer = true);
                                 },
@@ -501,11 +574,16 @@ class _BookingsFormState extends State<BookingsForm> {
                         if (!_isNewCustomer) ...[
                           DropdownButtonFormField<CustomerModel>(
                             value: currentCustomerValue,
-                            decoration: _inputDecoration('Select Customer', Icons.person),
+                            dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                            decoration: _inputDecoration(context, 'Select Customer', Icons.person, isDark, primaryColor),
                             items: controller.customersList.map((customer) {
                               return DropdownMenuItem(
                                 value: customer,
-                                child: Text('${customer.name ?? 'Guest'} (${customer.phone ?? 'No Phone'})'),
+                                child: Text(
+                                  '${customer.name ?? 'Guest'} (${customer.phone ?? 'No Phone'})',
+                                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                                ),
                               );
                             }).toList(),
                             onChanged: (val) => setState(() => _selectedCustomer = val),
@@ -513,86 +591,206 @@ class _BookingsFormState extends State<BookingsForm> {
                         ] else ...[
                           TextFormField(
                             controller: _nameController,
-                            decoration: _inputDecoration('Customer Name *', Icons.person),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                            decoration: _inputDecoration(context, 'Customer Name *', Icons.person, isDark, primaryColor),
                             validator: (val) => (val == null || val.trim().isEmpty) ? 'Name is required' : null,
                           ),
                           const SizedBox(height: 12),
                           TextFormField(
                             controller: _phoneController,
                             keyboardType: TextInputType.phone,
-                            decoration: _inputDecoration('Phone Number *', Icons.phone),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                            decoration: _inputDecoration(context, 'Phone Number *', Icons.phone, isDark, primaryColor),
                             validator: (val) => (val == null || val.trim().isEmpty) ? 'Phone number is required' : null,
-                          ),
-                          const SizedBox(height: 12),
-                          TextFormField(
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            decoration: _inputDecoration('Email (Optional)', Icons.email_outlined),
                           ),
                         ],
 
                         const SizedBox(height: 24),
 
                         // --- LOCATION SECTION ---
-                        _buildSectionHeader('Location', Icons.location_on_outlined),
+                        _buildSectionHeader(context, 'Location', Icons.location_on_outlined, isDark, primaryColor),
                         const SizedBox(height: 8),
                         DropdownButtonFormField<LocationModel>(
                           value: currentLocationValue,
-                          decoration: _inputDecoration('Select Location', Icons.storefront),
+                          dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+                          style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                          decoration: _inputDecoration(context, 'Select Location', Icons.storefront, isDark, primaryColor),
                           items: controller.locationsList.map((loc) {
                             return DropdownMenuItem(
                               value: loc,
-                              child: Text(loc.locationName ?? 'Default Location'),
+                              child: Text(
+                                loc.locationName ?? 'Default Location',
+                                style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                              ),
                             );
                           }).toList(),
                           onChanged: (val) => setState(() {
                             _selectedLocation = val;
                             _selectedSlotStr = null;
+                            _selectedServices.clear();
                           }),
                         ),
 
                         const SizedBox(height: 24),
 
                         // --- SERVICES SECTION ---
-                        _buildSectionHeader('Services', Icons.medical_services_outlined),
+                        _buildSectionHeader(context, 'Services', Icons.medical_services_outlined, isDark, primaryColor),
                         const SizedBox(height: 8),
-                        if (controller.servicesList.isEmpty)
-                          const Text('No services available', style: TextStyle(color: Colors.grey))
-                        else
-                          Wrap(
+                        Builder(builder: (context) {
+                          if (_selectedLocation == null) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceDark : AppColors.violet50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : AppColors.primary.withOpacity(0.2),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.location_off_outlined, color: isDark ? AppColors.lavender400 : AppColors.primary, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Please select a location above to see its available services.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          final filteredServices = controller.servicesList.where((service) {
+                            try {
+                              final locIds = service.safeLocationIds;
+                              if (locIds == null || locIds.isEmpty) return true;
+                              return locIds.contains(_selectedLocation!.id);
+                            } catch (_) {
+                              return true;
+                            }
+                          }).toList();
+
+                          if (filteredServices.isEmpty) {
+                            return Text(
+                              'No services available for ${_selectedLocation!.locationName ?? "this location"}',
+                              style: TextStyle(color: isDark ? AppColors.lavender400 : Colors.grey[700]),
+                            );
+                          }
+
+                          return Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: controller.servicesList.map((service) {
+                            children: filteredServices.map((service) {
                               final isSelected = _selectedServices.any((s) => s.id == service.id);
+                              final durationStr = (service.durationMinutes != null && service.durationMinutes! > 0)
+                                  ? '${service.durationMinutes!.toStringAsFixed(0)}m'
+                                  : '';
+                              final priceStr = service.price != null
+                                  ? '₹${service.price!.toStringAsFixed(0)}'
+                                  : '₹0';
+                              final chipLabel = durationStr.isNotEmpty
+                                  ? '${service.serviceName} ($durationStr • $priceStr)'
+                                  : '${service.serviceName} ($priceStr)';
+
                               return FilterChip(
-                                label: Text('${service.serviceName} (₹${service.price?.toStringAsFixed(0) ?? 0})'),
+                                label: Text(chipLabel),
                                 selected: isSelected,
                                 onSelected: (sel) => _onServiceSelected(service, sel),
-                                selectedColor: AppColors.primary.withOpacity(0.2),
-                                checkmarkColor: AppColors.primary,
+                                selectedColor: primaryColor.withOpacity(isDark ? 0.3 : 0.2),
+                                checkmarkColor: primaryColor,
+                                labelStyle: TextStyle(
+                                  color: isSelected ? primaryColor : (isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight),
+                                  fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                                ),
                               );
                             }).toList(),
-                          ),
+                          );
+                        }),
 
                         const SizedBox(height: 24),
 
                         // --- STAFF SECTION ---
-                        _buildSectionHeader('Staff Member', Icons.badge_outlined),
+                        _buildSectionHeader(context, 'Staff Member', Icons.badge_outlined, isDark, primaryColor),
                         const SizedBox(height: 8),
-                        DropdownButtonFormField<StaffModel>(
-                          value: currentStaffValue,
-                          decoration: _inputDecoration('Assign Staff', Icons.people_outline),
-                          items: controller.staffList.map((staff) {
-                            return DropdownMenuItem(
-                              value: staff,
-                              child: Text('${staff.staffName} (${staff.role ?? 'Staff'})'),
+                        Builder(builder: (context) {
+                          if (_selectedServices.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceDark : AppColors.violet50,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: isDark ? Colors.white12 : AppColors.primary.withOpacity(0.2),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  Icon(Icons.info_outline, color: isDark ? AppColors.lavender400 : AppColors.primary, size: 20),
+                                  const SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'Please select a service above to see staff members who provide it.',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w500,
+                                        color: isDark ? AppColors.textPrimaryDark : AppColors.textPrimaryLight,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
                             );
-                          }).toList(),
-                          onChanged: (val) => setState(() {
-                            _selectedStaff = val;
-                            _selectedSlotStr = null;
-                          }),
-                        ),
+                          }
+
+                          if (filteredStaffList.isEmpty) {
+                            return Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                              decoration: BoxDecoration(
+                                color: isDark ? AppColors.surfaceDark : Colors.orange.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                              ),
+                              child: const Row(
+                                children: [
+                                  Icon(Icons.people_outline, color: Colors.orangeAccent, size: 20),
+                                  SizedBox(width: 10),
+                                  Expanded(
+                                    child: Text(
+                                      'No staff members are assigned to provide the selected service(s).',
+                                      style: TextStyle(fontSize: 13, fontWeight: FontWeight.w500, color: Colors.orangeAccent),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          }
+
+                          return DropdownButtonFormField<StaffModel>(
+                            value: currentStaffValue,
+                            dropdownColor: isDark ? AppColors.surfaceDark : Colors.white,
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                            decoration: _inputDecoration(context, 'Assign Staff', Icons.people_outline, isDark, primaryColor),
+                            items: filteredStaffList.map((staff) {
+                              return DropdownMenuItem(
+                                value: staff,
+                                child: Text(
+                                  '${staff.staffName} (${staff.role ?? 'Staff'})',
+                                  style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                                ),
+                              );
+                            }).toList(),
+                            onChanged: (val) => setState(() {
+                              _selectedStaff = val;
+                              _selectedSlotStr = null;
+                            }),
+                          );
+                        }),
 
                         // --- STAFF LEAVE WARNING BANNER ---
                         if (staffLeave != null) ...[
@@ -600,18 +798,18 @@ class _BookingsFormState extends State<BookingsForm> {
                           Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
-                              color: Colors.orange.withOpacity(0.1),
+                              color: Colors.orange.withOpacity(isDark ? 0.2 : 0.1),
                               borderRadius: BorderRadius.circular(12),
-                              border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                              border: Border.all(color: Colors.orange.withOpacity(0.4)),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.beach_access, color: Colors.orange, size: 20),
+                                const Icon(Icons.beach_access, color: Colors.orangeAccent, size: 20),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     '${_selectedStaff?.staffName} is on leave (${staffLeave.leaveType ?? 'Leave'}) ${staffLeave.isAllDay == true ? 'All Day' : 'during ${staffLeave.startTime} - ${staffLeave.endTime}'}',
-                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orange),
+                                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.orangeAccent),
                                   ),
                                 ),
                               ],
@@ -622,7 +820,7 @@ class _BookingsFormState extends State<BookingsForm> {
                         const SizedBox(height: 24),
 
                         // --- DATE & AVAILABLE SLOTS SECTION ---
-                        _buildSectionHeader('Date & Time Slot', Icons.calendar_today_outlined),
+                        _buildSectionHeader(context, 'Date & Time Slot', Icons.calendar_today_outlined, isDark, primaryColor),
                         const SizedBox(height: 12),
                         InkWell(
                           onTap: _pickDate,
@@ -630,20 +828,24 @@ class _BookingsFormState extends State<BookingsForm> {
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                             decoration: BoxDecoration(
-                              border: Border.all(color: Colors.grey.withOpacity(0.4)),
+                              color: isDark ? AppColors.surfaceDark : Colors.white,
+                              border: Border.all(color: isDark ? Colors.white12 : AppColors.borderLight),
                               borderRadius: BorderRadius.circular(12),
                             ),
                             child: Row(
                               children: [
-                                const Icon(Icons.event, size: 20, color: AppColors.primary),
+                                Icon(Icons.event, size: 20, color: primaryColor),
                                 const SizedBox(width: 8),
                                 Expanded(
                                   child: Text(
                                     DateFormat('EEEE, MMM dd, yyyy').format(_selectedDate),
-                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      color: Theme.of(context).textTheme.bodyLarge?.color,
+                                    ),
                                   ),
                                 ),
-                                const Icon(Icons.arrow_drop_down, color: Colors.grey),
+                                Icon(Icons.arrow_drop_down, color: isDark ? AppColors.lavender400 : Colors.grey),
                               ],
                             ),
                           ),
@@ -653,11 +855,15 @@ class _BookingsFormState extends State<BookingsForm> {
 
                         // AVAILABLE STAFF TIME SLOTS
                         if (_selectedStaff == null) ...[
-                          const Padding(
-                            padding: EdgeInsets.symmetric(vertical: 8),
+                          Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'Please select a staff member to see available time slots.',
-                              style: TextStyle(fontSize: 13, color: Colors.grey, fontStyle: FontStyle.italic),
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: isDark ? AppColors.lavender400 : Colors.grey,
+                                fontStyle: FontStyle.italic,
+                              ),
                             ),
                           ),
                         ] else if (closure != null && closure.isAllDay == true) ...[
@@ -665,7 +871,7 @@ class _BookingsFormState extends State<BookingsForm> {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'No slots available. Business is closed for ${closure.title ?? 'Holiday'}.',
-                              style: const TextStyle(fontSize: 13, color: Colors.red, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 13, color: Colors.redAccent, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ] else if (staffLeave != null && staffLeave.isAllDay == true) ...[
@@ -673,7 +879,7 @@ class _BookingsFormState extends State<BookingsForm> {
                             padding: const EdgeInsets.symmetric(vertical: 8),
                             child: Text(
                               'No slots available. ${_selectedStaff?.staffName} is on leave (${staffLeave.leaveType}).',
-                              style: const TextStyle(fontSize: 13, color: Colors.orange, fontWeight: FontWeight.bold),
+                              style: const TextStyle(fontSize: 13, color: Colors.orangeAccent, fontWeight: FontWeight.bold),
                             ),
                           ),
                         ] else if (availableSlots.isEmpty) ...[
@@ -682,18 +888,18 @@ class _BookingsFormState extends State<BookingsForm> {
                             child: Container(
                               padding: const EdgeInsets.all(12),
                               decoration: BoxDecoration(
-                                color: Colors.orange.withOpacity(0.1),
+                                color: Colors.orange.withOpacity(isDark ? 0.2 : 0.1),
                                 borderRadius: BorderRadius.circular(12),
-                                border: Border.all(color: Colors.orange.withOpacity(0.3)),
+                                border: Border.all(color: Colors.orange.withOpacity(0.4)),
                               ),
                               child: Row(
                                 children: [
-                                  const Icon(Icons.info_outline, color: Colors.orange, size: 20),
+                                  const Icon(Icons.info_outline, color: Colors.orangeAccent, size: 20),
                                   const SizedBox(width: 8),
                                   Expanded(
                                     child: Text(
                                       'No available slots for ${_selectedStaff?.staffName} on ${DateFormat('EEEE').format(_selectedDate)}. Try selecting another date or staff.',
-                                      style: const TextStyle(fontSize: 12, color: Colors.orange),
+                                      style: const TextStyle(fontSize: 12, color: Colors.orangeAccent),
                                     ),
                                   ),
                                 ],
@@ -701,9 +907,9 @@ class _BookingsFormState extends State<BookingsForm> {
                             ),
                           ),
                         ] else ...[
-                          const Text(
+                          Text(
                             'Available Staff Time Slots:',
-                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.primary),
+                            style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: primaryColor),
                           ),
                           const SizedBox(height: 8),
                           Wrap(
@@ -715,9 +921,11 @@ class _BookingsFormState extends State<BookingsForm> {
                               return ChoiceChip(
                                 label: Text(displayLabel),
                                 selected: isSelected,
-                                selectedColor: AppColors.primary,
+                                selectedColor: primaryColor,
                                 labelStyle: TextStyle(
-                                  color: isSelected ? Colors.white : AppColors.primary,
+                                  color: isSelected
+                                      ? Colors.white
+                                      : (isDark ? AppColors.textPrimaryDark : AppColors.primary),
                                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                                 ),
                                 onSelected: (selected) {
@@ -734,20 +942,27 @@ class _BookingsFormState extends State<BookingsForm> {
                         Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                           decoration: BoxDecoration(
-                            color: AppColors.primary.withOpacity(0.08),
+                            color: primaryColor.withOpacity(isDark ? 0.15 : 0.08),
                             borderRadius: BorderRadius.circular(12),
+                            border: isDark ? Border.all(color: primaryColor.withOpacity(0.3)) : null,
                           ),
                           child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
-                              const Text('Selected Window:', style: TextStyle(fontWeight: FontWeight.w600)),
+                              Text(
+                                'Selected Window:',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                  color: Theme.of(context).textTheme.bodyLarge?.color,
+                                ),
+                              ),
                               Text(
                                 _selectedSlotStr != null
                                     ? '${_formatDisplayTime(_startTime)} - ${_formatDisplayTime(_endTime)}'
                                     : 'Select a time slot above',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
-                                  color: _selectedSlotStr != null ? AppColors.primary : Colors.grey,
+                                  color: _selectedSlotStr != null ? primaryColor : (isDark ? AppColors.lavender400 : Colors.grey),
                                 ),
                               ),
                             ],
@@ -756,15 +971,106 @@ class _BookingsFormState extends State<BookingsForm> {
 
                         const SizedBox(height: 24),
 
-                        // --- PAYMENT STATUS ---
-                        _buildSectionHeader('Payment Status', Icons.payments_outlined),
+                        // --- PAYMENT OPTIONS & STATUS ---
+                        _buildSectionHeader(context, 'Payment Options & Status', Icons.payments_outlined, isDark, primaryColor),
+                        const SizedBox(height: 12),
+                        
+                        Text(
+                          'Select Payment Method:',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Theme.of(context).textTheme.bodyLarge?.color,
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          children: [
+                            Expanded(child: _buildPaymentMethodChip(context, 'Cash', Icons.money_rounded, isDark, primaryColor)),
+                            const SizedBox(width: 6),
+                            Expanded(child: _buildPaymentMethodChip(context, 'Razorpay', Icons.credit_card_rounded, isDark, primaryColor)),
+                            const SizedBox(width: 6),
+                            Expanded(child: _buildPaymentMethodChip(context, 'UPI', Icons.qr_code_2_rounded, isDark, primaryColor)),
+                            const SizedBox(width: 6),
+                            Expanded(child: _buildPaymentMethodChip(context, 'Card', Icons.payment_rounded, isDark, primaryColor)),
+                          ],
+                        ),
+                        const SizedBox(height: 16),
+
+                        // Mark as Paid Switch
                         SwitchListTile(
-                          title: const Text('Mark as Paid'),
-                          subtitle: Text(_isPaid ? 'Payment received' : 'Payment pending'),
+                          title: Text(
+                            'Mark Payment as Received',
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color, fontWeight: FontWeight.w600),
+                          ),
+                          subtitle: Text(
+                            _isPaid ? 'Payment received via $_selectedPaymentMethod' : 'Payment pending (Pay on Arrival)',
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyMedium?.color),
+                          ),
                           value: _isPaid,
                           activeThumbColor: AppColors.success,
-                          onChanged: (val) => setState(() => _isPaid = val),
+                          onChanged: (val) {
+                            setState(() {
+                              _isPaid = val;
+                              if (val) {
+                                _paidAmountController.text = _totalPrice.toStringAsFixed(0);
+                              } else {
+                                _paidAmountController.clear();
+                              }
+                            });
+                          },
                           contentPadding: EdgeInsets.zero,
+                        ),
+
+                        if (_isPaid) ...[
+                          const SizedBox(height: 8),
+                          TextFormField(
+                            controller: _paidAmountController,
+                            keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                            style: TextStyle(color: Theme.of(context).textTheme.bodyLarge?.color),
+                            decoration: _inputDecoration(context, 'Collected Amount (₹)', Icons.currency_rupee_rounded, isDark, primaryColor),
+                          ),
+                        ],
+
+                        const SizedBox(height: 16),
+
+                        // Pricing Summary Box
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: isDark ? AppColors.surfaceDark : AppColors.violet50,
+                            borderRadius: BorderRadius.circular(16),
+                            border: isDark
+                                ? Border.all(color: Colors.white10)
+                                : Border.all(color: AppColors.primary.withOpacity(0.2)),
+                          ),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                children: [
+                                  Text('Total Booking Amount:', style: TextStyle(fontWeight: FontWeight.w600, color: Theme.of(context).textTheme.bodyLarge?.color)),
+                                  Text(
+                                    '₹${_totalPrice.toStringAsFixed(0)}',
+                                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: primaryColor),
+                                  ),
+                                ],
+                              ),
+                              if (_isPaid) ...[
+                                const SizedBox(height: 6),
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                  children: [
+                                    const Text('Amount Collected:', style: TextStyle(color: AppColors.success, fontWeight: FontWeight.w600)),
+                                    Text(
+                                      '₹${(double.tryParse(_paidAmountController.text) ?? _totalPrice).toStringAsFixed(0)}',
+                                      style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: AppColors.success),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
                         ),
 
                         const SizedBox(height: 32),
@@ -778,7 +1084,7 @@ class _BookingsFormState extends State<BookingsForm> {
                             child: ElevatedButton(
                               onPressed: isSubmitting ? null : _submit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppColors.primary,
+                                backgroundColor: primaryColor,
                                 foregroundColor: Colors.white,
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
@@ -811,29 +1117,95 @@ class _BookingsFormState extends State<BookingsForm> {
     );
   }
 
-  Widget _buildSectionHeader(String title, IconData icon) {
+  Widget _buildSectionHeader(BuildContext context, String title, IconData icon, bool isDark, Color primaryColor) {
     return Row(
       children: [
-        Icon(icon, size: 18, color: AppColors.primary),
+        Icon(icon, size: 18, color: primaryColor),
         const SizedBox(width: 8),
         Text(
           title,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.bold,
             letterSpacing: 0.5,
+            color: Theme.of(context).textTheme.titleMedium?.color,
           ),
         ),
       ],
     );
   }
 
-  InputDecoration _inputDecoration(String label, IconData icon) {
+  InputDecoration _inputDecoration(BuildContext context, String label, IconData icon, bool isDark, Color primaryColor) {
     return InputDecoration(
       labelText: label,
-      prefixIcon: Icon(icon, size: 20),
-      border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      labelStyle: TextStyle(color: isDark ? AppColors.textSecondaryDark : AppColors.textSecondaryLight),
+      prefixIcon: Icon(icon, size: 20, color: primaryColor),
+      filled: true,
+      fillColor: isDark ? AppColors.surfaceDark : Colors.white,
+      border: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: isDark ? const BorderSide(color: Colors.white12) : BorderSide.none,
+      ),
+      enabledBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: isDark ? const BorderSide(color: Colors.white12) : const BorderSide(color: AppColors.borderLight),
+      ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide(color: primaryColor, width: 1.5),
+      ),
       contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+    );
+  }
+
+  Widget _buildPaymentMethodChip(BuildContext context, String label, IconData icon, bool isDark, Color primaryColor) {
+    final isSelected = _selectedPaymentMethod == label;
+
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _selectedPaymentMethod = label;
+        });
+      },
+      borderRadius: BorderRadius.circular(12),
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 4),
+        decoration: BoxDecoration(
+          color: isSelected
+              ? (isDark ? AppColors.accent.withOpacity(0.2) : primaryColor.withOpacity(0.1))
+              : (isDark ? AppColors.surfaceDark : Colors.white),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected
+                ? (isDark ? AppColors.accent : primaryColor)
+                : (isDark ? Colors.white12 : AppColors.borderLight),
+            width: isSelected ? 1.5 : 1.0,
+          ),
+        ),
+        child: Column(
+          children: [
+            Icon(
+              icon,
+              size: 18,
+              color: isSelected
+                  ? (isDark ? AppColors.accent : primaryColor)
+                  : (isDark ? AppColors.lavender400 : Colors.grey),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected
+                    ? (isDark ? AppColors.accent : primaryColor)
+                    : Theme.of(context).textTheme.bodyMedium?.color,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

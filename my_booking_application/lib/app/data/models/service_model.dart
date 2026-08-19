@@ -6,6 +6,9 @@ class ServiceModel {
   double? price;
   double? minimumBookingCharge;
   bool? status;
+  List<int>? locationIds;
+
+  List<int>? get safeLocationIds => locationIds;
 
   ServiceModel({
     this.id,
@@ -15,12 +18,17 @@ class ServiceModel {
     this.price,
     this.minimumBookingCharge,
     this.status,
+    this.locationIds,
   });
 
   ServiceModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    businessId = json['business_id'];
-    serviceName = json['service_name'];
+    id = json['id'] is int
+        ? json['id']
+        : (json['id'] != null ? int.tryParse(json['id'].toString()) : null);
+    businessId = json['business_id'] is int
+        ? json['business_id']
+        : (json['business_id'] != null ? int.tryParse(json['business_id'].toString()) : null);
+    serviceName = json['service_name']?.toString();
     durationMinutes = json['duration_minutes'] != null 
         ? double.tryParse(json['duration_minutes'].toString()) 
         : null;
@@ -30,7 +38,19 @@ class ServiceModel {
     minimumBookingCharge = json['minimum_booking_charge'] != null 
         ? double.tryParse(json['minimum_booking_charge'].toString()) 
         : null;
-    status = json['status'];
+    status = json['status'] == true || json['status'] == 1 || json['status'] == '1' || json['status'] == 'true';
+
+    try {
+      if (json['locations'] != null && (json['locations'] as List).isNotEmpty) {
+        locationIds = (json['locations'] as List)
+            .map((loc) => int.tryParse(loc['id']?.toString() ?? '') ?? -1)
+            .where((id) => id != -1)
+            .toList();
+      } else if (json['location_id'] != null) {
+        final locId = int.tryParse(json['location_id'].toString());
+        if (locId != null) locationIds = [locId];
+      }
+    } catch (_) {}
   }
 
   Map<String, dynamic> toJson() {
@@ -42,6 +62,7 @@ class ServiceModel {
     data['price'] = price;
     data['minimum_booking_charge'] = minimumBookingCharge;
     data['status'] = status;
+    data['location_ids'] = locationIds;
     return data;
   }
 }

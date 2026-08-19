@@ -22,15 +22,19 @@ class LocationModel {
   });
 
   LocationModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    businessId = json['business_id'];
+    id = json['id'] is int
+        ? json['id']
+        : (json['id'] != null ? int.tryParse(json['id'].toString()) : null);
+    businessId = json['business_id'] is int
+        ? json['business_id']
+        : (json['business_id'] != null ? int.tryParse(json['business_id'].toString()) : null);
     locationName = json['location_name'] ?? json['name'];
     address = json['address'];
     city = json['city'];
     state = json['state'];
     locationType = json['location_type'];
     meetingLink = json['meeting_link'];
-    status = json['status'] is bool ? json['status'] : json['status'] == 1;
+    status = json['status'] == true || json['status'] == 1 || json['status'] == '1' || json['status'] == 'true';
   }
 
   Map<String, dynamic> toJson() {

@@ -28,20 +28,26 @@ class StaffLeaveModel {
   });
 
   StaffLeaveModel.fromJson(Map<String, dynamic> json) {
-    id = json['id'];
-    staffId = json['staff_id'];
-    businessId = json['business_id'];
-    leaveType = json['leave_type'];
-    startDate = json['start_date'];
-    endDate = json['end_date'];
-    startTime = json['start_time'];
-    endTime = json['end_time'];
-    isAllDay = json['is_all_day'] == true || json['is_all_day'] == 1 || json['is_all_day'] == '1';
-    approvalStatus = json['approval_status'];
-    reason = json['reason'];
+    id = json['id'] is int
+        ? json['id']
+        : (json['id'] != null ? int.tryParse(json['id'].toString()) : null);
+    staffId = json['staff_id'] is int
+        ? json['staff_id']
+        : (json['staff_id'] != null ? int.tryParse(json['staff_id'].toString()) : null);
+    businessId = json['business_id'] is int
+        ? json['business_id']
+        : (json['business_id'] != null ? int.tryParse(json['business_id'].toString()) : null);
+    leaveType = json['leave_type']?.toString();
+    startDate = json['start_date']?.toString();
+    endDate = json['end_date']?.toString();
+    startTime = json['start_time']?.toString();
+    endTime = json['end_time']?.toString();
+    isAllDay = json['is_all_day'] == true || json['is_all_day'] == 1 || json['is_all_day'] == '1' || json['is_all_day'] == 'true';
+    approvalStatus = json['approval_status']?.toString();
+    reason = json['reason']?.toString();
 
     if (json['staff'] != null) {
-      staffName = json['staff']['staff_name'];
+      staffName = json['staff']['staff_name']?.toString();
     }
   }
 

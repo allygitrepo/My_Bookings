@@ -23,6 +23,7 @@ class BookingsController extends GetxController {
   final locationsList = <LocationModel>[].obs;
   final servicesList = <ServiceModel>[].obs;
   final staffList = <StaffModel>[].obs;
+  final staffServicesList = <Map<String, dynamic>>[].obs;
   final availabilityList = <StaffAvailabilityModel>[].obs;
   final staffLeavesList = <StaffLeaveModel>[].obs;
   final businessClosuresList = <BusinessClosureModel>[].obs;
@@ -60,7 +61,7 @@ class BookingsController extends GetxController {
     try {
       isFormLoading.value = true;
       
-      // Fetch customers, locations, services, staff, availability, staff leaves, and closures in parallel
+      // Fetch customers, locations, services, staff, availability, staff leaves, closures, and staff-services mapping
       final results = await Future.wait([
         _apiClient.get(ApiConstants.customers).catchError((_) => null),
         _apiClient.get(ApiConstants.locations).catchError((_) => null),
@@ -69,6 +70,7 @@ class BookingsController extends GetxController {
         _apiClient.get(ApiConstants.staffAvailability).catchError((_) => null),
         _apiClient.get(ApiConstants.staffLeaves).catchError((_) => null),
         _apiClient.get(ApiConstants.businessClosures).catchError((_) => null),
+        _apiClient.get(ApiConstants.staffServices).catchError((_) => null),
       ]);
 
       // Customers
@@ -89,10 +91,28 @@ class BookingsController extends GetxController {
         servicesList.value = list.map((j) => ServiceModel.fromJson(j)).toList();
       }
 
+      // Staff-Services Mapping
+      if (results[7] != null && results[7]!.data['success'] == true) {
+        final List list = results[7]!.data['data'] ?? [];
+        staffServicesList.value = list.map((j) => Map<String, dynamic>.from(j)).toList();
+      }
+
       // Staff
       if (results[3] != null && results[3]!.data['success'] == true) {
         final List list = results[3]!.data['data'] ?? [];
-        staffList.value = list.map((j) => StaffModel.fromJson(j)).toList();
+        final parsedStaff = list.map((j) => StaffModel.fromJson(j)).toList();
+
+        // Populate staff service IDs
+        for (var staff in parsedStaff) {
+          if (staff.id != null) {
+            staff.serviceIds = staffServicesList
+                .where((ss) => ss['staff_id'] == staff.id)
+                .map((ss) => int.tryParse(ss['service_id'].toString()) ?? 0)
+                .where((id) => id > 0)
+                .toList();
+          }
+        }
+        staffList.value = parsedStaff;
       }
 
       // Availability
@@ -133,6 +153,9 @@ class BookingsController extends GetxController {
     required String startTime,
     required String endTime,
     required bool isPaid,
+    String? paymentMethod,
+    double? paidAmount,
+    double? totalAmount,
   }) async {
     try {
       isSubmitting.value = true;
@@ -146,6 +169,11 @@ class BookingsController extends GetxController {
         'start_time': startTime,
         'end_time': endTime,
         'payment_status': isPaid,
+        'payment_method': paymentMethod ?? (isPaid ? 'Cash' : 'Pay at Venue / Cash'),
+        'paid_amount': paidAmount ?? (isPaid ? (totalAmount ?? 0) : 0),
+        'total_amount': totalAmount ?? 0,
+        'skip_payment': true,
+        'booking_status': isPaid ? 'Confirmed' : 'Pending',
         'status': true,
       };
 
