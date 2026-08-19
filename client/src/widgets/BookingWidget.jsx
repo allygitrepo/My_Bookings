@@ -406,11 +406,26 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
         const uniqueSlots = [...new Set(all)].sort();
 
+        const getDayNameFromDateStr = (dateStr) => {
+            if (!dateStr) return '';
+            const [y, m, d] = dateStr.split('-').map(Number);
+            return new Date(y, m - 1, d).toLocaleDateString('en-US', { weekday: 'long' });
+        };
+
+        const isClosureActiveOnDate = (c, dateStr) => {
+            if (c.status !== true && String(c.status) !== '1') return false;
+            if (c.is_recurring) {
+                const dayOfWeek = getDayNameFromDateStr(dateStr);
+                const days = (c.recurring_day || '').split(',').map(d => d.trim().toLowerCase());
+                return days.includes(dayOfWeek.toLowerCase());
+            }
+            return c.start_date <= dateStr && c.end_date >= dateStr;
+        };
+
         // Check if business is closed all day
         const isBusinessClosedAllDay = closures.some(c => {
-            if (c.status !== true && String(c.status) !== '1') return false;
             if (c.is_all_day === false) return false;
-            return c.start_date <= bookingData.date && c.end_date >= bookingData.date;
+            return isClosureActiveOnDate(c, bookingData.date);
         });
         if (isBusinessClosedAllDay) return [];
 
@@ -439,8 +454,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
 
             // Check partial Business Closures
             const isClosedAtSlot = closures.some(c => {
-                if (c.status !== true && String(c.status) !== '1') return false;
-                if (c.start_date > bookingData.date || c.end_date < bookingData.date) return false;
+                if (!isClosureActiveOnDate(c, bookingData.date)) return false;
                 if (c.is_all_day !== false) return true;
                 if (!c.start_time || !c.end_time) return false;
                 return (slotStart < c.end_time && slotEnd > c.start_time);
@@ -1137,7 +1151,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     const iso = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                                     const isSelected = bookingData.date === iso;
                                     const isToday = cellDate.getTime() === today.getTime();
-                                    const isClosedDay = closures.some(c => (c.status === true || String(c.status) === '1') && c.start_date <= iso && c.end_date >= iso && c.is_all_day !== false);
+                                    const isClosedDay = closures.some(c => {
+                                        if (c.status !== true && String(c.status) !== '1') return false;
+                                        if (c.is_all_day === false) return false;
+                                        if (c.is_recurring) {
+                                            const dayOfWeek = new Date(year, month, d).toLocaleDateString('en-US', { weekday: 'long' });
+                                            const days = (c.recurring_day || '').split(',').map(td => td.trim().toLowerCase());
+                                            return days.includes(dayOfWeek.toLowerCase());
+                                        }
+                                        return c.start_date <= iso && c.end_date >= iso;
+                                    });
                                     const isOnLeaveDay = staffLeaves.some(l => String(l.staff_id) === String(bookingData.staff?.id) && (l.status === true || String(l.status) === '1') && l.approval_status === 'Approved' && l.start_date <= iso && l.end_date >= iso && l.is_all_day !== false);
 
                                     return (

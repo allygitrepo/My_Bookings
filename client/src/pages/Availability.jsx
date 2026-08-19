@@ -91,6 +91,8 @@ const Availability = () => {
     const [selectedClosure, setSelectedClosure] = useState(null);
     const [closureForm, setClosureForm] = useState({
         title: '',
+        is_recurring: false,
+        recurring_day: ['Sunday'],
         start_date: new Date().toISOString().split('T')[0],
         end_date: new Date().toISOString().split('T')[0],
         start_time: '09:00',
@@ -415,6 +417,8 @@ const Availability = () => {
         setSelectedClosure(null);
         setClosureForm({
             title: '',
+            is_recurring: false,
+            recurring_day: ['Sunday'],
             start_date: new Date().toISOString().split('T')[0],
             end_date: new Date().toISOString().split('T')[0],
             start_time: '09:00',
@@ -427,10 +431,13 @@ const Availability = () => {
 
     const handleEditClosure = (closure) => {
         setSelectedClosure(closure);
+        const recDays = (closure.recurring_day || '').split(',').map(d => d.trim()).filter(Boolean);
         setClosureForm({
             title: closure.title,
-            start_date: closure.start_date,
-            end_date: closure.end_date,
+            is_recurring: !!closure.is_recurring,
+            recurring_day: recDays.length > 0 ? recDays : ['Sunday'],
+            start_date: closure.start_date || '',
+            end_date: closure.end_date || '',
             start_time: closure.start_time || '09:00',
             end_time: closure.end_time || '17:00',
             is_all_day: closure.is_all_day !== false,
@@ -441,22 +448,35 @@ const Availability = () => {
 
     const handleSaveClosure = async () => {
         if (!closureForm.title) {
-            toast.error('Please specify a title (e.g. Diwali Holiday)');
+            toast.error('Please specify a title (e.g. Sunday Shop Off, Diwali Holiday)');
             return;
         }
-        if (!closureForm.start_date || !closureForm.end_date) {
+
+        if (closureForm.is_recurring && (!closureForm.recurring_day || closureForm.recurring_day.length === 0)) {
+            toast.error('Please select at least one recurring day (e.g. Sunday)');
+            return;
+        }
+
+        if (!closureForm.is_recurring && (!closureForm.start_date || !closureForm.end_date)) {
             toast.error('Please select start and end dates');
             return;
         }
+
+        const payload = {
+            ...closureForm,
+            recurring_day: Array.isArray(closureForm.recurring_day) ? closureForm.recurring_day.join(', ') : closureForm.recurring_day,
+            start_date: closureForm.is_recurring ? (closureForm.start_date || '1970-01-01') : closureForm.start_date,
+            end_date: closureForm.is_recurring ? (closureForm.end_date || '2099-12-31') : closureForm.end_date,
+        };
 
         setSavingClosure(true);
         showGlobalLoader(selectedClosure ? 'Updating closure...' : 'Adding business closure...');
         try {
             if (selectedClosure) {
-                await updateBusinessClosure(selectedClosure.id, closureForm);
+                await updateBusinessClosure(selectedClosure.id, payload);
                 toast.success('Business closure updated successfully');
             } else {
-                await createBusinessClosure(closureForm);
+                await createBusinessClosure(payload);
                 toast.success('Business closure recorded successfully');
             }
             setClosureModalOpen(false);
@@ -804,14 +824,23 @@ const Availability = () => {
                                             <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + idx + 1}</TableCell>
                                             <TableCell>
                                                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar sx={{ width: 30, height: 30, bgcolor: 'error.main', fontSize: '0.8rem' }}>
+                                                    <Avatar sx={{ width: 30, height: 30, bgcolor: closure.is_recurring ? 'warning.main' : 'error.main', fontSize: '0.8rem' }}>
                                                         <EventBusyIcon fontSize="small" />
                                                     </Avatar>
-                                                    <Typography variant="body2" fontWeight={600}>{closure.title}</Typography>
+                                                    <Box>
+                                                        <Typography variant="body2" fontWeight={600}>{closure.title}</Typography>
+                                                        {closure.is_recurring && (
+                                                            <Chip label={`Weekly (${closure.recurring_day})`} size="small" color="warning" variant="outlined" sx={{ fontSize: '0.65rem', height: 18, fontWeight: 700, mt: 0.3 }} />
+                                                        )}
+                                                    </Box>
                                                 </Box>
                                             </TableCell>
-                                            <TableCell sx={{ fontWeight: 500 }}>{closure.start_date}</TableCell>
-                                            <TableCell sx={{ fontWeight: 500 }}>{closure.end_date}</TableCell>
+                                            <TableCell sx={{ fontWeight: 500 }}>
+                                                {closure.is_recurring ? `Every ${closure.recurring_day}` : closure.start_date}
+                                            </TableCell>
+                                            <TableCell sx={{ fontWeight: 500 }}>
+                                                {closure.is_recurring ? 'Indefinite' : closure.end_date}
+                                            </TableCell>
                                             <TableCell>
                                                 <Chip
                                                     label={closure.is_all_day ? 'All Day Closed' : `${closure.start_time} - ${closure.end_time}`}
@@ -1089,39 +1118,87 @@ const Availability = () => {
             <Dialog open={closureModalOpen} onClose={() => setClosureModalOpen(false)} maxWidth="sm" fullWidth>
                 <DialogTitle>{selectedClosure ? 'Edit Business Closure' : 'Add Business Closure / Holiday'}</DialogTitle>
                 <DialogContent dividers>
-                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, mt: 0.5 }}>
+                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5, mt: 0.5 }}>
+                        <FormControl fullWidth size="small">
+                            <Typography variant="caption" fontWeight={700} color="text.secondary" mb={0.5}>Closure Type</Typography>
+                            <Select
+                                value={closureForm.is_recurring ? 'recurring' : 'date_range'}
+                                onChange={(e) => {
+                                    const isRec = e.target.value === 'recurring';
+                                    setClosureForm(prev => ({
+                                        ...prev,
+                                        is_recurring: isRec,
+                                        title: prev.title || (isRec ? 'Weekly Shop Off' : '')
+                                    }));
+                                }}
+                                sx={{ borderRadius: '10px' }}
+                            >
+                                <MenuItem value="date_range">Specific Dates (Holiday / Maintenance Range)</MenuItem>
+                                <MenuItem value="recurring">Recurring Weekly Day Off (Every Sunday, Saturday, etc.)</MenuItem>
+                            </Select>
+                        </FormControl>
+
                         <TextField
-                            label="Title / Occasion"
+                            label="Title / Closure Name"
                             size="small"
                             fullWidth
                             required
-                            placeholder="e.g., Independence Day, Diwali, Store Maintenance"
+                            placeholder={closureForm.is_recurring ? "e.g., Sunday Shop Off, Weekly Off" : "e.g., Independence Day, Store Repairs"}
                             value={closureForm.title}
                             onChange={(e) => setClosureForm(prev => ({ ...prev, title: e.target.value }))}
                         />
 
-                        <Box sx={{ display: 'flex', gap: 2 }}>
-                            <TextField
-                                type="date"
-                                label="Start Date"
-                                size="small"
-                                fullWidth
-                                required
-                                InputLabelProps={{ shrink: true }}
-                                value={closureForm.start_date}
-                                onChange={(e) => setClosureForm(prev => ({ ...prev, start_date: e.target.value }))}
-                            />
-                            <TextField
-                                type="date"
-                                label="End Date"
-                                size="small"
-                                fullWidth
-                                required
-                                InputLabelProps={{ shrink: true }}
-                                value={closureForm.end_date}
-                                onChange={(e) => setClosureForm(prev => ({ ...prev, end_date: e.target.value }))}
-                            />
-                        </Box>
+                        {closureForm.is_recurring ? (
+                            <Box>
+                                <Typography variant="caption" fontWeight={700} color="text.secondary" mb={1} display="block">
+                                    Select Recurring Off Day(s) *
+                                </Typography>
+                                <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                                    {DAYS.map(day => {
+                                        const isSelected = (closureForm.recurring_day || []).includes(day);
+                                        return (
+                                            <Chip
+                                                key={day}
+                                                label={day}
+                                                size="medium"
+                                                clickable
+                                                color={isSelected ? 'primary' : 'default'}
+                                                variant={isSelected ? 'filled' : 'outlined'}
+                                                onClick={() => {
+                                                    const cur = closureForm.recurring_day || [];
+                                                    const next = isSelected ? cur.filter(d => d !== day) : [...cur, day];
+                                                    setClosureForm(prev => ({ ...prev, recurring_day: next }));
+                                                }}
+                                                sx={{ fontWeight: 700, borderRadius: '10px' }}
+                                            />
+                                        );
+                                    })}
+                                </Box>
+                            </Box>
+                        ) : (
+                            <Box sx={{ display: 'flex', gap: 2 }}>
+                                <TextField
+                                    type="date"
+                                    label="Start Date"
+                                    size="small"
+                                    fullWidth
+                                    required
+                                    InputLabelProps={{ shrink: true }}
+                                    value={closureForm.start_date}
+                                    onChange={(e) => setClosureForm(prev => ({ ...prev, start_date: e.target.value }))}
+                                />
+                                <TextField
+                                    type="date"
+                                    label="End Date"
+                                    size="small"
+                                    fullWidth
+                                    required
+                                    InputLabelProps={{ shrink: true }}
+                                    value={closureForm.end_date}
+                                    onChange={(e) => setClosureForm(prev => ({ ...prev, end_date: e.target.value }))}
+                                />
+                            </Box>
+                        )}
 
                         <FormControlLabel
                             control={
