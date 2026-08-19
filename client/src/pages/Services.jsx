@@ -10,6 +10,7 @@ import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
 import PageTransition from '../components/PageTransition';
 import { getServices, createService, updateService, deleteService } from '../api/service.api';
+import { getServiceTypes } from '../api/serviceType.api';
 import { getLocations } from '../api/location.api';
 import { getServiceLocations, createServiceLocation, deleteServiceLocation } from '../api/serviceLocation.api';
 import { getBusinesses } from '../api/business.api';
@@ -43,6 +44,7 @@ const Services = () => {
     const [serviceLocations, setServiceLocations] = useState([]);
     const [staff, setStaff] = useState([]);
     const [staffServices, setStaffServices] = useState([]);
+    const [dbServiceTypes, setDbServiceTypes] = useState([]);
     const [loading, setLoading] = useState(true);
     const [open, setOpen] = useState(false);
     const [editId, setEditId] = useState(null);
@@ -56,20 +58,27 @@ const Services = () => {
         setPage(0);
     }, [searchQuery, selectedBusinessId, selectedServiceType]);
 
-    const uniqueServiceTypes = Array.from(new Set(
-        servicesList.flatMap(s => (s.service_type || '').split(',').map(t => t.trim())).filter(Boolean)
-    )).sort();
+    const typeNamesFromList = servicesList.flatMap(s => {
+        if (s.serviceTypes && s.serviceTypes.length > 0) return s.serviceTypes.map(st => st.name);
+        return (s.service_type || '').split(',').map(t => t.trim());
+    }).filter(Boolean);
+    const typeNamesFromDb = dbServiceTypes.map(t => t.name).filter(Boolean);
+
+    const uniqueServiceTypes = Array.from(new Set([...typeNamesFromDb, ...typeNamesFromList])).sort();
 
     const filteredServices = servicesList.filter(svc => {
         const matchesBusiness = selectedBusinessId === 'all' || String(svc.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
-        const svcTypes = (svc.service_type || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        const svcTypes = (svc.serviceTypes && svc.serviceTypes.length > 0)
+            ? svc.serviceTypes.map(st => st.name.toLowerCase())
+            : (svc.service_type || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+
         const matchesType = selectedServiceType === 'all' || svcTypes.includes(selectedServiceType.toLowerCase());
         if (!matchesType) return false;
 
         return svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            (svc.service_type || '')?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            svcTypes.some(t => t.includes(searchQuery.toLowerCase())) ||
             svc.price?.toString().includes(searchQuery) ||
             svc.duration_minutes?.toString().includes(searchQuery);
     });
@@ -77,8 +86,8 @@ const Services = () => {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const [svcRes, bizRes, locRes, slRes, staffRes, ssRes] = await Promise.all([
-                getServices(), getBusinesses(), getLocations(), getServiceLocations(), getStaff(), getStaffServices()
+            const [svcRes, bizRes, locRes, slRes, staffRes, ssRes, stRes] = await Promise.all([
+                getServices(), getBusinesses(), getLocations(), getServiceLocations(), getStaff(), getStaffServices(), getServiceTypes()
             ]);
             if (svcRes.success) setServicesList(svcRes.data);
             if (bizRes.success) setBusinesses(bizRes.data);
@@ -86,6 +95,7 @@ const Services = () => {
             if (slRes.success) setServiceLocations(slRes.data);
             if (staffRes.success) setStaff(staffRes.data);
             if (ssRes.success) setStaffServices(ssRes.data);
+            if (stRes?.success) setDbServiceTypes(stRes.data);
         } catch (error) {
             toast.error('Failed to fetch data');
         } finally {
@@ -123,7 +133,9 @@ const Services = () => {
         if (svc) {
             const assignedS = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
             const assignedL = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
-            const initialTypes = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
+            const initialTypes = (svc.serviceTypes && svc.serviceTypes.length > 0)
+                ? svc.serviceTypes.map(st => st.name)
+                : (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
             reset({
                 business_id: svc.business_id || '',
                 service_name: svc.service_name || '',
@@ -345,7 +357,9 @@ const Services = () => {
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
                             const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
-                            const types = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
+                            const types = (svc.serviceTypes && svc.serviceTypes.length > 0)
+                                ? svc.serviceTypes.map(st => st.name)
+                                : (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
                             return (
                                 <TableRow key={svc.id} hover>
                                     <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>

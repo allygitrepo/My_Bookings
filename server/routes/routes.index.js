@@ -19,6 +19,7 @@ const uploadRoutes = require("./upload.routes");
 const templateRoutes = require("./template.routes");
 const businessClosureRoutes = require("./businessClosure.routes");
 const staffLeaveRoutes = require("./staffLeave.routes");
+const serviceTypeRoutes = require("./serviceType.routes");
 
 const preventDuplicate = require("../middleware/preventDuplicate.middleware");
 
@@ -33,6 +34,7 @@ const routes = (app) => {
     app.use(`${prefix}/locations`, locationRoutes);
     app.use(`${prefix}/staff`, staffRoutes);
     app.use(`${prefix}/services`, serviceRoutes);
+    app.use(`${prefix}/service-types`, serviceTypeRoutes);
     app.use(`${prefix}/staff-services`, staffServiceRoutes);
     app.use(`${prefix}/staff-availability`, staffAvailabilityRoutes);
     app.use(`${prefix}/business-closures`, businessClosureRoutes);

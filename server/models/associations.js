@@ -17,6 +17,11 @@ const BusinessTemplate = require("./businessTemplate.model");
 const ApiKey = require("./apiKey.model");
 const StaffService = require("./staffService.model");
 
+const BusinessClosure = require("./businessClosure.model");
+const StaffLeave = require("./staffLeave.model");
+const ServiceType = require("./serviceType.model");
+const ServiceTypeMapping = require("./serviceTypeMapping.model");
+
 // Staff <-> Business (Many-to-One)
 Staff.belongsTo(Business, { foreignKey: 'business_id' });
 Business.hasMany(Staff, { foreignKey: 'business_id' });
@@ -32,6 +37,14 @@ Location.belongsToMany(Staff, { through: StaffLocation, foreignKey: 'location_id
 // Service <-> Business (Many-to-One)
 Service.belongsTo(Business, { foreignKey: 'business_id' });
 Business.hasMany(Service, { foreignKey: 'business_id' });
+
+// ServiceType <-> Business (Many-to-One)
+ServiceType.belongsTo(Business, { foreignKey: 'business_id' });
+Business.hasMany(ServiceType, { foreignKey: 'business_id' });
+
+// Service <-> ServiceType (Many-to-Many)
+Service.belongsToMany(ServiceType, { through: ServiceTypeMapping, foreignKey: 'service_id', otherKey: 'service_type_id', as: 'serviceTypes' });
+ServiceType.belongsToMany(Service, { through: ServiceTypeMapping, foreignKey: 'service_type_id', otherKey: 'service_id', as: 'services' });
 
 // Service <-> Location (Many-to-Many)
 Service.belongsToMany(Location, { through: ServiceLocation, foreignKey: 'service_id', as: 'locations' });
@@ -89,9 +102,6 @@ UserSubscription.belongsTo(User, { foreignKey: 'user_id' });
 // UserSubscription <-> Package (Many-to-One)
 UserSubscription.belongsTo(Package, { foreignKey: 'package_id', as: 'package' });
 
-const BusinessClosure = require("./businessClosure.model");
-const StaffLeave = require("./staffLeave.model");
-
 // Business <-> BusinessClosure (One-to-Many)
 Business.hasMany(BusinessClosure, { foreignKey: 'business_id', as: 'closures' });
 BusinessClosure.belongsTo(Business, { foreignKey: 'business_id' });
@@ -108,6 +118,6 @@ module.exports = {
     Staff, Location, StaffLocation, StaffAvailability, 
     Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService,
     Package, UserSubscription, TemplateProject, BusinessTemplate, ApiKey, StaffService,
-    BusinessClosure, StaffLeave
+    BusinessClosure, StaffLeave, ServiceType, ServiceTypeMapping
 };
 
