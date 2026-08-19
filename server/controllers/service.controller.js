@@ -8,53 +8,61 @@ const getBusinessId = (req) => {
 };
 
 const syncServiceTypes = async (service_id, business_id, service_types_input) => {
-    if (service_types_input === undefined) return;
+    try {
+        if (service_types_input === undefined || service_types_input === null) return;
 
-    let typeInputs = [];
-    if (Array.isArray(service_types_input)) {
-        typeInputs = service_types_input;
-    } else if (typeof service_types_input === 'string' && service_types_input.trim()) {
-        typeInputs = service_types_input.split(',').map(t => t.trim()).filter(Boolean);
-    }
-
-    const typeIds = [];
-    const typeNames = [];
-
-    for (const item of typeInputs) {
-        if (!item) continue;
-        let typeObj = null;
-        if (typeof item === 'number' || (!isNaN(item) && Number.isInteger(Number(item)) && String(item).length < 15)) {
-            typeObj = await ServiceType.findOne({ where: { id: Number(item), status: true } });
-        } else if (typeof item === 'object' && item.id) {
-            typeObj = await ServiceType.findOne({ where: { id: item.id, status: true } });
-        } else {
-            const nameStr = String(item.name || item).trim();
-            if (!nameStr) continue;
-            [typeObj] = await ServiceType.findOrCreate({
-                where: { business_id, name: nameStr, status: true },
-                defaults: { business_id, name: nameStr, status: true }
-            });
+        let typeInputs = [];
+        if (Array.isArray(service_types_input)) {
+            typeInputs = service_types_input;
+        } else if (typeof service_types_input === 'string' && service_types_input.trim()) {
+            typeInputs = service_types_input.split(',').map(t => t.trim()).filter(Boolean);
         }
-        if (typeObj) {
-            typeIds.push(typeObj.id);
-            typeNames.push(typeObj.name);
+
+        const typeIds = [];
+        const typeNames = [];
+
+        for (const item of typeInputs) {
+            if (!item) continue;
+            let typeObj = null;
+            if (typeof item === 'number' || (!isNaN(item) && Number.isInteger(Number(item)) && String(item).length < 15)) {
+                typeObj = await ServiceType.findOne({ where: { id: Number(item), status: true } });
+            } else if (typeof item === 'object' && item && item.id) {
+                typeObj = await ServiceType.findOne({ where: { id: item.id, status: true } });
+            } else {
+                const nameStr = String(item.name || item).trim();
+                if (!nameStr) continue;
+                const [foundOrCreated] = await ServiceType.findOrCreate({
+                    where: { business_id, name: nameStr },
+                    defaults: { business_id, name: nameStr, status: true }
+                });
+                typeObj = foundOrCreated;
+            }
+            if (typeObj) {
+                typeIds.push(typeObj.id);
+                typeNames.push(typeObj.name);
+            }
+        }
+
+        // Clear old mappings & add new ones
+        await ServiceTypeMapping.destroy({ where: { service_id } });
+
+        if (typeIds.length > 0) {
+            const mappings = typeIds.map(type_id => ({
+                service_id,
+                service_type_id: type_id
+            }));
+            await ServiceTypeMapping.bulkCreate(mappings);
+        }
+
+        // Also update string column on Service table for fast queries/backward compatibility
+        const joinedNames = typeNames.join(', ') || (typeof service_types_input === 'string' ? service_types_input : null);
+        await Service.update({ service_type: joinedNames }, { where: { id: service_id } });
+    } catch (err) {
+        console.error('[syncServiceTypes Error]:', err);
+        if (typeof service_types_input === 'string') {
+            await Service.update({ service_type: service_types_input }, { where: { id: service_id } }).catch(() => {});
         }
     }
-
-    // Clear old mappings & add new ones
-    await ServiceTypeMapping.destroy({ where: { service_id } });
-
-    if (typeIds.length > 0) {
-        const mappings = typeIds.map(type_id => ({
-            service_id,
-            service_type_id: type_id
-        }));
-        await ServiceTypeMapping.bulkCreate(mappings);
-    }
-
-    // Also update string column on Service table for fast queries/backward compatibility
-    const joinedNames = typeNames.join(', ') || null;
-    await Service.update({ service_type: joinedNames }, { where: { id: service_id } });
 };
 
 const serviceController = {
@@ -120,6 +128,22 @@ const serviceController = {
                 limit,
                 offset
             });
+
+            // Auto-sync legacy string service_type records into relational tables
+            for (const row of rows) {
+                if ((!row.serviceTypes || row.serviceTypes.length === 0) && row.service_type) {
+                    await syncServiceTypes(row.id, row.business_id, row.service_type);
+                    const freshTypes = await ServiceType.findAll({
+                        include: [{
+                            model: Service,
+                            as: 'services',
+                            where: { id: row.id },
+                            through: { attributes: [] }
+                        }]
+                    });
+                    row.setDataValue('serviceTypes', freshTypes);
+                }
+            }
 
             res.json({
                 success: true,

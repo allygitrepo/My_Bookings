@@ -40,12 +40,14 @@ const connectDB = async () => {
                 await Business.sync({ alter: true });
                 await Package.sync({ alter: true });
                 await Service.sync({ alter: true });
-                await ServiceType.sync({ alter: true });
-                await ServiceTypeMapping.sync({ alter: true });
+                await ServiceType.sync({ alter: true }).catch(() => ServiceType.sync());
+                await ServiceTypeMapping.sync({ alter: true }).catch(() => ServiceTypeMapping.sync());
                 try {
+                    await sequelize.query("CREATE TABLE IF NOT EXISTS service_types (id BIGINT AUTO_INCREMENT PRIMARY KEY, business_id BIGINT NOT NULL, name VARCHAR(255) NOT NULL, status TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
+                    await sequelize.query("CREATE TABLE IF NOT EXISTS service_type_mappings (id BIGINT AUTO_INCREMENT PRIMARY KEY, service_id BIGINT NOT NULL, service_type_id BIGINT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
                     await sequelize.query("ALTER TABLE services ADD COLUMN service_type VARCHAR(255) NULL");
                 } catch (colErr) {
-                    // Column already exists or error ignored
+                    // Column or table already exists or error ignored
                 }
                 console.log('✅ Targeted business_templates, business_closures, staff_leaves, bookings, businesses, packages, services, service_types, and service_type_mappings table sync completed successfully');
             } catch (targetErr) {
