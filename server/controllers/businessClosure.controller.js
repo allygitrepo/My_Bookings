@@ -16,41 +16,57 @@ const businessClosureController = {
                 return res.status(403).json({ success: false, message: "No business associated with your request." });
             }
 
-            const { title, start_date, end_date, start_time, end_time, is_all_day, reason } = req.body;
+            const { title, start_date, end_date, start_time, end_time, is_all_day, is_recurring, recurring_day, reason } = req.body;
 
-            if (!title || !start_date || !end_date) {
-                return res.status(400).json({ success: false, message: "Title, start date, and end date are required." });
+            const effectiveStartDate = is_recurring ? '1970-01-01' : (start_date || '1970-01-01');
+            const effectiveEndDate = is_recurring ? '2099-12-31' : (end_date || '2099-12-31');
+
+            if (!title) {
+                return res.status(400).json({ success: false, message: "Title is required." });
             }
 
-            if (new Date(start_date) > new Date(end_date)) {
+            if (!is_recurring && (!start_date || !end_date)) {
+                return res.status(400).json({ success: false, message: "Start date and end date are required for date-range closures." });
+            }
+
+            if (is_recurring && !recurring_day) {
+                return res.status(400).json({ success: false, message: "Recurring day (e.g. Sunday) is required for recurring closures." });
+            }
+
+            if (!is_recurring && new Date(start_date) > new Date(end_date)) {
                 return res.status(400).json({ success: false, message: "Start date cannot be after end date." });
             }
 
             // Check for duplicate / overlapping active closure for this business
-            const existingClosure = await BusinessClosure.findOne({
-                where: {
-                    business_id,
-                    status: true,
-                    start_date: { [Op.lte]: end_date },
-                    end_date: { [Op.gte]: start_date }
-                }
-            });
-
-            if (existingClosure) {
-                return res.status(400).json({
-                    success: false,
-                    message: `A business closure already exists covering ${existingClosure.start_date} to ${existingClosure.end_date} (${existingClosure.title}).`
+            if (!is_recurring) {
+                const existingClosure = await BusinessClosure.findOne({
+                    where: {
+                        business_id,
+                        status: true,
+                        is_recurring: false,
+                        start_date: { [Op.lte]: effectiveEndDate },
+                        end_date: { [Op.gte]: effectiveStartDate }
+                    }
                 });
+
+                if (existingClosure) {
+                    return res.status(400).json({
+                        success: false,
+                        message: `A business closure already exists covering ${existingClosure.start_date} to ${existingClosure.end_date} (${existingClosure.title}).`
+                    });
+                }
             }
 
             const row = await BusinessClosure.create({
                 business_id,
                 title,
-                start_date,
-                end_date,
+                start_date: effectiveStartDate,
+                end_date: effectiveEndDate,
                 start_time: is_all_day ? null : start_time,
                 end_time: is_all_day ? null : end_time,
                 is_all_day: is_all_day !== undefined ? is_all_day : true,
+                is_recurring: !!is_recurring,
+                recurring_day: is_recurring ? recurring_day : null,
                 reason,
                 status: true
             });
@@ -63,6 +79,12 @@ const businessClosureController = {
 
     getAll: async (req, res) => {
         try {
+            // Auto-update legacy recurring records to cover full range
+            await BusinessClosure.update(
+                { start_date: '1970-01-01', end_date: '2099-12-31' },
+                { where: { is_recurring: true, end_date: { [Op.ne]: '2099-12-31' } } }
+            );
+
             const whereClause = { status: true };
 
             if (req.isWidget) {
@@ -114,39 +136,20 @@ const businessClosureController = {
             });
             if (!row) return res.status(404).json({ success: false, message: "Business closure not found" });
 
-            const { title, start_date, end_date, start_time, end_time, is_all_day, reason } = req.body;
+            const { title, start_date, end_date, start_time, end_time, is_all_day, is_recurring, recurring_day, reason } = req.body;
 
-            if (start_date && end_date && new Date(start_date) > new Date(end_date)) {
-                return res.status(400).json({ success: false, message: "Start date cannot be after end date." });
-            }
-
-            const targetStartDate = start_date ?? row.start_date;
-            const targetEndDate = end_date ?? row.end_date;
-
-            const existingClosure = await BusinessClosure.findOne({
-                where: {
-                    business_id: row.business_id,
-                    status: true,
-                    id: { [Op.ne]: req.params.id },
-                    start_date: { [Op.lte]: targetEndDate },
-                    end_date: { [Op.gte]: targetStartDate }
-                }
-            });
-
-            if (existingClosure) {
-                return res.status(400).json({
-                    success: false,
-                    message: `A business closure already exists covering ${existingClosure.start_date} to ${existingClosure.end_date} (${existingClosure.title}).`
-                });
-            }
+            const nextIsRecurring = is_recurring !== undefined ? !!is_recurring : row.is_recurring;
+            const nextRecurringDay = is_recurring !== undefined ? (is_recurring ? recurring_day : null) : row.recurring_day;
 
             await row.update({
                 title: title ?? row.title,
-                start_date: start_date ?? row.start_date,
-                end_date: end_date ?? row.end_date,
+                start_date: start_date || (nextIsRecurring ? '1970-01-01' : row.start_date),
+                end_date: end_date || (nextIsRecurring ? '2099-12-31' : row.end_date),
                 start_time: is_all_day ? null : (start_time ?? row.start_time),
                 end_time: is_all_day ? null : (end_time ?? row.end_time),
                 is_all_day: is_all_day !== undefined ? is_all_day : row.is_all_day,
+                is_recurring: nextIsRecurring,
+                recurring_day: nextRecurringDay,
                 reason: reason !== undefined ? reason : row.reason
             });
 

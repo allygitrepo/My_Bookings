@@ -2,9 +2,9 @@ import React, { useState, useEffect } from 'react';
 import {
     Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper,
     IconButton, Chip, TextField, Grid, MenuItem, Select, FormControl,
-    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button, FormHelperText, CircularProgress, Card
+    InputLabel, Box, Typography, Divider, InputAdornment, Autocomplete, TablePagination, Button, FormHelperText, CircularProgress, Card, Checkbox
 } from '@mui/material';
-import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon } from '@mui/icons-material';
+import { Edit as EditIcon, Delete as DeleteIcon, Build as ServiceIcon, CheckBoxOutlineBlank as CheckBoxOutlineBlankIcon, CheckBox as CheckBoxIcon } from '@mui/icons-material';
 import { useForm, Controller } from 'react-hook-form';
 import PageHeader from '../components/PageHeader';
 import FormDrawer from '../components/FormDrawer';
@@ -30,6 +30,9 @@ const FieldSection = ({ label, children }) => (
     </Box>
 );
 
+const checkboxIcon = <CheckBoxOutlineBlankIcon fontSize="small" />;
+const checkedCheckboxIcon = <CheckBoxIcon fontSize="small" />;
+
 const Services = () => {
     const { searchQuery } = useSearch();
     const { selectedBusinessId, isSuspended } = useBusiness();
@@ -47,15 +50,26 @@ const Services = () => {
     const [rowsPerPage, setRowsPerPage] = useState(() => parseInt(localStorage.getItem('rowsPerPage'), 10) || 10);
     const [isSubmitting, setIsSubmitting] = useState(false);
 
+    const [selectedServiceType, setSelectedServiceType] = useState('all');
+
     useEffect(() => {
         setPage(0);
-    }, [searchQuery, selectedBusinessId]);
+    }, [searchQuery, selectedBusinessId, selectedServiceType]);
+
+    const uniqueServiceTypes = Array.from(new Set(
+        servicesList.flatMap(s => (s.service_type || '').split(',').map(t => t.trim())).filter(Boolean)
+    )).sort();
 
     const filteredServices = servicesList.filter(svc => {
         const matchesBusiness = selectedBusinessId === 'all' || String(svc.business_id) === String(selectedBusinessId);
         if (!matchesBusiness) return false;
 
+        const svcTypes = (svc.service_type || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+        const matchesType = selectedServiceType === 'all' || svcTypes.includes(selectedServiceType.toLowerCase());
+        if (!matchesType) return false;
+
         return svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            (svc.service_type || '')?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             svc.price?.toString().includes(searchQuery) ||
             svc.duration_minutes?.toString().includes(searchQuery);
     });
@@ -84,7 +98,7 @@ const Services = () => {
     }, []);
 
     const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: [] },
+        defaultValues: { business_id: '', service_name: '', service_type: [], duration_minutes: '', price: '', minimum_booking_charge: 0, assignedStaff: [], assignedLocations: [] },
     });
 
     const watchedBusinessId = watch('business_id');
@@ -109,12 +123,14 @@ const Services = () => {
         if (svc) {
             const assignedS = staffServices.filter(ss => ss.service_id === svc.id).map(ss => ss.staff_id);
             const assignedL = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
+            const initialTypes = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
             reset({
                 business_id: svc.business_id || '',
                 service_name: svc.service_name || '',
+                service_type: initialTypes,
                 duration_minutes: svc.duration_minutes || '',
                 price: svc.price || '',
-                minimum_booking_charge: svc.minimum_booking_charge || '',
+                minimum_booking_charge: (svc.minimum_booking_charge !== null && svc.minimum_booking_charge !== undefined && svc.minimum_booking_charge !== '') ? svc.minimum_booking_charge : 0,
                 assignedStaff: assignedS,
                 assignedLocations: assignedL
             });
@@ -124,9 +140,10 @@ const Services = () => {
             reset({
                 business_id: bizId,
                 service_name: '',
+                service_type: [],
                 duration_minutes: '',
                 price: '',
-                minimum_booking_charge: '',
+                minimum_booking_charge: 0,
                 assignedStaff: [],
                 assignedLocations: bizLocs.map(l => l.id)
             });
@@ -138,6 +155,16 @@ const Services = () => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         const { assignedStaff, assignedLocations, ...svcData } = data;
+        svcData.minimum_booking_charge = (svcData.minimum_booking_charge !== '' && svcData.minimum_booking_charge !== null && svcData.minimum_booking_charge !== undefined) ? Number(svcData.minimum_booking_charge) : 0;
+        
+        if (Array.isArray(svcData.service_type)) {
+            svcData.service_type = svcData.service_type.map(t => t.trim()).filter(Boolean).join(', ');
+        } else if (typeof svcData.service_type === 'string') {
+            svcData.service_type = svcData.service_type.trim();
+        } else {
+            svcData.service_type = '';
+        }
+
         setOpen(false);
         showGlobalLoader(editId ? 'Updating service...' : 'Creating service...');
 
@@ -249,12 +276,46 @@ const Services = () => {
                 buttonText="Add Service"
                 disabled={isSuspended || !canAdd('service')}
             />
+
+            {/* Filter Bar */}
+            <Box sx={{ mb: 3, display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                <FormControl size="small" sx={{ minWidth: 220 }}>
+                    <InputLabel>Filter by Service Type</InputLabel>
+                    <Select
+                        value={selectedServiceType}
+                        label="Filter by Service Type"
+                        onChange={(e) => setSelectedServiceType(e.target.value)}
+                        sx={{ borderRadius: '12px', bgcolor: 'background.paper' }}
+                    >
+                        <MenuItem value="all">All Service Types ({servicesList.length})</MenuItem>
+                        {uniqueServiceTypes.map(type => {
+                            const count = servicesList.filter(s => (s.service_type || '').split(',').map(t => t.trim().toLowerCase()).includes(type.toLowerCase())).length;
+                            return (
+                                <MenuItem key={type} value={type}>
+                                    {type} ({count})
+                                </MenuItem>
+                            );
+                        })}
+                    </Select>
+                </FormControl>
+                {selectedServiceType !== 'all' && (
+                    <Chip 
+                        label={`Filtered: ${selectedServiceType}`} 
+                        onDelete={() => setSelectedServiceType('all')} 
+                        color="primary" 
+                        variant="outlined" 
+                        sx={{ fontWeight: 700 }}
+                    />
+                )}
+            </Box>
+
             {/* Desktop Table */}
             <TableContainer component={Paper} sx={{ display: { xs: 'none', md: 'block' }, borderRadius: '16px', boxShadow: 'none', border: '1px solid', borderColor: 'divider' }}>
                 <Table>
                     <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
                         <TableRow>
                             <TableCell sx={{ fontWeight: 700 }}>Sr. No.</TableCell>
+                            <TableCell sx={{ fontWeight: 700 }}>Type</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Service Name</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Duration (min)</TableCell>
                             <TableCell sx={{ fontWeight: 700 }}>Price</TableCell>
@@ -267,13 +328,13 @@ const Services = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={8} align="center" sx={{ py: 6 }}>
+                                <TableCell colSpan={9} align="center" sx={{ py: 6 }}>
                                     <CircularProgress size={32} />
                                 </TableCell>
                             </TableRow>
                         ) : filteredServices.length === 0 ? (
-                            <TableRow><TableCell colSpan={8} align="center" sx={{ py: 6, color: 'text.secondary' }}>
-                                {searchQuery ? 'No services match your search.' : (
+                            <TableRow><TableCell colSpan={9} align="center" sx={{ py: 6, color: 'text.secondary' }}>
+                                {searchQuery || selectedServiceType !== 'all' ? 'No services match your search or filter.' : (
                                     <>
                                         <ServiceIcon sx={{ fontSize: 40, mb: 1, opacity: 0.3, display: 'block', mx: 'auto' }} />No services added yet.
                                     </>
@@ -284,13 +345,23 @@ const Services = () => {
                             const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                             const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
                             const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
+                            const types = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
                             return (
                                 <TableRow key={svc.id} hover>
                                     <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
+                                    <TableCell>
+                                        <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                            {types.length > 0 ? (
+                                                types.map(t => (
+                                                    <Chip key={t} label={t} size="small" variant="outlined" color="primary" sx={{ fontWeight: 700, borderRadius: 1.5 }} />
+                                                ))
+                                            ) : <Typography variant="caption" color="text.disabled">—</Typography>}
+                                        </Box>
+                                    </TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>{svc.service_name}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{svc.duration_minutes} min</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>₹{svc.price}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge ?? 0}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                             {locNames.length > 0 ? (
@@ -328,12 +399,18 @@ const Services = () => {
                     const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                     const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
                     const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
+                    const types = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
 
                     return (
                         <Card key={svc.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box>
-                                    <Typography variant="subtitle1" fontWeight={900} color="primary.main">{svc.service_name}</Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                        {types.map(t => (
+                                            <Chip key={t} label={t} size="small" variant="outlined" color="primary" sx={{ fontSize: '0.65rem', height: 20, fontWeight: 700 }} />
+                                        ))}
+                                        <Typography variant="subtitle1" fontWeight={900} color="primary.main">{svc.service_name}</Typography>
+                                    </Box>
                                     <Typography variant="caption" color="text.secondary">{svc.duration_minutes} Minutes Duration</Typography>
                                 </Box>
                                 <Box>
@@ -351,7 +428,7 @@ const Services = () => {
                                 </Grid>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Min. Charge</Typography>
-                                    <Typography variant="body2" fontWeight={800}>₹{svc.minimum_booking_charge}</Typography>
+                                    <Typography variant="body2" fontWeight={800}>₹{svc.minimum_booking_charge ?? 0}</Typography>
                                 </Grid>
                             </Grid>
 
@@ -447,17 +524,133 @@ const Services = () => {
 
                 <FieldSection label="Service Details">
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2.5 }}>
-                        <Controller name="service_name" control={control}
-                            rules={{
-                                validate: {
-                                    required: v => v?.trim() ? true : 'Service name is required',
-                                    format: v => validateName(v),
-                                    emoji: v => blockEmoji(v)
-                                }
-                            }}
-                            render={({ field }) => (
-                                <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} placeholder="e.g. Full Body Checkup" />
-                            )} />
+                        <Grid container spacing={2}>
+                            <Grid item xs={12} md={6}>
+                                <Controller
+                                    name="service_type"
+                                    control={control}
+                                    render={({ field }) => {
+                                        const valArray = Array.isArray(field.value)
+                                            ? field.value
+                                            : (field.value || '').split(',').map(t => t.trim()).filter(Boolean);
+                                        const isAllTypesSelected = uniqueServiceTypes.length > 0 && valArray.length >= uniqueServiceTypes.length && uniqueServiceTypes.every(t => valArray.includes(t));
+
+                                        return (
+                                            <Box>
+                                                <Autocomplete
+                                                    multiple
+                                                    freeSolo
+                                                    disableCloseOnSelect
+                                                    options={uniqueServiceTypes.length > 0 ? ['SELECT_ALL', ...uniqueServiceTypes] : []}
+                                                    value={valArray}
+                                                    onChange={(_, newValue) => {
+                                                        const cleanValue = newValue || [];
+                                                        if (cleanValue.includes('SELECT_ALL')) {
+                                                            if (isAllTypesSelected) {
+                                                                field.onChange([]);
+                                                            } else {
+                                                                field.onChange([...uniqueServiceTypes]);
+                                                            }
+                                                        } else {
+                                                            field.onChange(cleanValue.filter(v => v !== 'SELECT_ALL'));
+                                                        }
+                                                    }}
+                                                    renderOption={(props, option, { selected }) => {
+                                                        const { key, ...optionProps } = props;
+                                                        if (option === 'SELECT_ALL') {
+                                                            return (
+                                                                <li key="select_all" {...optionProps} style={{ fontWeight: 800, borderBottom: '1px solid rgba(255,255,255,0.12)', paddingBottom: 6, marginBottom: 4 }}>
+                                                                    <Checkbox
+                                                                        icon={checkboxIcon}
+                                                                        checkedIcon={checkedCheckboxIcon}
+                                                                        style={{ marginRight: 8 }}
+                                                                        checked={isAllTypesSelected}
+                                                                        indeterminate={valArray.length > 0 && !isAllTypesSelected}
+                                                                        size="small"
+                                                                    />
+                                                                    Select All
+                                                                </li>
+                                                            );
+                                                        }
+                                                        return (
+                                                            <li key={key || option} {...optionProps}>
+                                                                <Checkbox
+                                                                    icon={checkboxIcon}
+                                                                    checkedIcon={checkedCheckboxIcon}
+                                                                    style={{ marginRight: 8 }}
+                                                                    checked={selected}
+                                                                    size="small"
+                                                                />
+                                                                {option}
+                                                            </li>
+                                                        );
+                                                    }}
+                                                    renderTags={(value, getTagProps) =>
+                                                        value.filter(option => option !== 'SELECT_ALL').map((option, index) => {
+                                                            const { key, ...tagProps } = getTagProps({ index });
+                                                            return (
+                                                                <Chip
+                                                                    key={key || option}
+                                                                    label={option}
+                                                                    size="small"
+                                                                    {...tagProps}
+                                                                    sx={{ borderRadius: 1.5, fontWeight: 700 }}
+                                                                />
+                                                            );
+                                                        })
+                                                    }
+                                                    renderInput={(params) => (
+                                                        <TextField
+                                                            {...params}
+                                                            fullWidth
+                                                            label="Service Type / Category"
+                                                            placeholder={valArray.length === 0 ? "Select or type categories..." : ""}
+                                                            helperText="Select or type multiple categories"
+                                                        />
+                                                    )}
+                                                />
+                                                {uniqueServiceTypes.length > 0 && (
+                                                    <Box sx={{ mt: 0.8, display: 'flex', gap: 1 }}>
+                                                        <Button
+                                                            size="small"
+                                                            variant="text"
+                                                            onClick={() => field.onChange([...uniqueServiceTypes])}
+                                                            disabled={isAllTypesSelected}
+                                                            sx={{ fontSize: '0.75rem', p: '2px 8px', minWidth: 0, fontWeight: 700 }}
+                                                        >
+                                                            Select All
+                                                        </Button>
+                                                        <Button
+                                                            size="small"
+                                                            variant="text"
+                                                            color="error"
+                                                            onClick={() => field.onChange([])}
+                                                            disabled={valArray.length === 0}
+                                                            sx={{ fontSize: '0.75rem', p: '2px 8px', minWidth: 0, fontWeight: 700 }}
+                                                        >
+                                                            Clear All
+                                                        </Button>
+                                                    </Box>
+                                                )}
+                                            </Box>
+                                        );
+                                    }}
+                                />
+                            </Grid>
+                            <Grid item xs={12} md={6}>
+                                <Controller name="service_name" control={control}
+                                    rules={{
+                                        validate: {
+                                            required: v => v?.trim() ? true : 'Service name is required',
+                                            format: v => validateName(v),
+                                            emoji: v => blockEmoji(v)
+                                        }
+                                    }}
+                                    render={({ field }) => (
+                                        <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} placeholder="e.g. Full Body Checkup" />
+                                    )} />
+                            </Grid>
+                        </Grid>
 
                         <Grid container spacing={2}>
                             <Grid item xs={12} md={6}>

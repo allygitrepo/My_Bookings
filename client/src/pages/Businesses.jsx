@@ -55,6 +55,13 @@ const INDUSTRY_OPTIONS = [
     { label: 'Other', value: 'Other', icon: Folder, color: '#64748b' }
 ];
 
+const getLogoUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/mybookings\/?$/, '');
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const FieldSection = ({ label, children }) => (
     <Box sx={{ mb: 3 }}>
         <Typography variant="caption" fontWeight={700} color="text.secondary" sx={{ textTransform: 'uppercase', letterSpacing: 1, mb: 1.5, display: 'block' }}>
@@ -328,7 +335,24 @@ const Businesses = () => {
                             <TableRow key={biz.id} hover>
                                 <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + index + 1}</TableCell>
                                 <TableCell sx={{ fontWeight: 500 }}>
-                                    {biz.business_name}
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        <Avatar
+                                            src={getLogoUrl(biz.logo) || undefined}
+                                            sx={{
+                                                width: 38,
+                                                height: 38,
+                                                borderRadius: 2,
+                                                bgcolor: 'action.hover',
+                                                border: '1px solid',
+                                                borderColor: 'divider',
+                                                fontWeight: 700,
+                                                fontSize: '0.85rem'
+                                            }}
+                                        >
+                                            {!biz.logo && (biz.business_name?.[0]?.toUpperCase() || <BusinessIcon sx={{ fontSize: 20, color: 'text.disabled' }} />)}
+                                        </Avatar>
+                                        <Typography variant="body2" fontWeight={600}>{biz.business_name}</Typography>
+                                    </Box>
                                 </TableCell>
                                 <TableCell>
                                     {(() => {
@@ -409,16 +433,23 @@ const Businesses = () => {
                         <Card key={biz.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', mb: 1.5 }}>
                                 <Box sx={{ display: 'flex', gap: 1.5, alignItems: 'center' }}>
-                                    <Box sx={{
-                                         width: 40, height: 40, borderRadius: 2,
-                                         bgcolor: `${industry?.color || '#3b82f6'}18`, color: industry?.color || '#3b82f6',
-                                         display: 'flex', alignItems: 'center', justifyContent: 'center'
-                                     }}>
-                                         {industry?.icon ? (() => {
-                                             const IconComp = industry.icon;
-                                             return <IconComp size={20} />;
-                                         })() : <Building2 size={20} />}
-                                     </Box>
+                                    {biz.logo ? (
+                                        <Avatar
+                                            src={getLogoUrl(biz.logo)}
+                                            sx={{ width: 40, height: 40, borderRadius: 2, border: '1px solid', borderColor: 'divider' }}
+                                        />
+                                    ) : (
+                                        <Box sx={{
+                                             width: 40, height: 40, borderRadius: 2,
+                                             bgcolor: `${industry?.color || '#3b82f6'}18`, color: industry?.color || '#3b82f6',
+                                             display: 'flex', alignItems: 'center', justifyContent: 'center'
+                                         }}>
+                                             {industry?.icon ? (() => {
+                                                 const IconComp = industry.icon;
+                                                 return <IconComp size={20} />;
+                                             })() : <Building2 size={20} />}
+                                         </Box>
+                                    )}
                                     <Box>
                                         <Typography variant="subtitle1" fontWeight={900}>{biz.business_name}</Typography>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -559,7 +590,7 @@ const Businesses = () => {
                 <FieldSection label="Business Logo">
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 3 }}>
                         <Avatar
-                            src={logoUrl ? (logoUrl.startsWith('http') ? logoUrl : `${import.meta.env.VITE_API_BASE_URL.replace('/mybookings', '')}${logoUrl}`) : undefined}
+                            src={getLogoUrl(logoUrl) || undefined}
                             sx={{ width: 80, height: 80, borderRadius: 2, bgcolor: 'action.hover', border: '1px solid', borderColor: 'divider' }}
                         >
                             {!logoUrl && <BusinessIcon sx={{ fontSize: 40, color: 'text.disabled' }} />}

@@ -34,13 +34,19 @@ const bookingController = {
 
             // --- Check Business Closure ---
             if (bookingData.booking_date) {
-                const activeClosure = await BusinessClosure.findOne({
-                    where: {
-                        business_id,
-                        status: true,
-                        start_date: { [Op.lte]: bookingData.booking_date },
-                        end_date: { [Op.gte]: bookingData.booking_date }
+                const closures = await BusinessClosure.findAll({
+                    where: { business_id, status: true }
+                });
+
+                const [bY, bM, bD] = bookingData.booking_date.split('-').map(Number);
+                const bookingDayOfWeek = new Date(bY, bM - 1, bD).toLocaleDateString('en-US', { weekday: 'long' });
+
+                const activeClosure = closures.find(c => {
+                    if (c.is_recurring) {
+                        const days = (c.recurring_day || '').split(',').map(d => d.trim().toLowerCase());
+                        return days.includes(bookingDayOfWeek.toLowerCase());
                     }
+                    return c.start_date <= bookingData.booking_date && c.end_date >= bookingData.booking_date;
                 });
 
                 if (activeClosure) {

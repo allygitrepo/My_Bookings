@@ -7,6 +7,7 @@ const portalAdminMiddleware = require("../middleware/portalAdmin.middleware");
 // Public routes (for landing page)
 router.get("/active", (req, res, next) => {
     req.query.activeOnly = 'true';
+    req.query.publicOnly = 'true';
     next();
 }, packageController.getAll);
 

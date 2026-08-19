@@ -72,10 +72,20 @@ const Package = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: false
         },
+        allow_staff_leaves: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: true,
+            comment: "If true, enables Leave Master (Employee Leaves management)"
+        },
         is_one_time: {
             type: DataTypes.BOOLEAN,
             defaultValue: false,
             comment: "If true, user can only be assigned this package once in a lifetime"
+        },
+        is_private: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            comment: "If true, package is hidden publicly and assignable via superadmin side only"
         },
         created_at: {
             type: DataTypes.DATE,

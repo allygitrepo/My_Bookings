@@ -1,14 +1,24 @@
+const { Op } = require("sequelize");
 const { Package, User, UserSubscription } = require("../models/associations");
 
 const packageController = {
     getAll: async (req, res) => {
         try {
-            const { activeOnly } = req.query;
+            const { activeOnly, publicOnly } = req.query;
             const where = {};
             
             // Explicitly filter for active packages if requested
             if (activeOnly === 'true' || activeOnly === true) {
                 where.status = true;
+            }
+
+            // Filter out private packages if publicOnly requested or if caller is not Super Admin
+            const isSuperAdmin = req.user?.role === 'PORTAL_ADMIN';
+            if (publicOnly === 'true' || publicOnly === true || !isSuperAdmin) {
+                where[Op.or] = [
+                    { is_private: false },
+                    { is_private: null }
+                ];
             }
 
             const rows = await Package.findAll({
@@ -24,8 +34,15 @@ const packageController = {
     getAvailable: async (req, res) => {
         try {
             const userId = req.user.user_id;
+            // Private packages must not show in public/user available package list
             const packages = await Package.findAll({
-                where: { status: true },
+                where: {
+                    status: true,
+                    [Op.or]: [
+                        { is_private: false },
+                        { is_private: null }
+                    ]
+                },
                 order: [['amount', 'ASC']]
             });
 
@@ -54,6 +71,15 @@ const packageController = {
         try {
             const row = await Package.findByPk(req.params.id);
             if (!row) return res.status(404).json({ success: false, message: "Package not found" });
+
+            const isSuperAdmin = req.user?.role === 'PORTAL_ADMIN';
+            if (row.is_private && !isSuperAdmin) {
+                const user = await User.findByPk(req.user.user_id);
+                if (String(user?.package_id) !== String(row.id)) {
+                    return res.status(403).json({ success: false, message: "This package is private and not publicly accessible." });
+                }
+            }
+
             res.json({ success: true, data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });

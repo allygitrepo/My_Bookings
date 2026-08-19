@@ -37,6 +37,15 @@ const BusinessClosure = sequelize.define(
             type: DataTypes.BOOLEAN,
             defaultValue: true
         },
+        is_recurring: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false
+        },
+        recurring_day: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            comment: "Comma-separated days e.g. Sunday or Saturday, Sunday"
+        },
         reason: {
             type: DataTypes.TEXT,
             allowNull: true
