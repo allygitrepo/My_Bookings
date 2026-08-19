@@ -102,12 +102,12 @@ class BookingsController extends GetxController {
         final List list = results[3]!.data['data'] ?? [];
         final parsedStaff = list.map((j) => StaffModel.fromJson(j)).toList();
 
-        // Populate staff service IDs
+        // Populate staff service IDs with safe int parsing
         for (var staff in parsedStaff) {
           if (staff.id != null) {
             staff.serviceIds = staffServicesList
-                .where((ss) => ss['staff_id'] == staff.id)
-                .map((ss) => int.tryParse(ss['service_id'].toString()) ?? 0)
+                .where((ss) => ss['staff_id'] != null && int.tryParse(ss['staff_id'].toString()) == staff.id)
+                .map((ss) => int.tryParse(ss['service_id']?.toString() ?? '0') ?? 0)
                 .where((id) => id > 0)
                 .toList();
           }
@@ -140,7 +140,7 @@ class BookingsController extends GetxController {
     }
   }
 
-  Future<bool> createBooking({
+  Future<BookingModel?> createBooking({
     required bool isNewCustomer,
     int? customerId,
     String? newCustomerName,
@@ -156,6 +156,7 @@ class BookingsController extends GetxController {
     String? paymentMethod,
     double? paidAmount,
     double? totalAmount,
+    bool showSnackbar = true,
   }) async {
     try {
       isSubmitting.value = true;
@@ -172,7 +173,7 @@ class BookingsController extends GetxController {
         'payment_method': paymentMethod ?? (isPaid ? 'Cash' : 'Pay at Venue / Cash'),
         'paid_amount': paidAmount ?? (isPaid ? (totalAmount ?? 0) : 0),
         'total_amount': totalAmount ?? 0,
-        'skip_payment': true,
+        'skip_payment': isPaid,
         'booking_status': isPaid ? 'Confirmed' : 'Pending',
         'status': true,
       };
@@ -189,35 +190,42 @@ class BookingsController extends GetxController {
 
       final response = await _apiClient.post(ApiConstants.createBooking, data: payload);
 
-      if (response.data['success'] == true) {
-        Get.snackbar(
-          'Success',
-          'Booking created successfully',
-          snackPosition: SnackPosition.BOTTOM,
-          backgroundColor: Colors.green,
-          colorText: Colors.white,
-        );
+      if (response.data['success'] == true && response.data['data'] != null) {
+        final createdBooking = BookingModel.fromJson(response.data['data']);
+        if (showSnackbar) {
+          Get.snackbar(
+            'Success',
+            'Booking created successfully',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.green,
+            colorText: Colors.white,
+          );
+        }
         fetchBookings();
-        return true;
+        return createdBooking;
       } else {
+        if (showSnackbar) {
+          Get.snackbar(
+            'Booking Failed',
+            response.data['message'] ?? 'Unable to create booking',
+            snackPosition: SnackPosition.BOTTOM,
+            backgroundColor: Colors.red,
+            colorText: Colors.white,
+          );
+        }
+        return null;
+      }
+    } catch (e) {
+      if (showSnackbar) {
         Get.snackbar(
-          'Booking Failed',
-          response.data['message'] ?? 'Unable to create booking',
+          'Error',
+          'Failed to create booking. Please try again.',
           snackPosition: SnackPosition.BOTTOM,
           backgroundColor: Colors.red,
           colorText: Colors.white,
         );
-        return false;
       }
-    } catch (e) {
-      Get.snackbar(
-        'Error',
-        'Failed to create booking. Please try again.',
-        snackPosition: SnackPosition.BOTTOM,
-        backgroundColor: Colors.red,
-        colorText: Colors.white,
-      );
-      return false;
+      return null;
     } finally {
       isSubmitting.value = false;
     }
@@ -248,7 +256,8 @@ class BookingsController extends GetxController {
   Future<void> updateBookingStatus(int id, String status) async {
     try {
       final response = await _apiClient.put('${ApiConstants.updateBooking}/$id', data: {
-        'status': status,
+        'booking_status': status,
+        'status': status.toLowerCase() != 'cancelled',
       });
 
       if (response.data['success'] == true) {
@@ -267,7 +276,7 @@ class BookingsController extends GetxController {
     }
   }
 
-  Future<void> deleteBooking(int id) async {
+  Future<void> deleteBooking(int id, {bool showSnackbar = true}) async {
     try {
       isLoading.value = true;
       final response = await _apiClient.delete('${ApiConstants.deleteBooking}/$id');
@@ -275,15 +284,21 @@ class BookingsController extends GetxController {
       if (response.data['success'] == true) {
         bookings.removeWhere((b) => b.id == id);
         bookings.refresh();
-        Get.snackbar('Success', 'Booking deleted successfully',
-            snackPosition: SnackPosition.BOTTOM,
-            backgroundColor: Colors.green,
-            colorText: Colors.white);
+        if (showSnackbar) {
+          Get.snackbar('Success', 'Booking deleted successfully',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.green,
+              colorText: Colors.white);
+        }
       } else {
-        Get.snackbar('Error', response.data['message'] ?? 'Failed to delete booking');
+        if (showSnackbar) {
+          Get.snackbar('Error', response.data['message'] ?? 'Failed to delete booking');
+        }
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to delete booking');
+      if (showSnackbar) {
+        Get.snackbar('Error', 'Failed to delete booking');
+      }
     } finally {
       isLoading.value = false;
     }

@@ -3,17 +3,19 @@ import 'package:get/get.dart';
 import 'package:intl/intl.dart';
 import '../../../core/constants/appColors.dart';
 import '../../../data/models/staff_model.dart';
+import '../../../data/models/staff_leave_model.dart';
 import '../controllers/staff_controller.dart';
 
 class StaffLeaveForm extends StatefulWidget {
-  const StaffLeaveForm({super.key});
+  final StaffLeaveModel? leave;
+  const StaffLeaveForm({super.key, this.leave});
 
-  static void show(BuildContext context) {
+  static void show(BuildContext context, {StaffLeaveModel? leave}) {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const StaffLeaveForm(),
+      builder: (context) => StaffLeaveForm(leave: leave),
     );
   }
 
@@ -38,15 +40,50 @@ class _StaffLeaveFormState extends State<StaffLeaveForm> {
   final List<String> _leaveTypes = [
     'Casual Leave',
     'Sick Leave',
-    'Paid Leave',
+    'Vacation',
     'Unpaid Leave',
-    'Emergency Leave',
+    'Other',
   ];
 
   @override
   void initState() {
     super.initState();
-    if (controller.staffList.isNotEmpty) {
+    if (widget.leave != null) {
+      final l = widget.leave!;
+      if (l.staffId != null && controller.staffList.any((s) => s.id == l.staffId)) {
+        _selectedStaff = controller.staffList.firstWhere((s) => s.id == l.staffId);
+      } else if (controller.staffList.isNotEmpty) {
+        _selectedStaff = controller.staffList.first;
+      }
+      if (l.leaveType != null && _leaveTypes.contains(l.leaveType)) {
+        _selectedLeaveType = l.leaveType!;
+      }
+      if (l.startDate != null) {
+        try { _startDate = DateTime.parse(l.startDate!); } catch (_) {}
+      }
+      if (l.endDate != null) {
+        try { _endDate = DateTime.parse(l.endDate!); } catch (_) {}
+      }
+      if (l.startTime != null && l.startTime!.isNotEmpty) {
+        try {
+          final parts = l.startTime!.split(':').map((e) => int.parse(e)).toList();
+          _startTime = TimeOfDay(hour: parts[0], minute: parts[1]);
+        } catch (_) {}
+      }
+      if (l.endTime != null && l.endTime!.isNotEmpty) {
+        try {
+          final parts = l.endTime!.split(':').map((e) => int.parse(e)).toList();
+          _endTime = TimeOfDay(hour: parts[0], minute: parts[1]);
+        } catch (_) {}
+      }
+      _isAllDay = l.isAllDay ?? true;
+      if (l.approvalStatus != null && l.approvalStatus!.isNotEmpty) {
+        _approvalStatus = l.approvalStatus!;
+      }
+      if (l.reason != null) {
+        _reasonController.text = l.reason!;
+      }
+    } else if (controller.staffList.isNotEmpty) {
       _selectedStaff = controller.staffList.first;
     }
   }
@@ -61,7 +98,7 @@ class _StaffLeaveFormState extends State<StaffLeaveForm> {
     final picked = await showDatePicker(
       context: context,
       initialDate: isStart ? _startDate : _endDate,
-      firstDate: DateTime.now().subtract(const Duration(days: 30)),
+      firstDate: DateTime.now().subtract(const Duration(days: 365)),
       lastDate: DateTime.now().add(const Duration(days: 365)),
     );
     if (picked != null) {
@@ -108,17 +145,35 @@ class _StaffLeaveFormState extends State<StaffLeaveForm> {
       return;
     }
 
-    final success = await controller.createLeave(
-      staffId: _selectedStaff!.id!,
-      leaveType: _selectedLeaveType,
-      startDate: DateFormat('yyyy-MM-dd').format(_startDate),
-      endDate: DateFormat('yyyy-MM-dd').format(_endDate),
-      startTime: _isAllDay ? null : _formatTimeOfDay(_startTime),
-      endTime: _isAllDay ? null : _formatTimeOfDay(_endTime),
-      isAllDay: _isAllDay,
-      approvalStatus: _approvalStatus,
-      reason: _reasonController.text.trim(),
-    );
+    final bool isEdit = widget.leave != null && widget.leave!.id != null;
+    final bool success;
+
+    if (isEdit) {
+      success = await controller.updateLeave(
+        leaveId: widget.leave!.id!,
+        staffId: _selectedStaff!.id!,
+        leaveType: _selectedLeaveType,
+        startDate: DateFormat('yyyy-MM-dd').format(_startDate),
+        endDate: DateFormat('yyyy-MM-dd').format(_endDate),
+        startTime: _isAllDay ? null : _formatTimeOfDay(_startTime),
+        endTime: _isAllDay ? null : _formatTimeOfDay(_endTime),
+        isAllDay: _isAllDay,
+        approvalStatus: _approvalStatus,
+        reason: _reasonController.text.trim(),
+      );
+    } else {
+      success = await controller.createLeave(
+        staffId: _selectedStaff!.id!,
+        leaveType: _selectedLeaveType,
+        startDate: DateFormat('yyyy-MM-dd').format(_startDate),
+        endDate: DateFormat('yyyy-MM-dd').format(_endDate),
+        startTime: _isAllDay ? null : _formatTimeOfDay(_startTime),
+        endTime: _isAllDay ? null : _formatTimeOfDay(_endTime),
+        isAllDay: _isAllDay,
+        approvalStatus: _approvalStatus,
+        reason: _reasonController.text.trim(),
+      );
+    }
 
     if (success && mounted) {
       Navigator.pop(context);
@@ -160,7 +215,7 @@ class _StaffLeaveFormState extends State<StaffLeaveForm> {
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
                     Text(
-                      'Apply Staff Leave',
+                      widget.leave != null ? 'Edit Staff Leave' : 'Apply Staff Leave',
                       style: TextStyle(
                         fontSize: 20,
                         fontWeight: FontWeight.bold,
@@ -403,7 +458,10 @@ class _StaffLeaveFormState extends State<StaffLeaveForm> {
                             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                             elevation: 0,
                           ),
-                          child: const Text('Save Staff Leave', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                          child: Text(
+                            widget.leave != null ? 'Update Staff Leave' : 'Save Staff Leave',
+                            style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                          ),
                         ),
                       ),
                     ],

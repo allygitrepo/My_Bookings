@@ -631,17 +631,30 @@ class StaffView extends GetView<StaffController> {
                     style: TextStyle(fontSize: 12, color: Theme.of(context).textTheme.bodySmall?.color),
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
-                  padding: EdgeInsets.zero,
-                  constraints: const BoxConstraints(),
-                  onPressed: () {
-                    if (leave.id != null) controller.deleteLeave(leave.id!);
-                  },
-                ),
               ],
             ),
           ],
+
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              IconButton(
+                onPressed: () => StaffLeaveForm.show(context, leave: leave),
+                icon: Icon(Icons.edit_note_rounded, size: 20, color: isDark ? Colors.lightBlueAccent : AppColors.primary),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+              IconButton(
+                onPressed: () {
+                  if (leave.id != null) controller.deleteLeave(leave.id!);
+                },
+                icon: const Icon(Icons.delete_outline_rounded, size: 18, color: AppColors.error),
+                padding: EdgeInsets.zero,
+                constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
+              ),
+            ],
+          ),
         ],
       ),
     );

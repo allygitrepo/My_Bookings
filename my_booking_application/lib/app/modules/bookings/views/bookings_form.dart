@@ -8,6 +8,7 @@ import '../../../data/models/service_model.dart';
 import '../../../data/models/staff_model.dart';
 import '../../../data/models/staff_leave_model.dart';
 import '../../../data/models/business_closure_model.dart';
+import '../../../data/services/razorpay_service.dart';
 import '../controllers/bookings_controller.dart';
 
 class BookingsForm extends StatefulWidget {
@@ -85,11 +86,11 @@ class _BookingsFormState extends State<BookingsForm> {
         final staffSvcIds = (staff.serviceIds ?? []).toSet();
         if (staffSvcIds.isEmpty) {
           final mappingSvcIds = controller.staffServicesList
-              .where((ss) => ss['staff_id'] == staff.id)
-              .map((ss) => int.tryParse(ss['service_id'].toString()) ?? 0)
+              .where((ss) => ss['staff_id'] != null && int.tryParse(ss['staff_id'].toString()) == staff.id)
+              .map((ss) => int.tryParse(ss['service_id']?.toString() ?? '0') ?? 0)
               .where((id) => id > 0)
               .toSet();
-          if (mappingSvcIds.isEmpty) return true;
+          if (mappingSvcIds.isEmpty) return false;
           return selectedServiceIds.any((id) => mappingSvcIds.contains(id));
         }
         return selectedServiceIds.any((id) => staffSvcIds.contains(id));
@@ -251,10 +252,14 @@ class _BookingsFormState extends State<BookingsForm> {
       }
     }
 
-    slots.sort();
-
     final String todayStr = DateFormat('yyyy-MM-dd').format(DateTime.now());
-    final nowTimeStr = DateFormat('HH:mm:ss').format(DateTime.now());
+    final String nowTimeStr = DateFormat('HH:mm:ss').format(DateTime.now());
+
+    int totalServiceDuration = 0;
+    for (var s in _selectedServices) {
+      totalServiceDuration += (s.durationMinutes?.toInt() ?? stepMin);
+    }
+    if (totalServiceDuration <= 0) totalServiceDuration = stepMin;
 
     return slots.where((slot) {
       // Past time check for today
@@ -263,13 +268,13 @@ class _BookingsFormState extends State<BookingsForm> {
       }
 
       final slotStartMins = _parseMins(slot);
-      final slotEndMins = slotStartMins + stepMin;
+      final candidateEndMins = slotStartMins + totalServiceDuration;
 
       // Business Closure Check (Timed)
       if (closure != null && closure.isAllDay != true && closure.startTime != null && closure.endTime != null) {
         final cStartMins = _parseMins(closure.startTime!);
         final cEndMins = _parseMins(closure.endTime!);
-        if (slotStartMins < cEndMins && slotEndMins > cStartMins) {
+        if (slotStartMins < cEndMins && candidateEndMins > cStartMins) {
           return false;
         }
       }
@@ -278,18 +283,26 @@ class _BookingsFormState extends State<BookingsForm> {
       if (staffLeave != null && staffLeave.isAllDay != true && staffLeave.startTime != null && staffLeave.endTime != null) {
         final lStartMins = _parseMins(staffLeave.startTime!);
         final lEndMins = _parseMins(staffLeave.endTime!);
-        if (slotStartMins < lEndMins && slotEndMins > lStartMins) {
+        if (slotStartMins < lEndMins && candidateEndMins > lStartMins) {
           return false;
         }
       }
 
       // Existing Bookings Overlap Check
       final isBooked = controller.bookings.any((b) {
-        if (b.staffId != _selectedStaff!.id) return false;
-        if (b.bookingDate != selectedDateStr) return false;
+        if (b.staffId != null && _selectedStaff!.id != null && b.staffId != _selectedStaff!.id) {
+          return false;
+        }
+
+        final String bDate = (b.bookingDate ?? '').split('T')[0];
+        if (bDate.isNotEmpty && bDate != selectedDateStr) {
+          return false;
+        }
 
         final bStatus = (b.status ?? '').toLowerCase();
-        if (bStatus == 'cancelled' || bStatus == 'false' || bStatus == '0') return false;
+        if (bStatus == 'cancelled' || bStatus == 'false' || bStatus == '0') {
+          return false;
+        }
 
         final bStartStr = b.startTime ?? '00:00:00';
         final bStartMins = _parseMins(bStartStr);
@@ -297,7 +310,7 @@ class _BookingsFormState extends State<BookingsForm> {
             ? _parseMins(b.endTime!)
             : bStartMins + stepMin;
 
-        return (slotStartMins < bEndMins && slotEndMins > bStartMins);
+        return (slotStartMins < bEndMins && candidateEndMins > bStartMins);
       });
 
       return !isBooked;
@@ -389,8 +402,9 @@ class _BookingsFormState extends State<BookingsForm> {
     final double paidAmt = _isPaid
         ? (double.tryParse(_paidAmountController.text.trim()) ?? _totalPrice)
         : 0.0;
+    final isRazorpay = _selectedPaymentMethod == 'Razorpay';
 
-    final success = await controller.createBooking(
+    final createdBooking = await controller.createBooking(
       isNewCustomer: _isNewCustomer,
       customerId: _selectedCustomer?.id,
       newCustomerName: _nameController.text.trim(),
@@ -402,14 +416,54 @@ class _BookingsFormState extends State<BookingsForm> {
       bookingDate: DateFormat('yyyy-MM-dd').format(_selectedDate),
       startTime: _formatTimeOfDay(_startTime),
       endTime: _formatTimeOfDay(_endTime),
-      isPaid: _isPaid,
+      isPaid: isRazorpay ? false : _isPaid,
       paymentMethod: _selectedPaymentMethod,
-      paidAmount: paidAmt,
+      paidAmount: isRazorpay ? 0.0 : paidAmt,
       totalAmount: _totalPrice,
+      showSnackbar: !isRazorpay,
     );
 
-    if (success && mounted) {
+    if (createdBooking != null && mounted) {
       Navigator.pop(context);
+
+      if (isRazorpay && createdBooking.id != null) {
+        final custName = _isNewCustomer ? _nameController.text.trim() : (_selectedCustomer?.name ?? 'Customer');
+        final custPhone = _isNewCustomer ? _phoneController.text.trim() : (_selectedCustomer?.phone ?? '9999999999');
+
+        final rzpService = Get.find<RazorpayService>();
+        rzpService.initiatePayment(
+          bookingId: createdBooking.id!,
+          amount: _totalPrice > 0 ? _totalPrice : 1.0,
+          customerName: custName,
+          customerPhone: custPhone,
+          onSuccess: (response) async {
+            if (response.paymentId != null && response.orderId != null && response.signature != null) {
+              final verified = await rzpService.verifyPayment(
+                bookingId: createdBooking.id!,
+                razorpayOrderId: response.orderId!,
+                razorpayPaymentId: response.paymentId!,
+                razorpaySignature: response.signature!,
+                amount: _totalPrice > 0 ? _totalPrice : 1.0,
+              );
+
+              if (verified) {
+                controller.fetchBookings();
+              }
+            }
+          },
+          onFailure: (error) async {
+            // Remove the temporary pending booking if Razorpay payment is cancelled or fails
+            await controller.deleteBooking(createdBooking.id!, showSnackbar: false);
+            Get.snackbar(
+              'Payment Cancelled',
+              'Razorpay payment was cancelled or failed. Booking was not created.',
+              snackPosition: SnackPosition.BOTTOM,
+              backgroundColor: Colors.orange,
+              colorText: Colors.white,
+            );
+          },
+        );
+      }
     }
   }
 

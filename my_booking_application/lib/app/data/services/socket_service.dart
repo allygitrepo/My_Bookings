@@ -131,7 +131,11 @@ class SocketService extends GetxService {
         Get.find<HomeController>().refreshData();
       }
 
-      // 4. Show a global snackbar
+      // 4. Show a global snackbar (Only show top snackbar for confirmed paid bookings)
+      if (!isConfirmed) {
+        return;
+      }
+
       Get.snackbar(
         isConfirmed ? 'Booking Confirmed' : 'New Booking',
         isConfirmed

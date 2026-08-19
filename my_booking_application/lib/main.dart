@@ -10,6 +10,7 @@ import 'app/data/services/api_client.dart';
 import 'app/data/services/notification_service.dart';
 import 'app/data/services/socket_service.dart';
 import 'app/data/services/fcm_service.dart';
+import 'app/data/services/razorpay_service.dart';
 import 'app/core/themes/light_theme.dart';
 import 'app/core/themes/dark_theme.dart';
 
@@ -56,6 +57,12 @@ void main() async {
     await Get.putAsync(() => SocketService().init());
   } catch (e) {
     debugPrint('SocketService initialization error: $e');
+  }
+
+  try {
+    await Get.putAsync(() => RazorpayService().init());
+  } catch (e) {
+    debugPrint('RazorpayService initialization error: $e');
   }
 
   runApp(const MyApp());

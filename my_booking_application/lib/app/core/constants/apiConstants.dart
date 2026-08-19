@@ -57,13 +57,13 @@ class ApiConstants {
 
   // Staff Leaves & Business Closures
   static const String staffLeaves = '/staff-leaves/all';
-  static const String createStaffLeave = '/staff-leaves';
-  static const String updateStaffLeave = '/staff-leaves'; // + /:id
-  static const String deleteStaffLeave = '/staff-leaves'; // + /:id
+  static const String createStaffLeave = '/staff-leaves/create';
+  static const String updateStaffLeave = '/staff-leaves/update'; // + /:id
+  static const String deleteStaffLeave = '/staff-leaves/delete'; // + /:id
   static const String businessClosures = '/business-closures/all';
 
   // Payments & Razorpay
-  static const String createPayment = '/payment/create';
-  static const String createRazorpayOrder = '/payment/razorpay/order';
-  static const String verifyRazorpayPayment = '/payment/razorpay/verify';
+  static const String createPayment = '/payments/create';
+  static const String createRazorpayOrder = '/payments/razorpay/order';
+  static const String verifyRazorpayPayment = '/payments/razorpay/verify';
 }

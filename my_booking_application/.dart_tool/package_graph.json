@@ -21,6 +21,7 @@
         "logger",
         "path_provider",
         "permission_handler",
+        "razorpay_flutter",
         "socket_io_client"
       ],
       "devDependencies": [
@@ -76,6 +77,14 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "razorpay_flutter",
+      "version": "1.4.5",
+      "dependencies": [
+        "eventify",
+        "flutter"
       ]
     },
     {
@@ -378,6 +387,11 @@
         "string_scanner",
         "term_glyph"
       ]
+    },
+    {
+      "name": "eventify",
+      "version": "1.0.1",
+      "dependencies": []
     },
     {
       "name": "google_sign_in_web",

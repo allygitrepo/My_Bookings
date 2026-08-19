@@ -37,18 +37,42 @@ class BookingModel {
   BookingModel.fromJson(Map<String, dynamic> json) {
     id = json['id'];
     businessId = json['business_id'];
-    customerId = json['customer_id'];
-    staffId = json['staff_id'] ?? json['staff']?['id'];
-    locationId = json['location_id'] ?? json['location']?['id'];
-    bookingDate = json['booking_date'];
+    if (json['staff_id'] != null) {
+      staffId = int.tryParse(json['staff_id'].toString());
+    } else if (json['staff'] != null && json['staff']['id'] != null) {
+      staffId = int.tryParse(json['staff']['id'].toString());
+    }
+
+    if (json['location_id'] != null) {
+      locationId = int.tryParse(json['location_id'].toString());
+    } else if (json['location'] != null && json['location']['id'] != null) {
+      locationId = int.tryParse(json['location']['id'].toString());
+    }
+
+    if (json['booking_date'] != null) {
+      final String rawDate = json['booking_date'].toString();
+      bookingDate = rawDate.contains('T') ? rawDate.split('T')[0] : rawDate;
+    }
+
     startTime = json['start_time'];
     endTime = json['end_time'];
     
-    // Backend status is BOOLEAN (true = Active/Confirmed, false = Cancelled/Inactive)
-    if (json['status'] is bool) {
-      status = json['status'] == true ? 'Confirmed' : 'Cancelled';
+    bool? paymentStatus;
+    if (json['payment_status'] is bool) {
+      paymentStatus = json['payment_status'];
+    } else if (json['payment_status'] != null) {
+      paymentStatus = json['payment_status'] == 1 || json['payment_status'].toString() == 'true' || json['payment_status'].toString() == '1';
+    }
+
+    // Backend uses `booking_status` ('Pending', 'Confirmed', 'Cancelled', 'Completed') for operational status
+    if (json['booking_status'] != null && json['booking_status'].toString().isNotEmpty) {
+      status = json['booking_status'].toString();
+    } else if (json['status'] is String) {
+      status = json['status'];
+    } else if (json['status'] is bool) {
+      status = json['status'] == true ? (paymentStatus == true ? 'Confirmed' : 'Pending') : 'Cancelled';
     } else {
-      status = json['status']?.toString() ?? 'Confirmed';
+      status = 'Pending';
     }
     
     // Parse payments to compute totalAmount and paidAmount

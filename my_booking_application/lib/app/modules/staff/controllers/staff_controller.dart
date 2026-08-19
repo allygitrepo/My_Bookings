@@ -316,6 +316,52 @@ class StaffController extends GetxController {
     }
   }
 
+  Future<bool> updateLeave({
+    required int leaveId,
+    required int staffId,
+    required String leaveType,
+    required String startDate,
+    required String endDate,
+    String? startTime,
+    String? endTime,
+    required bool isAllDay,
+    required String approvalStatus,
+    String? reason,
+  }) async {
+    try {
+      final payload = {
+        'staff_id': staffId,
+        'leave_type': leaveType,
+        'start_date': startDate,
+        'end_date': endDate,
+        'start_time': startTime,
+        'end_time': endTime,
+        'is_all_day': isAllDay,
+        'approval_status': approvalStatus,
+        'reason': reason,
+      };
+
+      final response = await _apiClient.put('${ApiConstants.updateStaffLeave}/$leaveId', data: payload);
+      if (response.data['success'] == true) {
+        Get.snackbar(
+          'Success',
+          'Staff leave updated successfully',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+        );
+        fetchLeaves();
+        return true;
+      } else {
+        Get.snackbar('Error', response.data['message'] ?? 'Failed to update leave');
+        return false;
+      }
+    } catch (e) {
+      Get.snackbar('Error', 'Failed to update staff leave');
+      return false;
+    }
+  }
+
   Future<bool> updateLeaveStatus(int id, String approvalStatus) async {
     try {
       final response = await _apiClient.put(
