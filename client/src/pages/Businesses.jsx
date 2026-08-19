@@ -57,9 +57,14 @@ const INDUSTRY_OPTIONS = [
 
 const getLogoUrl = (url) => {
     if (!url) return null;
-    if (url.startsWith('http://') || url.startsWith('https://')) return url;
-    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/mybookings\/?$/, '');
-    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    if (url.startsWith('http://') || url.startsWith('https://') || url.startsWith('blob:') || url.startsWith('data:')) return url;
+    const rawBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/+$/, '');
+    const cleanUrl = url.startsWith('/') ? url : `/${url}`;
+    if (rawBase.endsWith('/mybookings') && cleanUrl.startsWith('/mybookings/')) {
+        const origin = rawBase.replace(/\/mybookings\/?$/, '');
+        return `${origin}${cleanUrl}`;
+    }
+    return `${rawBase}${cleanUrl}`;
 };
 
 const FieldSection = ({ label, children }) => (
@@ -611,6 +616,9 @@ const Businesses = () => {
                                     onChange={async (e) => {
                                         const file = e.target.files[0];
                                         if (file) {
+                                            const previewUrl = URL.createObjectURL(file);
+                                            setValue('logo', previewUrl, { shouldValidate: true, shouldDirty: true });
+
                                             const formData = new FormData();
                                             formData.append('logo', file);
                                             try {
@@ -622,7 +630,7 @@ const Businesses = () => {
                                                     }
                                                 });
                                                 if (res.data.success) {
-                                                    reset({ ...watch(), logo: res.data.url });
+                                                    setValue('logo', res.data.url, { shouldValidate: true, shouldDirty: true });
                                                     toast.success('Logo uploaded successfully');
                                                 }
                                             } catch (err) {
