@@ -47,6 +47,7 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Static files
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/mybookings/uploads', express.static(path.join(__dirname, 'uploads')));
 const clientDistTemplates = process.env.CLIENT_DIST_PATH
     ? path.resolve(process.env.CLIENT_DIST_PATH, 'Templates')
     : path.join(__dirname, '../client/dist/Templates');
