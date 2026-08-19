@@ -20,7 +20,7 @@ import { getStaff } from '../api/staff.api';
 import { getStaffServices } from '../api/staffService.api';
 import { getStaffAvailability } from '../api/staffAvailability.api';
 import { getCustomers, createCustomer } from '../api/customer.api';
-import { getBusinesses } from '../api/business.api';
+import { getBusinesses, getBusinessByIdPublic } from '../api/business.api';
 import { getBookings, createBooking, deleteBooking } from '../api/booking.api';
 import { createPayment, createRazorpayOrder, verifyRazorpayPayment, createStripeCheckoutSession, verifyStripePayment } from '../api/payment.api';
 import { getLocations } from '../api/location.api';
@@ -119,16 +119,11 @@ const formatDuration = (mins) => {
 const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFab = false, isExpired: externalIsExpired = null, allowSkipPayment = undefined }) => {
     const isPortalDomain = (() => {
         if (typeof window === 'undefined') return false;
-        const origin = window.location.origin.toLowerCase();
-        const hostname = window.location.hostname.toLowerCase();
         const pathname = window.location.pathname.toLowerCase();
 
-        // Must NOT be on website generator page or template site pages
-        if (pathname.includes('/website-generator') || pathname.includes('/site/') || pathname.includes('/templates/')) return false;
-
-        // Check if origin/hostname is either portal domain or localhost
-        const isPortal = hostname === 'localhost' || hostname === '127.0.0.1' || origin.includes('mybookings.allysoftsolutions.com');
-        return isPortal;
+        // ONLY allow if we are explicitly on the Admin Portal Dashboard routes (/bookings, /dashboard, /payments)
+        const isAdminPortalRoute = pathname.startsWith('/bookings') || pathname.startsWith('/dashboard') || pathname.startsWith('/payments');
+        return isAdminPortalRoute;
     })();
 
     const canShowSkipPayment = allowSkipPayment !== undefined ? allowSkipPayment : isPortalDomain;
@@ -172,8 +167,14 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
         customer: { name: '', phone: '' },
     });
     const [detailErrors, setDetailErrors] = useState({});
-    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
+    const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('razorpay');
     const [upiUtr, setUpiUtr] = useState('');
+
+    useEffect(() => {
+        if (!canShowSkipPayment && (selectedPaymentMethod === 'venue' || selectedPaymentMethod === 'cash')) {
+            setSelectedPaymentMethod('razorpay');
+        }
+    }, [canShowSkipPayment, selectedPaymentMethod]);
     const [stripeModalOpen, setStripeModalOpen] = useState(false);
     const [stripeCard, setStripeCard] = useState({ number: '', exp: '', cvc: '', name: '' });
     const [stripeProcessing, setStripeProcessing] = useState(false);
@@ -253,8 +254,21 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             if (ssRes.status === 'fulfilled' && ssRes.value?.success) setStaffServices(Array.isArray(ssRes.value.data) ? ssRes.value.data : (ssRes.value.data?.rows || []));
             if (availRes.status === 'fulfilled' && availRes.value?.success) setAvailability(Array.isArray(availRes.value.data) ? availRes.value.data : (availRes.value.data?.rows || []));
             if (custRes.status === 'fulfilled' && custRes.value?.success) setCustomers(Array.isArray(custRes.value.data) ? custRes.value.data : (custRes.value.data?.rows || []));
-            if (bookRes.status === 'fulfilled' && bookRes.value?.success) setBookings(Array.isArray(bookRes.value.data) ? bookRes.value.data : (bookRes.value.data?.rows || []));
-            if (bizRes.status === 'fulfilled' && bizRes.value?.success) setBusinesses(Array.isArray(bizRes.value.data) ? bizRes.value.data : (bizRes.value.data?.rows || []));
+            let fetchedBizList = [];
+            if (bizRes.status === 'fulfilled' && bizRes.value?.success) {
+                fetchedBizList = Array.isArray(bizRes.value.data) ? bizRes.value.data : (bizRes.value.data?.rows || []);
+            }
+            if (fetchedBizList.length === 0 && effectiveBizId) {
+                try {
+                    const pubBiz = await getBusinessByIdPublic(effectiveBizId);
+                    if (pubBiz?.success && pubBiz.data?.business) {
+                        fetchedBizList = [pubBiz.data.business];
+                    }
+                } catch (e) {
+                    console.warn('Widget public business fetch fallback:', e);
+                }
+            }
+            setBusinesses(fetchedBizList);
             if (locRes.status === 'fulfilled' && locRes.value?.success) {
                 const lData = Array.isArray(locRes.value.data) ? locRes.value.data : (locRes.value.data?.rows || []);
                 const bizLocs = bizId
@@ -292,6 +306,15 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
         }
     }, [resolvedBusinessId, businesses]);
+
+    const activeBusiness = businesses.find(b => String(b.id) === String(resolvedBusinessId)) || businesses[0];
+
+    const getLogoUrl = (url) => {
+        if (!url) return null;
+        if (url.startsWith('http://') || url.startsWith('https://')) return url;
+        const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/mybookings\/?$/, '');
+        return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+    };
 
     // Handle clicks on elements with the 'mybookings-trigger' class
     useEffect(() => {
@@ -1426,7 +1449,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         <Button fullWidth variant="contained" size="large" sx={{ mt: 1, borderRadius: 2, py: 1.4, fontWeight: 700 }}
                             onClick={() => handleConfirmBooking(canShowSkipPayment && selectedPaymentMethod === 'venue')}
                             disabled={loading}>
-                            {loading ? 'Processing...' : (canShowSkipPayment && selectedPaymentMethod === 'venue' ? 'Confirm Booking (Pay at Venue)' : `Confirm & Pay via ${selectedPaymentMethod.toUpperCase()}`)}
+                            {loading ? 'Processing...' : (canShowSkipPayment && selectedPaymentMethod === 'venue' ? 'Confirm Booking (Pay at Venue)' : `Confirm & Pay via ${((!canShowSkipPayment && selectedPaymentMethod === 'venue') ? 'RAZORPAY' : selectedPaymentMethod).toUpperCase()}`)}
                         </Button>
 
                         {canShowSkipPayment && selectedPaymentMethod !== 'venue' && (
@@ -1443,9 +1466,17 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             case 6: // Success
                 return (
                     <Box sx={{ textAlign: 'center', py: 3 }}>
-                        <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 18 }}>
-                            <SuccessIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
-                        </motion.div>
+                        {activeBusiness?.logo ? (
+                            <Avatar
+                                src={getLogoUrl(activeBusiness.logo)}
+                                alt={activeBusiness.business_name || 'Business'}
+                                sx={{ width: 72, height: 72, mx: 'auto', mb: 2, borderRadius: 3, border: '1px solid', borderColor: 'divider', boxShadow: '0 4px 14px rgba(0,0,0,0.08)' }}
+                            />
+                        ) : (
+                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: 'spring', stiffness: 200, damping: 18 }}>
+                                <SuccessIcon sx={{ fontSize: 80, color: 'success.main', mb: 2 }} />
+                            </motion.div>
+                        )}
                         <Typography variant="h5" fontWeight={800} gutterBottom>Booking Confirmed!</Typography>
                         <Typography variant="body2" color="text.secondary" mb={1}>
                             Your appointment with <strong>{bookingData.staff?.staff_name}</strong> is scheduled for
@@ -1577,13 +1608,32 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 pb: 2,
                             }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 1.5 }}>
-                                    <Box>
-                                        <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.7)', fontWeight: 600, letterSpacing: 1, textTransform: 'uppercase', fontSize: '0.65rem' }}>
-                                            Step {activeStep + 1} of {steps.length}
-                                        </Typography>
-                                        <Typography variant="h6" fontWeight={800} color="white" lineHeight={1.2} sx={{ fontSize: { xs: '1.1rem', sm: '1.25rem' } }}>
-                                            {steps[activeStep]}
-                                        </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        {activeBusiness?.logo ? (
+                                            <Avatar
+                                                src={getLogoUrl(activeBusiness.logo)}
+                                                alt={activeBusiness.business_name || 'Business Logo'}
+                                                sx={{
+                                                    width: 42,
+                                                    height: 42,
+                                                    borderRadius: 2.5,
+                                                    bgcolor: 'white',
+                                                    border: '2px solid rgba(255,255,255,0.5)',
+                                                    boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+                                                    objectFit: 'cover'
+                                                }}
+                                            />
+                                        ) : null}
+                                        <Box>
+                                            {activeBusiness?.business_name && (
+                                                <Typography variant="subtitle2" fontWeight={800} color="white" lineHeight={1.1} sx={{ opacity: 0.95, textShadow: '0 1px 2px rgba(0,0,0,0.1)' }}>
+                                                    {activeBusiness.business_name}
+                                                </Typography>
+                                            )}
+                                            <Typography variant="caption" sx={{ color: 'rgba(255,255,255,0.8)', fontWeight: 600, letterSpacing: 0.8, textTransform: 'uppercase', fontSize: '0.65rem' }}>
+                                                Step {activeStep + 1} of {steps.length} • {steps[activeStep]}
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                     <IconButton onClick={resetBooking} size="small"
                                         sx={{ color: 'white', bgcolor: 'rgba(255,255,255,0.15)', '&:hover': { bgcolor: 'rgba(255,255,255,0.25)' } }}>

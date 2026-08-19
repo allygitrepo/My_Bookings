@@ -29,6 +29,13 @@ import toast from 'react-hot-toast';
 
 import ConfirmDialog from '../components/ConfirmDialog';
 
+const getLogoUrl = (url) => {
+    if (!url) return null;
+    if (url.startsWith('http://') || url.startsWith('https://')) return url;
+    const apiBase = (import.meta.env.VITE_API_BASE_URL || '').replace(/\/mybookings\/?$/, '');
+    return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+};
+
 const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
     const { searchQuery, setSearchQuery } = useSearch();
     const { selectedBusinessId, setSelectedBusinessId, businesses } = useBusiness();
@@ -80,10 +87,33 @@ const Navbar = ({ onToggleSidebar, isSidebarOpen, drawerWidth }) => {
                                 onChange={(e) => setSelectedBusinessId(e.target.value)}
                                 disableUnderline
                                 sx={{ fontWeight: 700, fontSize: '0.95rem', color: 'primary.main' }}
+                                renderValue={(selected) => {
+                                    if (selected === 'all') return 'All Businesses';
+                                    const b = businesses.find(item => String(item.id) === String(selected));
+                                    if (!b) return 'Select Business';
+                                    return (
+                                        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 1 }}>
+                                            {b.logo ? (
+                                                <Avatar src={getLogoUrl(b.logo)} sx={{ width: 22, height: 22, borderRadius: 1 }} />
+                                            ) : null}
+                                            <Typography fontWeight={700} fontSize="0.95rem" color="primary.main">{b.business_name}</Typography>
+                                        </Box>
+                                    );
+                                }}
                             >
                                 <MenuItem value="all">All Businesses</MenuItem>
                                 {businesses.map((b) => (
-                                    <MenuItem key={b.id} value={b.id} sx={{ fontWeight: 600 }}>{b.business_name}</MenuItem>
+                                    <MenuItem key={b.id} value={b.id} sx={{ fontWeight: 600 }}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.2 }}>
+                                            <Avatar
+                                                src={b.logo ? getLogoUrl(b.logo) : undefined}
+                                                sx={{ width: 24, height: 24, borderRadius: 1.2, fontSize: '0.7rem', fontWeight: 700, bgcolor: 'action.hover' }}
+                                            >
+                                                {!b.logo && (b.business_name?.[0]?.toUpperCase() || 'B')}
+                                            </Avatar>
+                                            <Typography variant="body2" fontWeight={600}>{b.business_name}</Typography>
+                                        </Box>
+                                    </MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
