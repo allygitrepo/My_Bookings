@@ -40,7 +40,7 @@ const menuItems = [
     { text: 'Businesses', icon: <BusinessIcon />, path: '/businesses' },
     { text: 'Locations', icon: <LocationIcon />, path: '/locations' },
     { text: 'Staff', icon: <StaffIcon />, path: '/staff' },
-    { text: 'Availability & Leaves', icon: <EventBusyIcon />, path: '/availability' },
+    { text: 'Leaves & Closures ', icon: <EventBusyIcon />, path: '/availability' },
     { text: 'Services', icon: <ServicesIcon />, path: '/services' },
     { text: 'Customers', icon: <CustomersIcon />, path: '/customers' },
     { text: 'Bookings', icon: <BookingsIcon />, path: '/bookings' },

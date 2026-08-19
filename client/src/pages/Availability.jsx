@@ -45,11 +45,13 @@ const Availability = () => {
     const { isSuspended } = useBusiness();
     const { isFeatureAllowed } = useSubscription();
     const isLeaveAllowed = isFeatureAllowed('leaveMaster');
-    const [currentTab, setCurrentTab] = useState(0);
+    const [currentTab, setCurrentTab] = useState(isLeaveAllowed ? 1 : 2);
 
     useEffect(() => {
         if (!isLeaveAllowed && currentTab === 1) {
-            setCurrentTab(0);
+            setCurrentTab(2);
+        } else if (currentTab === 0) {
+            setCurrentTab(isLeaveAllowed ? 1 : 2);
         }
     }, [isLeaveAllowed, currentTab]);
 
@@ -506,8 +508,8 @@ const Availability = () => {
     return (
         <PageTransition>
             <PageHeader
-                title="Staff Availability & Schedule Management"
-                subtitle="Manage weekly working hours, employee leaves, and business holidays or temporary closures."
+                title="Leaves & Closures Management"
+                subtitle="Manage employee leaves, staff time-offs, and business holidays or temporary closures."
                 extraActions={
                     currentTab === 1 ? (
                         <Button
@@ -542,7 +544,6 @@ const Availability = () => {
                     textColor="primary"
                     indicatorColor="primary"
                 >
-                    <Tab value={0} label="Weekly Working Hours" icon={<ScheduleIcon />} iconPosition="start" />
                     {isLeaveAllowed && (
                         <Tab value={1} label={`Employee Leaves (${leaves.length})`} icon={<BeachAccessIcon />} iconPosition="start" />
                     )}
@@ -550,8 +551,8 @@ const Availability = () => {
                 </Tabs>
             </Box>
 
-            {/* Staff Filter Bar (for Tab 0 and Tab 1) */}
-            {currentTab !== 2 && (
+            {/* Staff Filter Bar (for Tab 1 Employee Leaves) */}
+            {currentTab === 1 && (
                 <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap', mb: 3, alignItems: 'center' }}>
                     <Typography variant="body2" color="text.secondary" fontWeight={500}>Filter Staff:</Typography>
                     <Chip
@@ -575,111 +576,6 @@ const Availability = () => {
                         />
                     ))}
                 </Box>
-            )}
-
-            {/* TAB 0: WEEKLY WORKING HOURS */}
-            {currentTab === 0 && (
-                <>
-                    <TableContainer component={Paper}>
-                        <Table>
-                            <TableHead sx={{ bgcolor: 'rgba(0,0,0,0.2)' }}>
-                                <TableRow>
-                                    <TableCell sx={{ fontWeight: 600 }}>Sr. No.</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Staff Member</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Weekly Schedule</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }}>Total Weekly Hours</TableCell>
-                                    <TableCell sx={{ fontWeight: 600 }} align="right">Actions</TableCell>
-                                </TableRow>
-                            </TableHead>
-                            <TableBody>
-                                {loading ? (
-                                    <TableRow>
-                                        <TableCell colSpan={5} align="center" sx={{ py: 8 }}>
-                                            <Typography color="text.secondary">Loading availability records...</Typography>
-                                        </TableCell>
-                                    </TableRow>
-                                ) : groupedStaffAvailability.length === 0 ? (
-                                    <TableRow><TableCell colSpan={5} align="center" sx={{ py: 8, color: 'text.secondary' }}>
-                                        <ScheduleIcon sx={{ fontSize: 44, mb: 1.5, opacity: 0.25, display: 'block', mx: 'auto' }} />
-                                        <Typography variant="body2" color="text.secondary">
-                                            {searchQuery ? 'No availability records match your search.' : 'No availability records found.'}
-                                        </Typography>
-                                        <Typography variant="caption" color="text.disabled">Add availability when creating or editing staff members.</Typography>
-                                    </TableCell></TableRow>
-                                ) : groupedStaffAvailability.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage).map((item, idx) => {
-                                    const { staff, records, totalWeeklyMinutes } = item;
-                                    const hours = Math.floor(totalWeeklyMinutes / 60);
-                                    const mins = totalWeeklyMinutes % 60;
-                                    const durationLabel = totalWeeklyMinutes > 0 ? `${hours}h ${mins}m / week` : 'No schedule';
-
-                                    return (
-                                        <TableRow key={staff.id} hover>
-                                            <TableCell sx={{ fontWeight: 600, color: 'text.secondary' }}>{page * rowsPerPage + idx + 1}</TableCell>
-                                            <TableCell>
-                                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
-                                                    <Avatar sx={{ width: 34, height: 34, fontSize: '0.8rem', bgcolor: 'primary.main', fontWeight: 700 }}>
-                                                        {staff.staff_name?.charAt(0)}
-                                                    </Avatar>
-                                                    <Box>
-                                                        <Typography variant="body2" fontWeight={700}>{staff.staff_name || '—'}</Typography>
-                                                        <Typography variant="caption" color="text.secondary">{staff.role || 'Staff Member'}</Typography>
-                                                    </Box>
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell>
-                                                {records.length === 0 ? (
-                                                    <Typography variant="caption" color="text.secondary">No schedule configured</Typography>
-                                                ) : (
-                                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.8 }}>
-                                                        {records.map((a, rIdx) => {
-                                                            const formattedDay = a.day_of_week.charAt(0).toUpperCase() + a.day_of_week.slice(1).toLowerCase();
-                                                            const dayAbbrev = formattedDay.slice(0, 3);
-                                                            const timeLabel = `${a.start_time?.slice(0, 5)} - ${a.end_time?.slice(0, 5)}`;
-                                                            return (
-                                                                <Chip
-                                                                    key={a.id || rIdx}
-                                                                    label={`${dayAbbrev}: ${timeLabel}`}
-                                                                    size="small"
-                                                                    color={dayColors[formattedDay] || 'primary'}
-                                                                    variant="outlined"
-                                                                    sx={{ fontWeight: 700, fontSize: '0.72rem', borderRadius: 1.5 }}
-                                                                />
-                                                            );
-                                                        })}
-                                                    </Box>
-                                                )}
-                                            </TableCell>
-                                            <TableCell>
-                                                <Box sx={{ px: 1.5, py: 0.4, display: 'inline-block', borderRadius: 1.5, bgcolor: totalWeeklyMinutes > 0 ? 'success.50' : 'action.selected', color: totalWeeklyMinutes > 0 ? 'success.dark' : 'text.secondary', fontSize: '0.78rem', fontWeight: 700 }}>
-                                                    {durationLabel}
-                                                </Box>
-                                            </TableCell>
-                                            <TableCell align="right">
-                                                <IconButton size="small" color="primary" onClick={() => handleEditWeekly(staff)} disabled={isSuspended}>
-                                                    <EditIcon fontSize="small" />
-                                                </IconButton>
-                                            </TableCell>
-                                        </TableRow>
-                                    );
-                                })}
-                            </TableBody>
-                        </Table>
-                    </TableContainer>
-                    <TablePagination
-                        rowsPerPageOptions={[5, 10, 20, 30, 50]}
-                        component="div"
-                        count={groupedStaffAvailability.length}
-                        rowsPerPage={rowsPerPage}
-                        page={page}
-                        onPageChange={(e, p) => setPage(p)}
-                        onRowsPerPageChange={(e) => {
-                            const rpp = parseInt(e.target.value, 10);
-                            setRowsPerPage(rpp);
-                            localStorage.setItem('rowsPerPage', rpp);
-                            setPage(0);
-                        }}
-                    />
-                </>
             )}
 
             {/* TAB 1: EMPLOYEE LEAVES */}
