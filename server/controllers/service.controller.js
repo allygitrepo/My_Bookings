@@ -10,6 +10,7 @@ const getBusinessId = (req) => {
 const syncServiceTypes = async (service_id, business_id, service_types_input) => {
     try {
         if (service_types_input === undefined || service_types_input === null) return;
+        const bizId = Number(business_id);
 
         let typeInputs = [];
         if (Array.isArray(service_types_input)) {
@@ -32,8 +33,8 @@ const syncServiceTypes = async (service_id, business_id, service_types_input) =>
                 const nameStr = String(item.name || item).trim();
                 if (!nameStr) continue;
                 const [foundOrCreated] = await ServiceType.findOrCreate({
-                    where: { business_id, name: nameStr },
-                    defaults: { business_id, name: nameStr, status: true }
+                    where: { business_id: bizId, name: nameStr },
+                    defaults: { business_id: bizId, name: nameStr, status: true }
                 });
                 typeObj = foundOrCreated;
             }
@@ -55,12 +56,12 @@ const syncServiceTypes = async (service_id, business_id, service_types_input) =>
         }
 
         // Also update string column on Service table for fast queries/backward compatibility
-        const joinedNames = typeNames.join(', ') || (typeof service_types_input === 'string' ? service_types_input : null);
+        const joinedNames = typeNames.join(', ') || (typeof service_types_input === 'string' ? service_types_input.trim() : null);
         await Service.update({ service_type: joinedNames }, { where: { id: service_id } });
     } catch (err) {
         console.error('[syncServiceTypes Error]:', err);
         if (typeof service_types_input === 'string') {
-            await Service.update({ service_type: service_types_input }, { where: { id: service_id } }).catch(() => {});
+            await Service.update({ service_type: service_types_input.trim() }, { where: { id: service_id } }).catch(() => {});
         }
     }
 };

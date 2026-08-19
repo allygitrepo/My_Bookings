@@ -301,7 +301,12 @@ const Services = () => {
                     >
                         <MenuItem value="all">All Service Types ({servicesList.length})</MenuItem>
                         {uniqueServiceTypes.map(type => {
-                            const count = servicesList.filter(s => (s.service_type || '').split(',').map(t => t.trim().toLowerCase()).includes(type.toLowerCase())).length;
+                            const count = servicesList.filter(s => {
+                                const types = (s.serviceTypes && s.serviceTypes.length > 0)
+                                    ? s.serviceTypes.map(st => st.name.toLowerCase())
+                                    : (s.service_type || '').split(',').map(t => t.trim().toLowerCase()).filter(Boolean);
+                                return types.includes(type.toLowerCase());
+                            }).length;
                             return (
                                 <MenuItem key={type} value={type}>
                                     {type} ({count})
@@ -413,7 +418,9 @@ const Services = () => {
                     const assignedNames = staff.filter(s => assignedIds.includes(s.id)).map(s => s.staff_name);
                     const locIds = serviceLocations.filter(sl => sl.service_id === svc.id).map(sl => sl.location_id);
                     const locNames = locations.filter(l => locIds.includes(l.id)).map(l => l.location_name);
-                    const types = (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
+                    const types = (svc.serviceTypes && svc.serviceTypes.length > 0)
+                        ? svc.serviceTypes.map(st => st.name)
+                        : (svc.service_type || '').split(',').map(t => t.trim()).filter(Boolean);
 
                     return (
                         <Card key={svc.id} sx={{ p: 2, borderRadius: '16px', border: '1px solid', borderColor: 'divider', boxShadow: 'none' }}>
@@ -620,6 +627,13 @@ const Services = () => {
                                                             label="Service Type / Category"
                                                             placeholder={valArray.length === 0 ? "Select or type categories..." : ""}
                                                             helperText="Select or type multiple categories"
+                                                            onBlur={(e) => {
+                                                                if (params.inputProps?.onBlur) params.inputProps.onBlur(e);
+                                                                const typedVal = e.target.value?.trim();
+                                                                if (typedVal && !valArray.includes(typedVal) && typedVal !== 'SELECT_ALL') {
+                                                                    field.onChange([...valArray, typedVal]);
+                                                                }
+                                                            }}
                                                         />
                                                     )}
                                                 />
