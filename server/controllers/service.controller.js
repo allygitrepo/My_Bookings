@@ -12,7 +12,8 @@ const serviceController = {
         try {
             const business_id = getBusinessId(req);
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
-            const row = await Service.create({ ...req.body, business_id });
+            const minCharge = (req.body.minimum_booking_charge !== '' && req.body.minimum_booking_charge !== null && req.body.minimum_booking_charge !== undefined) ? Number(req.body.minimum_booking_charge) : 0;
+            const row = await Service.create({ ...req.body, minimum_booking_charge: minCharge, business_id });
             res.status(201).json({ success: true, message: "Service created successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
@@ -96,6 +97,9 @@ const serviceController = {
             const { business_id: _, ...safeBody } = req.body;
             if (req.body.business_id) {
                 safeBody.business_id = req.body.business_id;
+            }
+            if (safeBody.minimum_booking_charge !== undefined) {
+                safeBody.minimum_booking_charge = (safeBody.minimum_booking_charge !== '' && safeBody.minimum_booking_charge !== null) ? Number(safeBody.minimum_booking_charge) : 0;
             }
 
             await row.update(safeBody);

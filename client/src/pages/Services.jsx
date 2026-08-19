@@ -84,7 +84,7 @@ const Services = () => {
     }, []);
 
     const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: '', assignedStaff: [], assignedLocations: [] },
+        defaultValues: { business_id: '', service_name: '', duration_minutes: '', price: '', minimum_booking_charge: 0, assignedStaff: [], assignedLocations: [] },
     });
 
     const watchedBusinessId = watch('business_id');
@@ -114,7 +114,7 @@ const Services = () => {
                 service_name: svc.service_name || '',
                 duration_minutes: svc.duration_minutes || '',
                 price: svc.price || '',
-                minimum_booking_charge: svc.minimum_booking_charge || '',
+                minimum_booking_charge: (svc.minimum_booking_charge !== null && svc.minimum_booking_charge !== undefined && svc.minimum_booking_charge !== '') ? svc.minimum_booking_charge : 0,
                 assignedStaff: assignedS,
                 assignedLocations: assignedL
             });
@@ -126,7 +126,7 @@ const Services = () => {
                 service_name: '',
                 duration_minutes: '',
                 price: '',
-                minimum_booking_charge: '',
+                minimum_booking_charge: 0,
                 assignedStaff: [],
                 assignedLocations: bizLocs.map(l => l.id)
             });
@@ -138,6 +138,7 @@ const Services = () => {
         if (isSubmitting) return;
         setIsSubmitting(true);
         const { assignedStaff, assignedLocations, ...svcData } = data;
+        svcData.minimum_booking_charge = (svcData.minimum_booking_charge !== '' && svcData.minimum_booking_charge !== null && svcData.minimum_booking_charge !== undefined) ? Number(svcData.minimum_booking_charge) : 0;
         setOpen(false);
         showGlobalLoader(editId ? 'Updating service...' : 'Creating service...');
 
@@ -290,7 +291,7 @@ const Services = () => {
                                     <TableCell sx={{ fontWeight: 700 }}>{svc.service_name}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{svc.duration_minutes} min</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>₹{svc.price}</TableCell>
-                                    <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge}</TableCell>
+                                    <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge ?? 0}</TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                             {locNames.length > 0 ? (
@@ -351,7 +352,7 @@ const Services = () => {
                                 </Grid>
                                 <Grid item xs={6}>
                                     <Typography variant="caption" color="text.secondary" display="block">Min. Charge</Typography>
-                                    <Typography variant="body2" fontWeight={800}>₹{svc.minimum_booking_charge}</Typography>
+                                    <Typography variant="body2" fontWeight={800}>₹{svc.minimum_booking_charge ?? 0}</Typography>
                                 </Grid>
                             </Grid>
 
