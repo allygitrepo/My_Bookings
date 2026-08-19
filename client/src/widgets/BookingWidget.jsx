@@ -899,7 +899,14 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                         }}
                                     >
                                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                            <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, flexWrap: 'wrap' }}>
+                                                <Typography fontWeight={700} fontSize="0.95rem">{service.service_name}</Typography>
+                                                {service.service_type && (
+                                                    <Typography variant="caption" sx={{ fontSize: '0.65rem', px: 1, py: 0.2, borderRadius: 1, bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 800 }}>
+                                                        {service.service_type}
+                                                    </Typography>
+                                                )}
+                                            </Box>
                                             <Box sx={{
                                                 width: 20, height: 20, borderRadius: '4px',
                                                 border: '2px solid', borderColor: isSelected ? '#6366f1' : '#cbd5e1',

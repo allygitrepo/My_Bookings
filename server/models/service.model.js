@@ -32,6 +32,11 @@ const Service = sequelize.define(
             allowNull: true,
             validate: { min: 0 }
         },
+        service_type: {
+            type: DataTypes.STRING,
+            allowNull: true,
+            defaultValue: null
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true
