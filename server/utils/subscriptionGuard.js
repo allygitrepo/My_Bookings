@@ -90,7 +90,8 @@ const subscriptionGuard = {
             canAcceptBooking: pkg.max_bookings === -1 || bookingCount < pkg.max_bookings,
             isWebsiteAllowed: pkg.allow_website_builder,
             isApiAllowed: pkg.allow_api,
-            isWhatsappAllowed: pkg.allow_whatsapp
+            isWhatsappAllowed: pkg.allow_whatsapp,
+            isStaffLeavesAllowed: pkg.allow_staff_leaves ?? true
         };
 
         // If expired, override all action flags to false
@@ -110,7 +111,8 @@ const subscriptionGuard = {
                 bookings: pkg.max_bookings,
                 websiteBuilder: pkg.allow_website_builder,
                 apiAccess: pkg.allow_api,
-                whatsappEnabled: pkg.allow_whatsapp
+                whatsappEnabled: pkg.allow_whatsapp,
+                staffLeavesEnabled: pkg.allow_staff_leaves ?? true
             },
             usage: {
                 businesses: businesses.length,

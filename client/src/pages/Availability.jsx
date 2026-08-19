@@ -21,6 +21,7 @@ import { getBusinessClosures, createBusinessClosure, updateBusinessClosure, dele
 import { getStaff } from '../api/staff.api';
 import { useSearch } from '../context/SearchContext';
 import { useBusiness } from '../context/BusinessContext';
+import { useSubscription } from '../context/SubscriptionContext';
 import toast from 'react-hot-toast';
 import { showGlobalLoader, hideGlobalLoader } from '../utils/loader';
 
@@ -42,7 +43,15 @@ const leaveColors = {
 const Availability = () => {
     const { searchQuery } = useSearch();
     const { isSuspended } = useBusiness();
+    const { isFeatureAllowed } = useSubscription();
+    const isLeaveAllowed = isFeatureAllowed('leaveMaster');
     const [currentTab, setCurrentTab] = useState(0);
+
+    useEffect(() => {
+        if (!isLeaveAllowed && currentTab === 1) {
+            setCurrentTab(0);
+        }
+    }, [isLeaveAllowed, currentTab]);
 
     // Common State
     const [staffList, setStaffList] = useState([]);
@@ -513,9 +522,11 @@ const Availability = () => {
                     textColor="primary"
                     indicatorColor="primary"
                 >
-                    <Tab label="Weekly Working Hours" icon={<ScheduleIcon />} iconPosition="start" />
-                    <Tab label={`Employee Leaves (${leaves.length})`} icon={<BeachAccessIcon />} iconPosition="start" />
-                    <Tab label={`Business Closures (${closures.length})`} icon={<EventBusyIcon />} iconPosition="start" />
+                    <Tab value={0} label="Weekly Working Hours" icon={<ScheduleIcon />} iconPosition="start" />
+                    {isLeaveAllowed && (
+                        <Tab value={1} label={`Employee Leaves (${leaves.length})`} icon={<BeachAccessIcon />} iconPosition="start" />
+                    )}
+                    <Tab value={2} label={`Business Closures (${closures.length})`} icon={<EventBusyIcon />} iconPosition="start" />
                 </Tabs>
             </Box>
 

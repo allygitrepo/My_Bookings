@@ -64,7 +64,9 @@ export const SubscriptionProvider = ({ children }) => {
             const featureMap = {
                 website: 'isWebsiteAllowed',
                 api: 'isApiAllowed',
-                whatsapp: 'isWhatsappAllowed'
+                whatsapp: 'isWhatsappAllowed',
+                staffLeaves: 'isStaffLeavesAllowed',
+                leaveMaster: 'isStaffLeavesAllowed'
             };
 
             const flagKey = featureMap[feature];

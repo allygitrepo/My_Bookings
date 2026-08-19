@@ -57,6 +57,7 @@ const PortalPackages = () => {
         allow_api: false,
         allow_website_builder: false,
         allow_whatsapp: false,
+        allow_staff_leaves: true,
         is_one_time: false,
         is_private: false
     });
@@ -93,6 +94,7 @@ const PortalPackages = () => {
             allow_api: pkg.allow_api,
             allow_website_builder: pkg.allow_website_builder,
             allow_whatsapp: pkg.allow_whatsapp,
+            allow_staff_leaves: pkg.allow_staff_leaves ?? true,
             is_one_time: pkg.is_one_time,
             is_private: !!pkg.is_private
         });
@@ -318,6 +320,15 @@ const PortalPackages = () => {
                                                     sx={{ width: '100%', m: 0 }} 
                                                     control={<Switch checked={formData.allow_whatsapp} onChange={(e) => setFormData({ ...formData, allow_whatsapp: e.target.checked })} />} 
                                                     label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>Auto Messaging (WhatsApp)</Typography><Typography variant="caption" color="text.secondary">Automated WhatsApp alerts via WA-Mitra</Typography></Box>} 
+                                                />
+                                            </Paper>
+                                        </Box>
+                                        <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', height: '100%' }}>
+                                                <FormControlLabel 
+                                                    sx={{ width: '100%', m: 0 }} 
+                                                    control={<Switch checked={formData.allow_staff_leaves} onChange={(e) => setFormData({ ...formData, allow_staff_leaves: e.target.checked })} />} 
+                                                    label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800}>Leave Master (Staff Leaves)</Typography><Typography variant="caption" color="text.secondary">Allow managing staff leaves and temporary time-offs</Typography></Box>} 
                                                 />
                                             </Paper>
                                         </Box>
