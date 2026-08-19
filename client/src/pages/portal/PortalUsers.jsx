@@ -79,7 +79,7 @@ const PortalUsers = () => {
 
     const fetchPackages = async () => {
         try {
-            const response = await axiosInstance.get('/packages/active');
+            const response = await axiosInstance.get('/packages?activeOnly=true');
             if (response.data.success) {
                 setPackages(response.data.data);
             }
@@ -381,7 +381,7 @@ const PortalUsers = () => {
                             <MenuItem value=""><em>None / Remove Package</em></MenuItem>
                             {packages.map(pkg => (
                                 <MenuItem key={pkg.id} value={pkg.id}>
-                                    {pkg.name} - ₹{parseFloat(pkg.amount).toLocaleString()} ({pkg.duration_days} Days) {pkg.is_one_time ? '[1-TIME]' : ''}
+                                    {pkg.name} - ₹{parseFloat(pkg.amount).toLocaleString()} ({pkg.duration_days} Days) {pkg.is_one_time ? '[1-TIME]' : ''} {pkg.is_private ? '🔒 [PRIVATE]' : ''}
                                 </MenuItem>
                             ))}
                         </Select>

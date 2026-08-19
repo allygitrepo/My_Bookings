@@ -77,6 +77,11 @@ const Package = sequelize.define(
             defaultValue: false,
             comment: "If true, user can only be assigned this package once in a lifetime"
         },
+        is_private: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            comment: "If true, package is hidden publicly and assignable via superadmin side only"
+        },
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW

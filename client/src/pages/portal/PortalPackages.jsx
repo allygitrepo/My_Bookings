@@ -57,7 +57,8 @@ const PortalPackages = () => {
         allow_api: false,
         allow_website_builder: false,
         allow_whatsapp: false,
-        is_one_time: false
+        is_one_time: false,
+        is_private: false
     });
 
     const fetchPackages = async () => {
@@ -92,7 +93,8 @@ const PortalPackages = () => {
             allow_api: pkg.allow_api,
             allow_website_builder: pkg.allow_website_builder,
             allow_whatsapp: pkg.allow_whatsapp,
-            is_one_time: pkg.is_one_time
+            is_one_time: pkg.is_one_time,
+            is_private: !!pkg.is_private
         });
         setEditingId(pkg.id);
         setShowForm(true);
@@ -192,7 +194,8 @@ const PortalPackages = () => {
             allow_api: false,
             allow_website_builder: false,
             allow_whatsapp: false,
-            is_one_time: false
+            is_one_time: false,
+            is_private: false
         });
         setEditingId(null);
         setShowForm(false);
@@ -301,6 +304,15 @@ const PortalPackages = () => {
                                             </Paper>
                                         </Box>
                                         <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
+                                            <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: formData.is_private ? 'rgba(168, 85, 247, 0.08)' : 'rgba(255,255,255,0.02)', borderColor: formData.is_private ? '#a855f7' : 'divider', height: '100%', transition: 'all 0.2s' }}>
+                                                <FormControlLabel 
+                                                    sx={{ width: '100%', m: 0 }} 
+                                                    control={<Switch checked={formData.is_private} onChange={(e) => setFormData({ ...formData, is_private: e.target.checked })} color="secondary" />} 
+                                                    label={<Box sx={{ ml: 1 }}><Typography variant="body2" fontWeight={800} color={formData.is_private ? '#a855f7' : 'inherit'}>Private Package (Super Admin Only)</Typography><Typography variant="caption" color="text.secondary">Hidden publicly. Can only be applied via Super Admin side.</Typography></Box>} 
+                                                />
+                                            </Paper>
+                                        </Box>
+                                        <Box sx={{ flex: '1 1 200px', minWidth: 0 }}>
                                             <Paper variant="outlined" sx={{ p: 2, borderRadius: 2, bgcolor: 'rgba(255,255,255,0.02)', height: '100%' }}>
                                                 <FormControlLabel 
                                                     sx={{ width: '100%', m: 0 }} 
@@ -355,7 +367,12 @@ const PortalPackages = () => {
                                         #{page * rowsPerPage + index + 1}
                                     </TableCell>
                                     <TableCell>
-                                        <Typography variant="body2" fontWeight={800}>{pkg.name}</Typography>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="body2" fontWeight={800}>{pkg.name}</Typography>
+                                            {pkg.is_private && (
+                                                <Chip label="Private" size="small" sx={{ fontSize: '0.65rem', height: 20, fontWeight: 900, bgcolor: '#a855f7', color: 'white' }} />
+                                            )}
+                                        </Box>
                                     </TableCell>
                                     <TableCell>
                                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -381,6 +398,7 @@ const PortalPackages = () => {
                                                 </Box>
                                                 <Divider sx={{ my: 1, opacity: 0.1 }} />
                                                 <Typography variant="caption" display="block" sx={{ fontWeight: 700, color: pkg.is_one_time ? 'warning.light' : 'success.light' }}>One-Time Only: {pkg.is_one_time ? 'Yes' : 'No'}</Typography>
+                                                <Typography variant="caption" display="block" sx={{ fontWeight: 700, color: pkg.is_private ? 'secondary.light' : 'text.secondary' }}>Private Package: {pkg.is_private ? 'Yes (Super Admin Only)' : 'No (Public)'}</Typography>
                                             </Box>
                                         }>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5, cursor: 'help' }}>
@@ -402,6 +420,11 @@ const PortalPackages = () => {
                                             {pkg.is_one_time && (
                                                 <Tooltip title="One-Time Package">
                                                     <Chip label="1-TIME" size="small" color="warning" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 900 }} />
+                                                </Tooltip>
+                                            )}
+                                            {pkg.is_private && (
+                                                <Tooltip title="Private Package - Super Admin Only">
+                                                    <Chip label="PRIVATE" size="small" sx={{ fontSize: '0.6rem', height: 20, fontWeight: 900, bgcolor: 'rgba(168, 85, 247, 0.15)', color: '#a855f7', border: '1px solid rgba(168, 85, 247, 0.3)' }} />
                                                 </Tooltip>
                                             )}
                                         </Box>
