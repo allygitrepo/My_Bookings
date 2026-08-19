@@ -38,6 +38,11 @@ const connectDB = async () => {
                 await Business.sync({ alter: true });
                 await Package.sync({ alter: true });
                 await Service.sync({ alter: true });
+                try {
+                    await sequelize.query("ALTER TABLE services ADD COLUMN service_type VARCHAR(255) NULL");
+                } catch (colErr) {
+                    // Column already exists or error ignored
+                }
                 console.log('✅ Targeted business_templates, business_closures, staff_leaves, bookings, businesses, packages, and services table sync completed successfully');
             } catch (targetErr) {
                 console.error('❌ Targeted sync failed:', targetErr);

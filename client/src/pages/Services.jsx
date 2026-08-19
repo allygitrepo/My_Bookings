@@ -179,7 +179,7 @@ const Services = () => {
                         updateLocationAssignments(targetId, assignedLocations)
                     ]);
                     toast.success('Service updated successfully');
-                    fetchData();
+                    await fetchData();
                     refreshUsage();
                 }
             } else {
@@ -191,7 +191,7 @@ const Services = () => {
                         updateLocationAssignments(targetId, assignedLocations)
                     ]);
                     toast.success('Service created successfully');
-                    fetchData();
+                    await fetchData();
                     refreshUsage();
                 }
             }

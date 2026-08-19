@@ -103,10 +103,17 @@ const serviceController = {
                 safeBody.minimum_booking_charge = (safeBody.minimum_booking_charge !== '' && safeBody.minimum_booking_charge !== null) ? Number(safeBody.minimum_booking_charge) : 0;
             }
             if (safeBody.service_type !== undefined) {
-                safeBody.service_type = safeBody.service_type ? String(safeBody.service_type).trim() : null;
+                if (Array.isArray(safeBody.service_type)) {
+                    safeBody.service_type = safeBody.service_type.map(t => String(t).trim()).filter(Boolean).join(', ') || null;
+                } else if (typeof safeBody.service_type === 'string') {
+                    safeBody.service_type = safeBody.service_type.trim() || null;
+                } else {
+                    safeBody.service_type = null;
+                }
             }
 
             await row.update(safeBody);
+            await row.reload();
             res.json({ success: true, message: "Service updated successfully", data: row });
         } catch (error) {
             res.status(500).json({ success: false, message: error.message });
