@@ -31,7 +31,6 @@ class _StaffFormState extends State<StaffForm> {
   bool _isSubmitting = false;
 
   final List<int> _selectedLocationIds = [];
-  final List<int> _selectedServiceIds = [];
 
   // Weekly Schedule: Map<DayName, Map<'enabled'|'start'|'end', dynamic>>
   final List<String> _days = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
@@ -49,11 +48,6 @@ class _StaffFormState extends State<StaffForm> {
     // Initialize location IDs
     if (staff?.locations != null) {
       _selectedLocationIds.addAll(staff!.locations!.map((l) => l.id!).where((id) => id > 0));
-    }
-
-    // Initialize service IDs
-    if (staff?.serviceIds != null) {
-      _selectedServiceIds.addAll(staff!.serviceIds!);
     }
 
     // Initialize schedule map
@@ -106,6 +100,32 @@ class _StaffFormState extends State<StaffForm> {
     return '$h:$m:00';
   }
 
+  void _copyDayToAll(String sourceDay) {
+    final sourceData = _schedule[sourceDay];
+    if (sourceData == null) return;
+
+    final start = sourceData['start'] as TimeOfDay;
+    final end = sourceData['end'] as TimeOfDay;
+    final isEnabled = sourceData['enabled'] == true;
+
+    setState(() {
+      for (var day in _days) {
+        _schedule[day]!['enabled'] = isEnabled;
+        _schedule[day]!['start'] = start;
+        _schedule[day]!['end'] = end;
+      }
+    });
+
+    Get.snackbar(
+      'Schedule Copied',
+      'Applied $sourceDay\'s timing to all days',
+      snackPosition: SnackPosition.BOTTOM,
+      backgroundColor: Colors.green.withOpacity(0.1),
+      colorText: Colors.green,
+      duration: const Duration(seconds: 2),
+    );
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -136,12 +156,14 @@ class _StaffFormState extends State<StaffForm> {
 
     // Format availability records
     final List<Map<String, dynamic>> availRecords = [];
+    final int? primaryLocationId = _selectedLocationIds.isNotEmpty ? _selectedLocationIds.first : null;
     _schedule.forEach((day, data) {
       if (data['enabled'] == true) {
         final start = _formatTimeOfDay24(data['start']);
         final end = _formatTimeOfDay24(data['end']);
         availRecords.add({
           'day_of_week': day.toLowerCase(),
+          if (primaryLocationId != null) 'location_id': primaryLocationId,
           'start_time': start,
           'end_time': end,
           'status': true,
@@ -155,14 +177,14 @@ class _StaffFormState extends State<StaffForm> {
         staffId: widget.staff!.id!,
         staffData: staffData,
         locationIds: _selectedLocationIds,
-        assignedServiceIds: _selectedServiceIds,
+        assignedServiceIds: const [],
         availabilityRecords: availRecords,
       );
     } else {
       success = await controller.createStaff(
         staffData: staffData,
         locationIds: _selectedLocationIds,
-        assignedServiceIds: _selectedServiceIds,
+        assignedServiceIds: const [],
         availabilityRecords: availRecords,
       );
     }
@@ -395,61 +417,48 @@ class _StaffFormState extends State<StaffForm> {
               }),
               const SizedBox(height: 20),
 
-              // ── SECTION 3: SERVICE ASSIGNMENT ──
-              _buildSectionHeader(context, 'Assigned Services'),
-              const SizedBox(height: 8),
-
-              Obx(() {
-                final services = controller.servicesList;
-                if (services.isEmpty) {
-                  return Text(
-                    'No services created yet in catalog.',
-                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white60 : Colors.grey.shade600),
-                  );
-                }
-                return Wrap(
-                  spacing: 8,
-                  runSpacing: 8,
-                  children: services.map((svc) {
-                    final isSelected = svc.id != null && _selectedServiceIds.contains(svc.id);
-                    return FilterChip(
-                      selected: isSelected,
-                      label: Text('${svc.serviceName ?? 'Service'} (₹${svc.price?.toStringAsFixed(0) ?? '0'})'),
-                      labelStyle: TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.bold,
-                        color: isSelected ? Colors.white : (isDark ? Colors.white70 : AppColors.navy900),
-                      ),
-                      selectedColor: isDark ? AppColors.accent : AppColors.navy900,
-                      backgroundColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey.shade100,
-                      checkmarkColor: Colors.white,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(10),
-                        side: BorderSide(
-                          color: isSelected
-                              ? AppColors.navy900
-                              : (isDark ? Colors.white10 : Colors.grey.shade300),
+              // ── SECTION 3: WEEKLY AVAILABILITY ──
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildSectionHeader(context, 'Weekly Working Schedule'),
+                  InkWell(
+                    onTap: () {
+                      final firstEnabled = _days.firstWhere(
+                        (d) => _schedule[d]!['enabled'] == true,
+                        orElse: () => _days.first,
+                      );
+                      _copyDayToAll(firstEnabled);
+                    },
+                    borderRadius: BorderRadius.circular(8),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                      decoration: BoxDecoration(
+                        color: isDark ? AppColors.primary.withOpacity(0.2) : AppColors.violet50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(
+                          color: AppColors.primary.withOpacity(0.3),
                         ),
                       ),
-                      onSelected: (selected) {
-                        setState(() {
-                          if (svc.id != null) {
-                            if (selected) {
-                              _selectedServiceIds.add(svc.id!);
-                            } else {
-                              _selectedServiceIds.remove(svc.id!);
-                            }
-                          }
-                        });
-                      },
-                    );
-                  }).toList(),
-                );
-              }),
-              const SizedBox(height: 20),
-
-              // ── SECTION 4: WEEKLY AVAILABILITY ──
-              _buildSectionHeader(context, 'Weekly Working Schedule'),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.copy_all_rounded, size: 14, color: AppColors.primary),
+                          const SizedBox(width: 4),
+                          Text(
+                            'Copy to All Days',
+                            style: TextStyle(
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                              color: isDark ? AppColors.lavender400 : AppColors.primary,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
               const SizedBox(height: 10),
 
               Column(
@@ -522,6 +531,14 @@ class _StaffFormState extends State<StaffForm> {
                                   _buildTimePickerTile(context, 'To', data['end'], (newTime) {
                                     setState(() => data['end'] = newTime);
                                   }),
+                                  const SizedBox(width: 2),
+                                  IconButton(
+                                    icon: const Icon(Icons.copy_all_rounded, size: 16, color: AppColors.primary),
+                                    tooltip: 'Apply $day timing to all days',
+                                    constraints: const BoxConstraints(minWidth: 28, minHeight: 28),
+                                    padding: EdgeInsets.zero,
+                                    onPressed: () => _copyDayToAll(day),
+                                  ),
                                 ],
                               ),
                             ),

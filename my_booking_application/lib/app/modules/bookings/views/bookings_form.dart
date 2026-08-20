@@ -1041,12 +1041,8 @@ class _BookingsFormState extends State<BookingsForm> {
                         Row(
                           children: [
                             Expanded(child: _buildPaymentMethodChip(context, 'Cash', Icons.money_rounded, isDark, primaryColor)),
-                            const SizedBox(width: 6),
+                            const SizedBox(width: 12),
                             Expanded(child: _buildPaymentMethodChip(context, 'Razorpay', Icons.credit_card_rounded, isDark, primaryColor)),
-                            const SizedBox(width: 6),
-                            Expanded(child: _buildPaymentMethodChip(context, 'UPI', Icons.qr_code_2_rounded, isDark, primaryColor)),
-                            const SizedBox(width: 6),
-                            Expanded(child: _buildPaymentMethodChip(context, 'Card', Icons.payment_rounded, isDark, primaryColor)),
                           ],
                         ),
                         const SizedBox(height: 16),

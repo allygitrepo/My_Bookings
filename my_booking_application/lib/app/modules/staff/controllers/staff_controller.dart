@@ -1,11 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:dio/dio.dart';
 import '../../../data/models/staff_model.dart';
 import '../../../data/models/staff_availability_model.dart';
 import '../../../data/models/staff_leave_model.dart';
 import '../../../data/models/location_model.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/services/api_client.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../core/constants/apiConstants.dart';
 
 class StaffController extends GetxController {
@@ -43,9 +45,12 @@ class StaffController extends GetxController {
   Future<void> fetchStaff() async {
     try {
       isLoading.value = true;
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+      final queryParams = userBusinessId != null ? {'business_id': userBusinessId} : null;
 
       final results = await Future.wait([
-        _apiClient.get(ApiConstants.staff).catchError((_) => null),
+        _apiClient.get(ApiConstants.staff, queryParameters: queryParams).catchError((_) => null),
         _apiClient.get(ApiConstants.staffAvailability).catchError((_) => null),
         _apiClient.get(ApiConstants.locations).catchError((_) => null),
         _apiClient.get(ApiConstants.services).catchError((_) => null),
@@ -130,8 +135,12 @@ class StaffController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+
       final payload = {
         ...staffData,
+        if (userBusinessId != null) 'business_id': userBusinessId,
         'location_ids': locationIds,
       };
 
@@ -161,11 +170,23 @@ class StaffController extends GetxController {
         await fetchStaff();
         return true;
       } else {
-        Get.snackbar('Error', response.data['message'] ?? 'Failed to create staff');
+        Get.snackbar(
+          'Error',
+          response.data?['message'] ?? 'Failed to create staff',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+        );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create staff: $e');
+      Get.snackbar(
+        'Error',
+        e is DioException ? (e.response?.data?['message'] ?? e.message ?? 'Failed to create staff') : 'Failed to create staff: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
       return false;
     } finally {
       isLoading.value = false;
@@ -181,13 +202,17 @@ class StaffController extends GetxController {
   }) async {
     try {
       isLoading.value = true;
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+
       final payload = {
         ...staffData,
+        if (userBusinessId != null) 'business_id': userBusinessId,
         'location_ids': locationIds,
       };
 
       final response = await _apiClient.put('${ApiConstants.updateStaff}/$staffId', data: payload);
-      if (response.data['success'] == true) {
+      if (response.data?['success'] == true) {
         // Update service assignments
         await _updateStaffServiceAssignments(staffId, assignedServiceIds);
 
@@ -211,11 +236,23 @@ class StaffController extends GetxController {
         await fetchStaff();
         return true;
       } else {
-        Get.snackbar('Error', response.data['message'] ?? 'Failed to update staff');
+        Get.snackbar(
+          'Error',
+          response.data?['message'] ?? 'Failed to update staff',
+          snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
+        );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update staff: $e');
+      Get.snackbar(
+        'Error',
+        e is DioException ? (e.response?.data?['message'] ?? e.message ?? 'Failed to update staff') : 'Failed to update staff: $e',
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
       return false;
     } finally {
       isLoading.value = false;
@@ -223,11 +260,14 @@ class StaffController extends GetxController {
   }
 
   Future<void> _updateStaffServiceAssignments(int staffId, List<int> newServiceIds) async {
-    final currentAssigned = staffServicesList.where((ss) => ss['staff_id'] == staffId).toList();
-    final currentServiceIds = currentAssigned.map((ss) => int.tryParse(ss['service_id'].toString()) ?? 0).toList();
+    final currentAssigned = staffServicesList.where((ss) => (int.tryParse(ss['staff_id']?.toString() ?? '') ?? 0) == staffId).toList();
+    final currentServiceIds = currentAssigned.map((ss) => int.tryParse(ss['service_id']?.toString() ?? '') ?? 0).toList();
 
     // To remove
-    final toRemove = currentAssigned.where((ss) => !newServiceIds.contains(ss['service_id'])).toList();
+    final toRemove = currentAssigned.where((ss) {
+      final sId = int.tryParse(ss['service_id']?.toString() ?? '') ?? 0;
+      return !newServiceIds.contains(sId);
+    }).toList();
     // To add
     final toAdd = newServiceIds.where((id) => !currentServiceIds.contains(id)).toList();
 
