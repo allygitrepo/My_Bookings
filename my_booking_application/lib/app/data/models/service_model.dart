@@ -2,6 +2,7 @@ class ServiceModel {
   int? id;
   int? businessId;
   String? serviceName;
+  String? serviceType;
   double? durationMinutes;
   double? price;
   double? minimumBookingCharge;
@@ -14,6 +15,7 @@ class ServiceModel {
     this.id,
     this.businessId,
     this.serviceName,
+    this.serviceType,
     this.durationMinutes,
     this.price,
     this.minimumBookingCharge,
@@ -29,6 +31,16 @@ class ServiceModel {
         ? json['business_id']
         : (json['business_id'] != null ? int.tryParse(json['business_id'].toString()) : null);
     serviceName = json['service_name']?.toString();
+
+    if (json['service_type'] != null) {
+      serviceType = json['service_type'].toString();
+    } else if (json['serviceTypes'] != null && (json['serviceTypes'] as List).isNotEmpty) {
+      serviceType = (json['serviceTypes'] as List)
+          .map((st) => st['name']?.toString() ?? '')
+          .where((n) => n.isNotEmpty)
+          .join(', ');
+    }
+
     durationMinutes = json['duration_minutes'] != null 
         ? double.tryParse(json['duration_minutes'].toString()) 
         : null;
@@ -58,6 +70,7 @@ class ServiceModel {
     data['id'] = id;
     data['business_id'] = businessId;
     data['service_name'] = serviceName;
+    data['service_type'] = serviceType;
     data['duration_minutes'] = durationMinutes;
     data['price'] = price;
     data['minimum_booking_charge'] = minimumBookingCharge;

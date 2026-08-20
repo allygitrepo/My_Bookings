@@ -43,6 +43,7 @@ class ApiConstants {
   static const String createService = '/services/create';
   static const String updateService = '/services/update'; // + /:id
   static const String deleteService = '/services/delete'; // + /:id
+  static const String serviceTypes = '/service-types/all';
 
   // Locations
   static const String locations = '/locations/all';

@@ -25,16 +25,17 @@ class ServicesForm extends StatefulWidget {
 class _ServicesFormState extends State<ServicesForm> {
   final _formKey = GlobalKey<FormState>();
   late TextEditingController _nameController;
+  late TextEditingController _typeController;
   late TextEditingController _priceController;
   late TextEditingController _durationController;
   late TextEditingController _minChargeController;
+  final FocusNode _typeFocusNode = FocusNode();
+
   bool _status = true;
   bool _isSubmitting = false;
 
   final List<int> _selectedStaffIds = [];
-
-  // Platform fee percentage matching web client standard (10%)
-  final double _platformFeePct = 10.0;
+  final List<String> _selectedServiceTypes = [];
 
   @override
   void initState() {
@@ -42,6 +43,17 @@ class _ServicesFormState extends State<ServicesForm> {
     final controller = Get.find<ServicesController>();
 
     _nameController = TextEditingController(text: widget.service?.serviceName ?? '');
+    _typeController = TextEditingController();
+
+    if (widget.service?.serviceType != null && widget.service!.serviceType!.trim().isNotEmpty) {
+      final initialTypes = widget.service!.serviceType!
+          .split(',')
+          .map((t) => t.trim())
+          .where((t) => t.isNotEmpty)
+          .toList();
+      _selectedServiceTypes.addAll(initialTypes);
+    }
+
     _priceController = TextEditingController(
       text: widget.service?.price != null ? widget.service!.price!.toStringAsFixed(2) : '',
     );
@@ -66,30 +78,17 @@ class _ServicesFormState extends State<ServicesForm> {
           .toList();
       _selectedStaffIds.addAll(assigned);
     }
-
-    // Listeners for live platform fee calculation
-    _minChargeController.addListener(_onFieldChanged);
-    _priceController.addListener(_onFieldChanged);
-  }
-
-  void _onFieldChanged() {
-    setState(() {});
   }
 
   @override
   void dispose() {
-    _minChargeController.removeListener(_onFieldChanged);
-    _priceController.removeListener(_onFieldChanged);
+    _typeFocusNode.dispose();
+    _typeController.dispose();
     _nameController.dispose();
     _priceController.dispose();
     _durationController.dispose();
     _minChargeController.dispose();
     super.dispose();
-  }
-
-  double get _calculatedPlatformFee {
-    final minCharge = double.tryParse(_minChargeController.text.trim()) ?? 0.0;
-    return (minCharge * _platformFeePct) / 100.0;
   }
 
   void _submit() async {
@@ -98,8 +97,14 @@ class _ServicesFormState extends State<ServicesForm> {
     setState(() => _isSubmitting = true);
 
     final controller = Get.find<ServicesController>();
+
+    final serviceTypeVal = _selectedServiceTypes.isNotEmpty
+        ? _selectedServiceTypes.join(', ')
+        : _typeController.text.trim();
+
     final data = {
       'service_name': _nameController.text.trim(),
+      'service_type': serviceTypeVal,
       'price': double.tryParse(_priceController.text.trim()) ?? 0.0,
       'duration_minutes': double.tryParse(_durationController.text.trim()) ?? 30.0,
       'minimum_booking_charge': double.tryParse(_minChargeController.text.trim()) ?? 0.0,
@@ -242,6 +247,262 @@ class _ServicesFormState extends State<ServicesForm> {
               ),
               const SizedBox(height: 12),
 
+              // ── SERVICE TYPE / CATEGORY MULTI-SELECT DROPDOWN & TYPEAHEAD ──
+              Obx(() {
+                final suggestions = controller.availableServiceTypes;
+                final filter = _typeController.text.toLowerCase().trim();
+
+                final filteredSuggestions = suggestions.where((option) {
+                  return filter.isEmpty || option.toLowerCase().contains(filter);
+                }).toList();
+
+                final isAllSelected = suggestions.isNotEmpty &&
+                    _selectedServiceTypes.length >= suggestions.length &&
+                    suggestions.every((s) => _selectedServiceTypes.contains(s));
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          'Service Type / Category',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: isDark ? Colors.white70 : AppColors.navy900,
+                          ),
+                        ),
+                        if (suggestions.isNotEmpty)
+                          Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedServiceTypes.clear();
+                                    _selectedServiceTypes.addAll(suggestions);
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(64, 24),
+                                ),
+                                child: const Text(
+                                  'Select All',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.primary,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              TextButton(
+                                onPressed: () {
+                                  setState(() {
+                                    _selectedServiceTypes.clear();
+                                  });
+                                },
+                                style: TextButton.styleFrom(
+                                  padding: EdgeInsets.zero,
+                                  minimumSize: const Size(50, 24),
+                                ),
+                                child: const Text(
+                                  'Clear All',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    fontWeight: FontWeight.bold,
+                                    color: Colors.redAccent,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 6),
+
+                    // TypeAhead Search / Custom Category Input
+                    TextFormField(
+                      controller: _typeController,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: isDark ? Colors.white : AppColors.navy900,
+                      ),
+                      onChanged: (_) => setState(() {}),
+                      onFieldSubmitted: (val) {
+                        final trimmed = val.trim();
+                        if (trimmed.isNotEmpty) {
+                          setState(() {
+                            if (!_selectedServiceTypes.contains(trimmed)) {
+                              _selectedServiceTypes.add(trimmed);
+                            }
+                            _typeController.clear();
+                          });
+                        }
+                      },
+                      decoration: _buildInputDecoration(
+                        context,
+                        label: 'Type Ahead or Filter Categories',
+                        hint: 'Type new category name or filter below...',
+                        icon: Icons.category_outlined,
+                        suffixIcon: IconButton(
+                          icon: const Icon(Icons.add_circle_rounded, color: AppColors.primary),
+                          tooltip: 'Add Custom Category',
+                          onPressed: () {
+                            final trimmed = _typeController.text.trim();
+                            if (trimmed.isNotEmpty) {
+                              setState(() {
+                                if (!_selectedServiceTypes.contains(trimmed)) {
+                                  _selectedServiceTypes.add(trimmed);
+                                }
+                                _typeController.clear();
+                              });
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Selected Chips Display
+                    if (_selectedServiceTypes.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _selectedServiceTypes.map((type) {
+                          return Chip(
+                            label: Text(
+                              type,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            backgroundColor: AppColors.primary,
+                            deleteIcon: const Icon(Icons.close_rounded, size: 14, color: Colors.white),
+                            onDeleted: () {
+                              setState(() {
+                                _selectedServiceTypes.remove(type);
+                              });
+                            },
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          );
+                        }).toList(),
+                      ),
+                    ],
+
+                    // Inline Multi-Select Dropdown List
+                    if (suggestions.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Container(
+                        constraints: const BoxConstraints(maxHeight: 180),
+                        decoration: BoxDecoration(
+                          color: isDark ? Colors.white.withOpacity(0.04) : Colors.grey.shade50,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isDark ? Colors.white10 : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: ClipRRect(
+                          borderRadius: BorderRadius.circular(12),
+                          child: ListView(
+                            shrinkWrap: true,
+                            padding: EdgeInsets.zero,
+                            children: [
+                              // Select All Option
+                              if (filter.isEmpty) ...[
+                                InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isAllSelected) {
+                                        _selectedServiceTypes.clear();
+                                      } else {
+                                        _selectedServiceTypes.clear();
+                                        _selectedServiceTypes.addAll(suggestions);
+                                      }
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isAllSelected
+                                              ? Icons.check_box_rounded
+                                              : Icons.check_box_outline_blank_rounded,
+                                          size: 18,
+                                          color: AppColors.primary,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        const Text(
+                                          'Select All Categories',
+                                          style: TextStyle(
+                                            fontSize: 13,
+                                            fontWeight: FontWeight.bold,
+                                            color: AppColors.primary,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                Divider(height: 1, color: isDark ? Colors.white10 : Colors.grey.shade200),
+                              ],
+
+                              // Filtered Suggestions List
+                              ...filteredSuggestions.map((opt) {
+                                final isChecked = _selectedServiceTypes.contains(opt);
+                                return InkWell(
+                                  onTap: () {
+                                    setState(() {
+                                      if (isChecked) {
+                                        _selectedServiceTypes.remove(opt);
+                                      } else {
+                                        _selectedServiceTypes.add(opt);
+                                      }
+                                    });
+                                  },
+                                  child: Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          isChecked
+                                              ? Icons.check_box_rounded
+                                              : Icons.check_box_outline_blank_rounded,
+                                          size: 18,
+                                          color: isChecked ? AppColors.primary : Colors.grey,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            opt,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              fontWeight: isChecked ? FontWeight.bold : FontWeight.normal,
+                                              color: isDark ? Colors.white : AppColors.navy900,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                );
+                              }),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                );
+              }),
+              const SizedBox(height: 12),
+
               // Duration Input
               TextFormField(
                 controller: _durationController,
@@ -324,59 +585,6 @@ class _ServicesFormState extends State<ServicesForm> {
                     ),
                   ),
                 ],
-              ),
-              const SizedBox(height: 14),
-
-              // ── PLATFORM FEE CALCULATOR BOX (Matches Client Web App) ──
-              Container(
-                padding: const EdgeInsets.all(14),
-                decoration: BoxDecoration(
-                  color: isDark
-                      ? Colors.white.withOpacity(0.05)
-                      : const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(14),
-                  border: Border.all(
-                    color: isDark ? Colors.white10 : Colors.grey.shade300,
-                  ),
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Text(
-                          'PLATFORM FEE (${_platformFeePct.toStringAsFixed(0)}%)',
-                          style: TextStyle(
-                            fontSize: 11,
-                            fontWeight: FontWeight.w700,
-                            letterSpacing: 0.8,
-                            color: isDark ? Colors.white70 : Colors.grey.shade700,
-                          ),
-                        ),
-                        Text(
-                          '₹ ${_calculatedPlatformFee.toStringAsFixed(2)}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            fontWeight: FontWeight.w900,
-                            color: isDark ? Colors.lightBlueAccent : AppColors.primary,
-                            fontFamily: 'Syne',
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      'Note: Platform charges will be deducted as per amount transaction via portal, settlements will be done at the end of the month.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        fontStyle: FontStyle.italic,
-                        color: isDark ? Colors.white54 : Colors.grey.shade600,
-                        height: 1.3,
-                      ),
-                    ),
-                  ],
-                ),
               ),
               const SizedBox(height: 20),
 
@@ -612,6 +820,7 @@ class _ServicesFormState extends State<ServicesForm> {
     IconData? icon,
     String? prefixText,
     String? suffixText,
+    Widget? suffixIcon,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
 
@@ -639,6 +848,7 @@ class _ServicesFormState extends State<ServicesForm> {
         fontWeight: FontWeight.bold,
         color: isDark ? Colors.white : AppColors.navy900,
       ),
+      suffixIcon: suffixIcon,
       suffixText: suffixText,
       suffixStyle: TextStyle(
         fontSize: 13,

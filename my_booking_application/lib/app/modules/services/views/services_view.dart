@@ -358,7 +358,9 @@ class ServicesView extends GetView<ServicesController> {
                           // Category Label
                           Expanded(
                             child: Text(
-                              categoryInfo.label,
+                              (service.serviceType != null && service.serviceType!.trim().isNotEmpty)
+                                  ? service.serviceType!
+                                  : categoryInfo.label,
                               maxLines: 1,
                               overflow: TextOverflow.ellipsis,
                               style: TextStyle(
@@ -525,7 +527,13 @@ class ServicesView extends GetView<ServicesController> {
             const SizedBox(height: 12),
 
             _buildDetailRow(context, 'Service ID', '#${service.id ?? "N/A"}'),
-            _buildDetailRow(context, 'Category', categoryInfo.label),
+            _buildDetailRow(
+              context,
+              'Category / Type',
+              (service.serviceType != null && service.serviceType!.trim().isNotEmpty)
+                  ? service.serviceType!
+                  : categoryInfo.label,
+            ),
             _buildDetailRow(context, 'Duration', _formatDuration(service.durationMinutes)),
             _buildDetailRow(context, 'Standard Price', '₹${(service.price ?? 0.0).toStringAsFixed(2)}'),
             _buildDetailRow(

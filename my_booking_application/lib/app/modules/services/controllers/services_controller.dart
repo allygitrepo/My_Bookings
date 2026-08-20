@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import 'package:dio/dio.dart';
 import '../../../data/models/service_model.dart';
 import '../../../data/models/staff_model.dart';
 import '../../../data/services/api_client.dart';
+import '../../../data/services/auth_service.dart';
 import '../../../core/constants/apiConstants.dart';
 import '../../../shared/widgets/customDialogue.dart';
 
@@ -11,6 +13,7 @@ class ServicesController extends GetxController {
   final servicesList = <ServiceModel>[].obs;
   final staffList = <StaffModel>[].obs;
   final staffServicesList = <Map<String, dynamic>>[].obs;
+  final serviceTypesList = <String>[].obs;
 
   // Search & Filter State
   final searchQuery = ''.obs;
@@ -24,6 +27,22 @@ class ServicesController extends GetxController {
     fetchServices();
   }
 
+  // Unique service types for typeahead suggestions
+  List<String> get availableServiceTypes {
+    final set = <String>{};
+    for (var st in serviceTypesList) {
+      if (st.trim().isNotEmpty) set.add(st.trim());
+    }
+    for (var s in servicesList) {
+      if (s.serviceType != null && s.serviceType!.trim().isNotEmpty) {
+        final parts = s.serviceType!.split(',').map((p) => p.trim()).where((p) => p.isNotEmpty);
+        set.addAll(parts);
+      }
+    }
+    final sorted = set.toList()..sort((a, b) => a.toLowerCase().compareTo(b.toLowerCase()));
+    return sorted;
+  }
+
   // Filtered services reactive getter
   List<ServiceModel> get filteredServices {
     return servicesList.where((service) {
@@ -34,9 +53,10 @@ class ServicesController extends GetxController {
       if (searchQuery.value.trim().isNotEmpty) {
         final query = searchQuery.value.toLowerCase().trim();
         final name = (service.serviceName ?? '').toLowerCase();
+        final type = (service.serviceType ?? '').toLowerCase();
         final price = (service.price ?? 0).toString();
         final duration = (service.durationMinutes ?? 0).toString();
-        return name.contains(query) || price.contains(query) || duration.contains(query);
+        return name.contains(query) || type.contains(query) || price.contains(query) || duration.contains(query);
       }
       return true;
     }).toList();
@@ -55,11 +75,15 @@ class ServicesController extends GetxController {
   Future<void> fetchServices() async {
     try {
       isLoading.value = true;
-      
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+      final queryParams = userBusinessId != null ? {'business_id': userBusinessId} : null;
+
       final results = await Future.wait([
-        _apiClient.get(ApiConstants.services).catchError((_) => null),
-        _apiClient.get(ApiConstants.staff).catchError((_) => null),
+        _apiClient.get(ApiConstants.services, queryParameters: queryParams).catchError((_) => null),
+        _apiClient.get(ApiConstants.staff, queryParameters: queryParams).catchError((_) => null),
         _apiClient.get(ApiConstants.staffServices).catchError((_) => null),
+        _apiClient.get(ApiConstants.serviceTypes, queryParameters: queryParams).catchError((_) => null),
       ]);
 
       if (results[0] != null && results[0]!.data['success'] == true) {
@@ -76,6 +100,14 @@ class ServicesController extends GetxController {
         final List ss = results[2]!.data['data'] ?? [];
         staffServicesList.value = ss.map((j) => Map<String, dynamic>.from(j)).toList();
       }
+
+      if (results[3] != null && results[3]!.data['success'] == true) {
+        final List stTypes = results[3]!.data['data'] ?? [];
+        serviceTypesList.value = stTypes
+            .map((t) => (t['name'] ?? t['service_type'] ?? '').toString().trim())
+            .where((t) => t.isNotEmpty)
+            .toList();
+      }
     } catch (e) {
       debugPrint('Error fetching services: $e');
     } finally {
@@ -86,7 +118,14 @@ class ServicesController extends GetxController {
   Future<bool> createService(Map<String, dynamic> data, {List<int> assignedStaffIds = const []}) async {
     try {
       isLoading.value = true;
-      final response = await _apiClient.post(ApiConstants.createService, data: data);
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+      final payload = {
+        ...data,
+        if (userBusinessId != null) 'business_id': userBusinessId,
+      };
+
+      final response = await _apiClient.post(ApiConstants.createService, data: payload);
       if (response.data['success'] == true) {
         final newServiceId = response.data['data']?['id'];
         if (newServiceId != null && assignedStaffIds.isNotEmpty) {
@@ -105,13 +144,22 @@ class ServicesController extends GetxController {
       } else {
         Get.snackbar(
           'Error',
-          response.data['message'] ?? 'Failed to create service',
+          response.data?['message'] ?? 'Failed to create service',
           snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
         );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to create service: $e', snackPosition: SnackPosition.BOTTOM);
+      final msg = e is DioException ? (e.response?.data?['message'] ?? e.message ?? 'Failed to create service') : 'Failed to create service: $e';
+      Get.snackbar(
+        'Error',
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
       return false;
     } finally {
       isLoading.value = false;
@@ -121,8 +169,15 @@ class ServicesController extends GetxController {
   Future<bool> updateService(int id, Map<String, dynamic> data, {List<int> assignedStaffIds = const []}) async {
     try {
       isLoading.value = true;
-      final response = await _apiClient.put('${ApiConstants.updateService}/$id', data: data);
-      if (response.data['success'] == true) {
+      final authService = Get.find<AuthService>();
+      final int? userBusinessId = authService.user?.businessId;
+      final payload = {
+        ...data,
+        if (userBusinessId != null) 'business_id': userBusinessId,
+      };
+
+      final response = await _apiClient.put('${ApiConstants.updateService}/$id', data: payload);
+      if (response.data?['success'] == true) {
         await _updateServiceStaffAssignments(id, assignedStaffIds);
 
         Get.snackbar(
@@ -137,13 +192,22 @@ class ServicesController extends GetxController {
       } else {
         Get.snackbar(
           'Error',
-          response.data['message'] ?? 'Failed to update service',
+          response.data?['message'] ?? 'Failed to update service',
           snackPosition: SnackPosition.BOTTOM,
+          backgroundColor: Colors.red.withOpacity(0.1),
+          colorText: Colors.red,
         );
         return false;
       }
     } catch (e) {
-      Get.snackbar('Error', 'Failed to update service: $e', snackPosition: SnackPosition.BOTTOM);
+      final msg = e is DioException ? (e.response?.data?['message'] ?? e.message ?? 'Failed to update service') : 'Failed to update service: $e';
+      Get.snackbar(
+        'Error',
+        msg,
+        snackPosition: SnackPosition.BOTTOM,
+        backgroundColor: Colors.red.withOpacity(0.1),
+        colorText: Colors.red,
+      );
       return false;
     } finally {
       isLoading.value = false;
