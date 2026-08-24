@@ -37,6 +37,11 @@ const Service = sequelize.define(
             allowNull: true,
             defaultValue: null
         },
+        description: {
+            type: DataTypes.TEXT,
+            allowNull: true,
+            defaultValue: null
+        },
         status: {
             type: DataTypes.BOOLEAN,
             defaultValue: true

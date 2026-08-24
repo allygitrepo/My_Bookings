@@ -78,6 +78,7 @@ const Services = () => {
         if (!matchesType) return false;
 
         return svc.service_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            svc.description?.toLowerCase().includes(searchQuery.toLowerCase()) ||
             svcTypes.some(t => t.includes(searchQuery.toLowerCase())) ||
             svc.price?.toString().includes(searchQuery) ||
             svc.duration_minutes?.toString().includes(searchQuery);
@@ -108,7 +109,7 @@ const Services = () => {
     }, []);
 
     const { control, handleSubmit, reset, watch, setValue, formState: { errors } } = useForm({
-        defaultValues: { business_id: '', service_name: '', service_type: [], duration_minutes: '', price: '', minimum_booking_charge: 0, assignedStaff: [], assignedLocations: [] },
+        defaultValues: { business_id: '', service_name: '', description: '', service_type: [], duration_minutes: '', price: '', minimum_booking_charge: 0, assignedStaff: [], assignedLocations: [] },
     });
 
     const watchedBusinessId = watch('business_id');
@@ -139,6 +140,7 @@ const Services = () => {
             reset({
                 business_id: svc.business_id || '',
                 service_name: svc.service_name || '',
+                description: svc.description || '',
                 service_type: initialTypes,
                 duration_minutes: svc.duration_minutes || '',
                 price: svc.price || '',
@@ -152,6 +154,7 @@ const Services = () => {
             reset({
                 business_id: bizId,
                 service_name: '',
+                description: '',
                 service_type: [],
                 duration_minutes: '',
                 price: '',
@@ -377,7 +380,14 @@ const Services = () => {
                                             ) : <Typography variant="caption" color="text.disabled">—</Typography>}
                                         </Box>
                                     </TableCell>
-                                    <TableCell sx={{ fontWeight: 700 }}>{svc.service_name}</TableCell>
+                                     <TableCell sx={{ fontWeight: 700 }}>
+                                         {svc.service_name}
+                                         {svc.description && (
+                                             <Typography variant="caption" color="text.secondary" display="block" sx={{ fontWeight: 400, mt: 0.3, fontStyle: 'italic', maxWidth: 260 }}>
+                                                 {svc.description}
+                                             </Typography>
+                                         )}
+                                     </TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>{svc.duration_minutes} min</TableCell>
                                     <TableCell sx={{ fontWeight: 700 }}>₹{svc.price}</TableCell>
                                     <TableCell sx={{ fontWeight: 500 }}>₹{svc.minimum_booking_charge ?? 0}</TableCell>
@@ -431,8 +441,13 @@ const Services = () => {
                                             <Chip key={t} label={t} size="small" variant="outlined" color="primary" sx={{ fontSize: '0.65rem', height: 20, fontWeight: 700 }} />
                                         ))}
                                         <Typography variant="subtitle1" fontWeight={900} color="primary.main">{svc.service_name}</Typography>
-                                    </Box>
-                                    <Typography variant="caption" color="text.secondary">{svc.duration_minutes} Minutes Duration</Typography>
+                                     </Box>
+                                     {svc.description && (
+                                         <Typography variant="caption" color="text.secondary" display="block" sx={{ fontStyle: 'italic', my: 0.3 }}>
+                                             {svc.description}
+                                         </Typography>
+                                     )}
+                                     <Typography variant="caption" color="text.secondary">{svc.duration_minutes} Minutes Duration</Typography>
                                 </Box>
                                 <Box>
                                     <IconButton onClick={() => handleOpen(svc)} size="small" color="primary" disabled={isSuspended}><EditIcon fontSize="small" /></IconButton>
@@ -676,6 +691,20 @@ const Services = () => {
                                     }}
                                     render={({ field }) => (
                                         <TextField {...field} fullWidth label="Service Name *" error={!!errors.service_name} helperText={errors.service_name?.message} placeholder="e.g. Full Body Checkup" />
+                                    )} />
+                            </Grid>
+                            <Grid item xs={12}>
+                                <Controller name="description" control={control}
+                                    render={({ field }) => (
+                                        <TextField
+                                            {...field}
+                                            fullWidth
+                                            multiline
+                                            rows={2.5}
+                                            label="Note / Description"
+                                            placeholder="Enter service notes, instructions, or details..."
+                                            helperText="Optional note or description for this service"
+                                        />
                                     )} />
                             </Grid>
                         </Grid>

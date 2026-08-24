@@ -45,7 +45,8 @@ const connectDB = async () => {
                 try {
                     await sequelize.query("CREATE TABLE IF NOT EXISTS service_types (id BIGINT AUTO_INCREMENT PRIMARY KEY, business_id BIGINT NOT NULL, name VARCHAR(255) NOT NULL, status TINYINT(1) DEFAULT 1, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, updated_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
                     await sequelize.query("CREATE TABLE IF NOT EXISTS service_type_mappings (id BIGINT AUTO_INCREMENT PRIMARY KEY, service_id BIGINT NOT NULL, service_type_id BIGINT NOT NULL, created_at DATETIME DEFAULT CURRENT_TIMESTAMP);");
-                    await sequelize.query("ALTER TABLE services ADD COLUMN service_type VARCHAR(255) NULL");
+                    await sequelize.query("ALTER TABLE services ADD COLUMN service_type VARCHAR(255) NULL").catch(() => {});
+                    await sequelize.query("ALTER TABLE services ADD COLUMN description TEXT NULL").catch(() => {});
                 } catch (colErr) {
                     // Column or table already exists or error ignored
                 }
