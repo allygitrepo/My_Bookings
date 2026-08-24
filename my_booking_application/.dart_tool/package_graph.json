@@ -5,7 +5,7 @@
   "packages": [
     {
       "name": "my_booking_application",
-      "version": "1.0.1+5",
+      "version": "1.0.1+6",
       "dependencies": [
         "cupertino_icons",
         "dio",
@@ -21,6 +21,7 @@
         "logger",
         "path_provider",
         "permission_handler",
+        "razorpay_flutter",
         "socket_io_client"
       ],
       "devDependencies": [
@@ -76,6 +77,14 @@
         "stream_channel",
         "test_api",
         "vector_math"
+      ]
+    },
+    {
+      "name": "razorpay_flutter",
+      "version": "1.4.5",
+      "dependencies": [
+        "eventify",
+        "flutter"
       ]
     },
     {
@@ -309,7 +318,7 @@
     },
     {
       "name": "meta",
-      "version": "1.17.0",
+      "version": "1.18.0",
       "dependencies": []
     },
     {
@@ -366,7 +375,7 @@
     },
     {
       "name": "test_api",
-      "version": "0.7.10",
+      "version": "0.7.11",
       "dependencies": [
         "async",
         "boolean_selector",
@@ -378,6 +387,11 @@
         "string_scanner",
         "term_glyph"
       ]
+    },
+    {
+      "name": "eventify",
+      "version": "1.0.1",
+      "dependencies": []
     },
     {
       "name": "google_sign_in_web",

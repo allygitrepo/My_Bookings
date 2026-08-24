@@ -8,14 +8,23 @@ class CustomersView extends GetView<CustomersController> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final primaryColor = isDark ? AppColors.navy300 : AppColors.primary;
+
     return Scaffold(
-      backgroundColor: AppColors.backgroundLight,
+      backgroundColor: Theme.of(context).scaffoldBackgroundColor,
       appBar: AppBar(
-        title: const Text('Customers', style: TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          'Customers',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: Theme.of(context).textTheme.titleLarge?.color,
+          ),
+        ),
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new_rounded, color: AppColors.primary),
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: primaryColor),
           onPressed: () => Get.back(),
         ),
       ),
@@ -35,10 +44,15 @@ class CustomersView extends GetView<CustomersController> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: Theme.of(context).cardColor,
                   borderRadius: BorderRadius.circular(16),
+                  border: isDark ? Border.all(color: Colors.white10, width: 1) : null,
                   boxShadow: [
-                    BoxShadow(color: Colors.black.withOpacity(0.04), blurRadius: 10, offset: const Offset(0, 4)),
+                    BoxShadow(
+                      color: isDark ? Colors.black26 : Colors.black.withOpacity(0.04),
+                      blurRadius: 10,
+                      offset: const Offset(0, 4),
+                    ),
                   ],
                 ),
                 child: Row(
@@ -57,20 +71,33 @@ class CustomersView extends GetView<CustomersController> {
                         children: [
                           Text(
                             customer.name ?? 'Unknown',
-                            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                              color: Theme.of(context).textTheme.titleMedium?.color,
+                            ),
                           ),
                           Text(
                             customer.email ?? 'No Email',
-                            style: const TextStyle(color: AppColors.textSecondaryLight, fontSize: 13),
+                            style: TextStyle(
+                              color: Theme.of(context).textTheme.bodyMedium?.color,
+                              fontSize: 13,
+                            ),
                           ),
                           Text(
                             customer.phone ?? 'No Phone',
-                            style: const TextStyle(color: AppColors.textTertiaryLight, fontSize: 12),
+                            style: TextStyle(
+                              color: isDark ? AppColors.lavender400 : AppColors.textTertiaryLight,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    const Icon(Icons.chevron_right_rounded, color: AppColors.textTertiaryLight),
+                    Icon(
+                      Icons.chevron_right_rounded,
+                      color: isDark ? AppColors.lavender400 : AppColors.textTertiaryLight,
+                    ),
                   ],
                 ),
               );

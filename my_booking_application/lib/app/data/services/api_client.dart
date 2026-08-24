@@ -13,6 +13,7 @@ class ApiClient extends GetxService {
       baseUrl: ApiConstants.baseUrl,
       connectTimeout: const Duration(seconds: 10),
       receiveTimeout: const Duration(seconds: 10),
+      validateStatus: (status) => status != null && status < 500,
     ));
 
     dio.interceptors.add(InterceptorsWrapper(

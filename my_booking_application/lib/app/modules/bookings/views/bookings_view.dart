@@ -4,38 +4,54 @@ import 'package:intl/intl.dart';
 import '../../../core/constants/appColors.dart';
 import '../../../data/models/booking_model.dart';
 import '../controllers/bookings_controller.dart';
+import 'bookings_form.dart';
 
 class BookingsView extends GetView<BookingsController> {
   const BookingsView({super.key});
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        _buildFilterBar(),
-        Expanded(
-          child: Obx(() {
-            if (controller.isLoading.value && controller.bookings.isEmpty) {
-              return const Center(child: CircularProgressIndicator());
-            }
-
-            if (controller.filteredBookings.isEmpty) {
-              return _buildEmptyState();
-            }
-
-            return RefreshIndicator(
-              onRefresh: () async => controller.refreshData(),
-              child: ListView.builder(
-                padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 100),
-                itemCount: controller.filteredBookings.length,
-                itemBuilder: (context, index) {
-                  return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
-                },
-              ),
-            );
-          }),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 110),
+        child: FloatingActionButton.extended(
+          onPressed: () => BookingsForm.show(context),
+          icon: const Icon(Icons.add, color: Colors.white),
+          label: const Text(
+            'New Booking',
+            style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+          backgroundColor: AppColors.primary,
         ),
-      ],
+      ),
+      body: Column(
+        children: [
+          _buildFilterBar(),
+          Expanded(
+            child: Obx(() {
+              if (controller.isLoading.value && controller.bookings.isEmpty) {
+                return const Center(child: CircularProgressIndicator());
+              }
+
+              if (controller.filteredBookings.isEmpty) {
+                return _buildEmptyState();
+              }
+
+              return RefreshIndicator(
+                onRefresh: () async => controller.refreshData(),
+                child: ListView.builder(
+                  padding: const EdgeInsets.only(left: 16, right: 16, top: 16, bottom: 180),
+                  itemCount: controller.filteredBookings.length,
+                  itemBuilder: (context, index) {
+                    return _buildBookingCard(context, controller.filteredBookings[index], index + 1);
+                  },
+                ),
+              );
+            }),
+          ),
+        ],
+      ),
     );
   }
 
@@ -145,7 +161,7 @@ class BookingsView extends GetView<BookingsController> {
                         ),
                       ),
                       const SizedBox(width: 8),
-                      _buildStatusBadge(context, booking.status ?? '', statusColor),
+                      _buildStatusBadge(context, booking, statusColor),
                     ],
                   ),
                   const SizedBox(height: 6),
@@ -244,21 +260,99 @@ class BookingsView extends GetView<BookingsController> {
     );
   }
 
-  Widget _buildStatusBadge(BuildContext context, String status, Color color) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Text(
-        status.toUpperCase(),
-        style: TextStyle(
-          color: color,
-          fontSize: 10,
-          fontWeight: FontWeight.bold,
+  Widget _buildStatusBadge(BuildContext context, BookingModel booking, Color color) {
+    return InkWell(
+      onTap: booking.id != null ? () => _showStatusPicker(context, booking) : null,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          color: color.withOpacity(0.12),
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: color.withOpacity(0.3), width: 1),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              (booking.status ?? 'Pending').toUpperCase(),
+              style: TextStyle(
+                color: color,
+                fontSize: 10,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            const SizedBox(width: 2),
+            Icon(Icons.arrow_drop_down, size: 14, color: color),
+          ],
         ),
       ),
+    );
+  }
+
+  void _showStatusPicker(BuildContext context, BookingModel booking) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    Get.bottomSheet(
+      Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: isDark ? AppColors.surfaceDark : Colors.white,
+          borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 40,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: isDark ? Colors.white24 : Colors.grey[300],
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Update Booking Status',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.bold,
+                color: Theme.of(context).textTheme.titleMedium?.color,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _buildStatusOptionItem(context, booking, 'Confirmed', AppColors.success, Icons.check_circle_outline),
+            _buildStatusOptionItem(context, booking, 'Pending', AppColors.warning, Icons.hourglass_empty_rounded),
+            _buildStatusOptionItem(context, booking, 'Completed', AppColors.primary, Icons.task_alt_rounded),
+            _buildStatusOptionItem(context, booking, 'Cancelled', AppColors.error, Icons.cancel_outlined),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusOptionItem(BuildContext context, BookingModel booking, String status, Color color, IconData icon) {
+    final isCurrent = (booking.status?.toLowerCase() == status.toLowerCase());
+
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(
+        status,
+        style: TextStyle(
+          fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+          color: isCurrent ? color : Theme.of(context).textTheme.bodyLarge?.color,
+        ),
+      ),
+      trailing: isCurrent ? Icon(Icons.check, color: color) : null,
+      onTap: () {
+        Get.back();
+        if (!isCurrent && booking.id != null) {
+          controller.updateBookingStatus(booking.id!, status);
+        }
+      },
     );
   }
 

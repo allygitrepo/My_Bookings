@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'dart:ui';
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
@@ -75,7 +74,7 @@ class _LoginScreenState extends State<LoginScreen>
               builder: (context, constraints) {
                 return SingleChildScrollView(
                   physics: const ClampingScrollPhysics(),
-                  padding: const EdgeInsets.symmetric(horizontal: 28.0),
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: constraints.maxHeight,
@@ -88,7 +87,7 @@ class _LoginScreenState extends State<LoginScreen>
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
-                              const SizedBox(height: 40),
+                              const SizedBox(height: 30),
                               // ── Logo ──
                               Center(
                                 child: Hero(
@@ -96,18 +95,27 @@ class _LoginScreenState extends State<LoginScreen>
                                   child: Container(
                                     width: 90,
                                     height: 90,
-                                    padding: const EdgeInsets.all(18),
+                                    padding: const EdgeInsets.all(8),
                                     decoration: BoxDecoration(
                                       shape: BoxShape.circle,
-                                      gradient: AppColors.logoGradient,
+                                      color: isDark ? Colors.white : null,
+                                      gradient: isDark
+                                          ? null
+                                          : AppColors.logoGradient,
                                       border: Border.all(
-                                        color: Colors.white.withOpacity(isDark ? 0.15 : 0.8),
+                                        color: Colors.white.withOpacity(
+                                          isDark ? 0.9 : 0.8,
+                                        ),
                                         width: 2,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: AppColors.accent.withOpacity(0.35),
-                                          blurRadius: 30,
+                                          color: isDark
+                                              ? Colors.white.withOpacity(0.35)
+                                              : AppColors.accent.withOpacity(
+                                                  0.35,
+                                                ),
+                                          blurRadius: 28,
                                           spreadRadius: 2,
                                         ),
                                       ],
@@ -116,46 +124,60 @@ class _LoginScreenState extends State<LoginScreen>
                                       'assets/icons/app_logo_bg.png',
                                       fit: BoxFit.contain,
                                       errorBuilder:
-                                          (context, error, stackTrace) =>
-                                              const Icon(
-                                                Icons.calendar_today_rounded,
-                                                color: Colors.white,
-                                                size: 34,
-                                              ),
+                                          (context, error, stackTrace) => Icon(
+                                            Icons.calendar_today_rounded,
+                                            color: isDark
+                                                ? AppColors.primary
+                                                : Colors.white,
+                                            size: 40,
+                                          ),
                                     ),
                                   ),
                                 ),
                               ),
-                              const SizedBox(height: 24),
+                              const SizedBox(height: 20),
 
                               // ── Glassmorphism Form Card ──
                               ClipRRect(
-                                borderRadius: BorderRadius.circular(28),
+                                borderRadius: BorderRadius.circular(24),
                                 child: BackdropFilter(
-                                  filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+                                  filter: ImageFilter.blur(
+                                    sigmaX: 16,
+                                    sigmaY: 16,
+                                  ),
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 20.0),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 18.0,
+                                      vertical: 20.0,
+                                    ),
                                     decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(28),
+                                      borderRadius: BorderRadius.circular(24),
                                       color: isDark
-                                          ? AppColors.surfaceDark.withOpacity(0.65)
+                                          ? AppColors.surfaceDark.withOpacity(
+                                              0.65,
+                                            )
                                           : Colors.white.withOpacity(0.75),
                                       border: Border.all(
                                         color: isDark
                                             ? Colors.white.withOpacity(0.08)
-                                            : AppColors.primary.withOpacity(0.08),
+                                            : AppColors.primary.withOpacity(
+                                                0.08,
+                                              ),
                                         width: 1.5,
                                       ),
                                       boxShadow: [
                                         BoxShadow(
-                                          color: Colors.black.withOpacity(isDark ? 0.25 : 0.05),
+                                          color: Colors.black.withOpacity(
+                                            isDark ? 0.25 : 0.05,
+                                          ),
                                           blurRadius: 30,
                                           offset: const Offset(0, 15),
                                         ),
                                       ],
                                     ),
                                     child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
                                       children: [
                                         // ── Header ──
                                         Text(
@@ -191,16 +213,22 @@ class _LoginScreenState extends State<LoginScreen>
                                         Align(
                                           alignment: Alignment.centerRight,
                                           child: TextButton(
-                                            onPressed: () => Get.toNamed(Routes.FORGOT_PASSWORD),
+                                            onPressed: () => Get.toNamed(
+                                              Routes.FORGOT_PASSWORD,
+                                            ),
                                             style: TextButton.styleFrom(
                                               padding: EdgeInsets.zero,
                                               minimumSize: Size.zero,
-                                              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
                                             ),
-                                            child: const Text(
+                                            child: Text(
                                               'Forgot Password?',
                                               style: TextStyle(
-                                                color: AppColors.accent,
+                                                color: isDark
+                                                    ? Colors.white
+                                                    : AppColors.accent,
                                                 fontWeight: FontWeight.w600,
                                                 fontFamily: 'Syne',
                                                 fontSize: 13,
@@ -393,9 +421,11 @@ class _LoginScreenState extends State<LoginScreen>
           label: 'Email Address',
           icon: Icons.alternate_email_rounded,
           hint: 'owner@example.com',
+          keyboardType: TextInputType.emailAddress,
+          textInputAction: TextInputAction.next,
           isDark: isDark,
         ),
-        const SizedBox(height: 16),
+        const SizedBox(height: 14),
         Obx(
           () => _buildTextField(
             controller: controller.passwordController,
@@ -405,6 +435,7 @@ class _LoginScreenState extends State<LoginScreen>
             isPassword: true,
             obscureText: !controller.isPasswordVisible.value,
             onTogglePassword: controller.togglePasswordVisibility,
+            textInputAction: TextInputAction.done,
             isDark: isDark,
           ),
         ),
@@ -420,6 +451,8 @@ class _LoginScreenState extends State<LoginScreen>
     bool isPassword = false,
     bool obscureText = false,
     VoidCallback? onTogglePassword,
+    TextInputType? keyboardType,
+    TextInputAction? textInputAction,
     required bool isDark,
   }) {
     return Column(
@@ -433,19 +466,20 @@ class _LoginScreenState extends State<LoginScreen>
               fontSize: 13,
               fontWeight: FontWeight.w600,
               color: isDark
-                  ? AppColors.textSecondaryDark
+                  ? Colors.white
                   : AppColors.textSecondaryLight,
               fontFamily: 'Syne',
             ),
           ),
         ),
         Container(
+          height: 48,
           decoration: BoxDecoration(
             color: isDark ? Colors.black.withOpacity(0.2) : Colors.white,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(14),
             border: Border.all(
               color: isDark
-                  ? Colors.white.withOpacity(0.08)
+                  ? Colors.white.withOpacity(0.12)
                   : AppColors.borderLight,
               width: 1.5,
             ),
@@ -453,39 +487,59 @@ class _LoginScreenState extends State<LoginScreen>
           child: TextField(
             controller: controller,
             obscureText: obscureText,
+            keyboardType: keyboardType,
+            textInputAction: textInputAction,
+            textAlignVertical: TextAlignVertical.center,
             style: TextStyle(
               color: isDark
-                  ? AppColors.textPrimaryDark
+                  ? Colors.white
                   : AppColors.textPrimaryLight,
               fontFamily: 'Syne',
-              fontSize: 15,
+              fontSize: 14,
             ),
             decoration: InputDecoration(
+              isDense: true,
               hintText: hint,
               hintStyle: TextStyle(
                 color: isDark
-                    ? AppColors.textDisabledDark
+                    ? Colors.white60
                     : AppColors.textDisabledLight.withOpacity(0.7),
                 fontSize: 14,
               ),
-              prefixIcon: Icon(icon, color: AppColors.accent, size: 20),
+              prefixIcon: Icon(
+                icon,
+                color: isDark ? Colors.white : AppColors.accent,
+                size: 19,
+              ),
+              prefixIconConstraints: const BoxConstraints(
+                minWidth: 42,
+                minHeight: 48,
+              ),
               suffixIcon: isPassword
                   ? IconButton(
+                      constraints: const BoxConstraints(
+                        minWidth: 42,
+                        minHeight: 48,
+                      ),
+                      padding: EdgeInsets.zero,
                       icon: Icon(
                         obscureText
                             ? Icons.visibility_off_outlined
                             : Icons.visibility_outlined,
-                        color: AppColors.accent.withOpacity(0.5),
-                        size: 20,
+                        color: isDark
+                            ? Colors.white70
+                            : AppColors.accent.withOpacity(0.5),
+                        size: 19,
                       ),
                       onPressed: onTogglePassword,
                     )
                   : null,
-              border: InputBorder.none,
-              contentPadding: const EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 14,
+              suffixIconConstraints: const BoxConstraints(
+                minWidth: 42,
+                minHeight: 48,
               ),
+              border: InputBorder.none,
+              contentPadding: const EdgeInsets.symmetric(horizontal: 14),
             ),
           ),
         ),

@@ -131,11 +131,15 @@ class SocketService extends GetxService {
         Get.find<HomeController>().refreshData();
       }
 
-      // 4. Show a global snackbar
+      // 4. Show a global snackbar (Only show top snackbar for confirmed paid bookings)
+      if (!isConfirmed) {
+        return;
+      }
+
       Get.snackbar(
         isConfirmed ? 'Booking Confirmed' : 'New Booking',
         isConfirmed
-            ? '$clientName paid ₹${booking.paidAmount?.toStringAsFixed(2)} for ${booking.serviceName}!'
+            ? '$clientName paid ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'} for ${booking.serviceName}!'
             : '$clientName booked ${booking.serviceName} at $formattedTime!',
         snackPosition: SnackPosition.TOP,
         backgroundColor: isConfirmed ? Colors.green : Get.theme.primaryColor,
@@ -193,7 +197,7 @@ class SocketService extends GetxService {
         // Show a global snackbar in the app
         Get.snackbar(
           'Booking Confirmed',
-          '$clientName paid ₹${booking.paidAmount?.toStringAsFixed(2)} for ${booking.serviceName}!',
+          '$clientName paid ₹${booking.paidAmount?.toStringAsFixed(2) ?? '0.00'} for ${booking.serviceName}!',
           snackPosition: SnackPosition.TOP,
           backgroundColor: Colors.green,
           colorText: Colors.white,

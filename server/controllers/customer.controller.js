@@ -61,7 +61,7 @@ const customerController = {
     getById: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -82,7 +82,7 @@ const customerController = {
     update: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -95,7 +95,7 @@ const customerController = {
 
             const row = await Customer.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Customer not found" });
-            
+
             const { business_id: _, ...safeBody } = req.body;
             if (req.body.business_id) {
                 safeBody.business_id = req.body.business_id;
@@ -110,7 +110,7 @@ const customerController = {
     delete: async (req, res) => {
         try {
             const whereClause = { id: req.params.id, status: true };
-            
+
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
@@ -123,7 +123,7 @@ const customerController = {
 
             const row = await Customer.findOne({ where: whereClause });
             if (!row) return res.status(404).json({ success: false, message: "Customer not found" });
-            
+
             await row.update({ status: false });
             res.json({ success: true, message: "Customer deleted successfully" });
         } catch (error) {

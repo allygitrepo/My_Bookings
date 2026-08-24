@@ -27,7 +27,10 @@ class AuthService extends GetxService {
     _user.value = user;
     _isLogged.value = true;
     _storage.write('user', user.toJson());
-    Get.find<SocketService>().connect();
+    
+    if (Get.isRegistered<SocketService>()) {
+      Get.find<SocketService>().connect();
+    }
     
     // Update FCM token on server for this user
     if (Get.isRegistered<FCMService>()) {
@@ -39,7 +42,10 @@ class AuthService extends GetxService {
     _user.value = null;
     _isLogged.value = false;
     _storage.remove('user');
-    Get.find<SocketService>().disconnect();
+    
+    if (Get.isRegistered<SocketService>()) {
+      Get.find<SocketService>().disconnect();
+    }
     Get.offAllNamed(Routes.LOGIN);
   }
 

@@ -4,7 +4,6 @@ import 'package:get/get.dart';
 import 'package:my_booking_application/app/data/services/auth_service.dart';
 import 'package:my_booking_application/app/routes/appPages.dart';
 import '../../../core/constants/appColors.dart';
-import 'login_screen.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -240,12 +239,14 @@ class _SplashScreenState extends State<SplashScreen>
                   ),
                   const SizedBox(height: 12),
                   Image.asset(
-                    'assets/images/company_logo.png',
-                    height: 30,
+                    isDark
+                        ? 'assets/images/ally_logo_dark.png'
+                        : 'assets/images/ally_logo_light.png',
+                    height: 48,
                     errorBuilder: (context, error, stackTrace) => const Icon(
                       Icons.business_rounded,
                       color: AppColors.accent,
-                      size: 30,
+                      size: 40,
                     ),
                   ),
                 ],
@@ -460,10 +461,13 @@ class _SplashScreenState extends State<SplashScreen>
                     height: 120,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      gradient: AppColors.logoGradient,
+                      color: isDark ? Colors.white : null,
+                      gradient: isDark ? null : AppColors.logoGradient,
                       boxShadow: [
                         BoxShadow(
-                          color: AppColors.accent.withOpacity(0.45),
+                          color: isDark
+                              ? Colors.white.withOpacity(0.35)
+                              : AppColors.accent.withOpacity(0.45),
                           blurRadius: 40,
                           spreadRadius: 2,
                         ),
@@ -475,12 +479,11 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Image.asset(
                           'assets/icons/app_logo_bg.png',
                           fit: BoxFit.contain,
-                          errorBuilder: (context, error, stackTrace) =>
-                              const Icon(
-                                Icons.calendar_today_rounded,
-                                color: Colors.white,
-                                size: 48,
-                              ),
+                          errorBuilder: (context, error, stackTrace) => Icon(
+                            Icons.calendar_today_rounded,
+                            color: isDark ? AppColors.primary : Colors.white,
+                            size: 48,
+                          ),
                         ),
                       ),
                     ),

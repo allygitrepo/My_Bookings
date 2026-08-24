@@ -38,23 +38,41 @@ const staffController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 50;
+            const limit = parseInt(req.query.limit) || 1000;
             const offset = (page - 1) * limit;
 
-            const whereClause = { status: true };
+            const whereClause = { status: { [Op.ne]: false } };
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
             } else if (req.user?.role === 'PORTAL_ADMIN') {
                 // Bypass filter for Portal Admin
-            } else if (req.user?.user_id) {
-                // Fetch all businesses owned by this user
-                const businesses = await Business.findAll({ where: { user_id: req.user.user_id, status: true }, attributes: ['id'] });
-                const businessIds = businesses.map(b => b.id);
-                whereClause.business_id = { [Op.in]: businessIds.length > 0 ? businessIds : [-1] };
             } else {
-                whereClause.business_id = -1;
+                const userId = req.user?.user_id || req.user?.id;
+                const businessIds = [];
+
+                if (userId) {
+                    const businesses = await Business.findAll({
+                        where: { user_id: userId, status: true },
+                        attributes: ['id']
+                    });
+                    businessIds.push(...businesses.map(b => b.id));
+                }
+
+                if (req.user?.business_id && !businessIds.includes(req.user.business_id)) {
+                    businessIds.push(req.user.business_id);
+                }
+
+                if (req.query?.business_id) {
+                    whereClause.business_id = req.query.business_id;
+                } else if (businessIds.length > 0) {
+                    whereClause.business_id = { [Op.in]: businessIds };
+                } else {
+                    whereClause.business_id = -1;
+                }
             }
+
+            const { StaffAvailability } = require("../models/associations");
 
             const { count, rows } = await Staff.findAndCountAll({
                 where: whereClause,
@@ -66,10 +84,17 @@ const staffController = {
                         through: { attributes: [] }
                     },
                     {
+                        model: StaffAvailability,
+                        as: 'availabilities',
+                        where: { status: { [Op.ne]: false } },
+                        required: false
+                    },
+                    {
                         model: Business,
                         attributes: ['business_name']
                     }
                 ],
+                order: [['id', 'DESC']],
                 distinct: true,
                 limit,
                 offset

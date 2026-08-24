@@ -403,7 +403,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
     const availableSlots = (() => {
         if (matchingRecs.length === 0) return [];
         const all = [];
-        matchingRecs.forEach(r => { 
+        matchingRecs.forEach(r => {
             console.log(` - Record ${r.id}: ${r.start_time} - ${r.end_time}`);
             // Generate all possible base slots (stepMin duration each)
             generateSlots(r.start_time, r.end_time, slotStepMin, slotStepMin).forEach(s => all.push(s));
@@ -540,7 +540,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
             }
             currentSlots.push(slot);
         }
-        
+
         setBookingData({ ...bookingData, slots: currentSlots.sort() });
     };
 
@@ -698,7 +698,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                         ondismiss: async () => {
                             setLoading(false);
                             if (createdBookingId) {
-                                try { await deleteBooking(createdBookingId); } catch (e) {}
+                                try { await deleteBooking(createdBookingId); } catch (e) { }
                             }
                         }
                     }
@@ -1091,7 +1091,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             <IconButton size="small" onClick={handleBack}><BackIcon fontSize="small" /></IconButton>
                             <Typography variant="h6" fontWeight={700}>Pick a Date &amp; Time</Typography>
                         </Box>
-                        
+
                         {!isDurationMet && (
                             <Box sx={{ mb: 2, p: 1.5, borderRadius: 2, bgcolor: 'rgba(245,158,11,0.08)', border: '1px solid', borderColor: 'rgba(245,158,11,0.2)' }}>
                                 <Typography variant="caption" fontWeight={700} color="#b45309" sx={{ display: 'block' }}>
@@ -1102,7 +1102,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                 </Typography>
                             </Box>
                         )}
-                        
+
                         {bookingData.slots?.length > 0 && !areSlotsConsecutive && (
                             <Box sx={{ mb: 2, p: 1, borderRadius: 2, bgcolor: 'rgba(239,68,68,0.08)', border: '1px solid', borderColor: 'rgba(239,68,68,0.2)' }}>
                                 <Typography variant="caption" fontWeight={700} color="error.main">
@@ -1211,10 +1211,10 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     <Typography variant="subtitle2" fontWeight={700} sx={{ color: '#6366f1' }}>
                                         Available Slots — {getDayNameDisplay(bookingData.date)}
                                     </Typography>
-                                    <Chip 
-                                        label={`Required: ${formatDuration(totalDuration)}`} 
-                                        size="small" 
-                                        sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 700, borderRadius: 1.5 }} 
+                                    <Chip
+                                        label={`Required: ${formatDuration(totalDuration)}`}
+                                        size="small"
+                                        sx={{ bgcolor: 'rgba(99,102,241,0.1)', color: '#6366f1', fontWeight: 700, borderRadius: 1.5 }}
                                     />
                                 </Box>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mb: 2 }}>
@@ -1342,7 +1342,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                                     }} />
                             </Grid>
                             <Grid item xs={12}>
-                                <PhoneInput 
+                                <PhoneInput
                                     value={bookingData.customer.phone}
                                     onChange={val => {
                                         setBookingData({ ...bookingData, customer: { ...bookingData.customer, phone: val } });
@@ -1601,7 +1601,7 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                     }
                 }}>
 
-                { (quotaExceeded || isExpired || externalIsExpired === true) ? (
+                {(quotaExceeded || isExpired || externalIsExpired === true) ? (
                     <Box sx={{ p: 4, textAlign: 'center', bgcolor: 'background.paper' }}>
                         <Box sx={{ display: 'flex', justifyContent: 'flex-end' }}>
                             <IconButton onClick={resetBooking} size="small">
@@ -1615,16 +1615,16 @@ const BookingWidget = ({ businessId, externalOpen = null, onClose = null, hideFa
                             {isExpired ? 'Not Accepting Bookings' : 'Limit Reached'}
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 4, px: 2 }}>
-                            {isExpired 
-                                ? 'We are not accepting bookings right now.' 
+                            {isExpired
+                                ? 'We are not accepting bookings right now.'
                                 : 'We have reached our booking limit for this period and are not accepting new appointments right now. Please contact us directly for assistance.'
                             }
                         </Typography>
-                        <Button 
-                            fullWidth 
-                            variant="contained" 
+                        <Button
+                            fullWidth
+                            variant="contained"
                             onClick={resetBooking}
-                            sx={{ 
+                            sx={{
                                 borderRadius: 3, py: 1.5, fontWeight: 800,
                                 background: 'linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%)',
                             }}

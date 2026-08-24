@@ -7,11 +7,17 @@ import '../../../data/services/auth_service.dart';
 class SettingsController extends GetxController {
   final isLoading = false.obs;
   final business = Rxn<BusinessModel>();
+  final selectedThemeMode = ThemeMode.system.obs;
 
   final nameController = TextEditingController();
   final addressController = TextEditingController();
   final cityController = TextEditingController();
   final stateController = TextEditingController();
+
+  void changeTheme(ThemeMode mode) {
+    selectedThemeMode.value = mode;
+    Get.changeThemeMode(mode);
+  }
 
   final _apiClient = Get.find<ApiClient>();
   final _authService = Get.find<AuthService>();

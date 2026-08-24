@@ -61,7 +61,7 @@ const syncServiceTypes = async (service_id, business_id, service_types_input) =>
     } catch (err) {
         console.error('[syncServiceTypes Error]:', err);
         if (typeof service_types_input === 'string') {
-            await Service.update({ service_type: service_types_input.trim() }, { where: { id: service_id } }).catch(() => {});
+            await Service.update({ service_type: service_types_input.trim() }, { where: { id: service_id } }).catch(() => { });
         }
     }
 };
@@ -73,7 +73,7 @@ const serviceController = {
             if (business_id === -1) return res.status(403).json({ success: false, message: "No business associated with your account." });
 
             const minCharge = (req.body.minimum_booking_charge !== '' && req.body.minimum_booking_charge !== null && req.body.minimum_booking_charge !== undefined) ? Number(req.body.minimum_booking_charge) : 0;
-            
+
             const row = await Service.create({
                 ...req.body,
                 minimum_booking_charge: minCharge,
@@ -98,10 +98,10 @@ const serviceController = {
     getAll: async (req, res) => {
         try {
             const page = parseInt(req.query.page) || 1;
-            const limit = parseInt(req.query.limit) || 50;
+            const limit = parseInt(req.query.limit) || 1000;
             const offset = (page - 1) * limit;
 
-            const whereClause = { status: true };
+            const whereClause = { status: { [Op.ne]: false } };
 
             if (req.isWidget) {
                 whereClause.business_id = req.business_id ?? -1;
@@ -114,6 +114,8 @@ const serviceController = {
             } else {
                 whereClause.business_id = -1;
             }
+
+            const { Location } = require("../models/associations");
 
             const { count, rows } = await Service.findAndCountAll({
                 where: whereClause,
