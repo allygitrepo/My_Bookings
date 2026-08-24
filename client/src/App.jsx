@@ -30,7 +30,7 @@ import Login from './pages/Login';
 import Register from './pages/Register';
 import Profile from './pages/Profile';
 import Checkout from './pages/Checkout';
-import WhatsApp from './pages/WhatsApp';
+// import WhatsApp from './pages/WhatsApp';
 import Documentation from './pages/Documentation';
 import StripeSuccess from './pages/StripeSuccess';
 import StripeCancel from './pages/StripeCancel';
@@ -130,7 +130,7 @@ function App() {
                         <Route path="/website-builder" element={<WebsiteGenerator />} />
                         <Route path="/profile" element={<Profile />} />
                         <Route path="/checkout" element={<Checkout />} />
-                        <Route path="/whatsapp" element={<WhatsApp />} />
+                        {/* <Route path="/whatsapp" element={<WhatsApp />} /> */}
 
                     </Route>
 

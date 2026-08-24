@@ -49,7 +49,7 @@ const menuItems = [
     { text: 'API Keys', icon: <ApiKeysIcon />, path: '/api-keys' },
     { text: 'Widget Script', icon: <WidgetIcon />, path: '/widget-script' },
     { text: 'Website Builder', icon: <WebsiteIcon />, path: '/website-builder' },
-    { text: 'WhatsApp', icon: <WhatsAppIcon />, path: '/whatsapp' },
+    // { text: 'WhatsApp', icon: <WhatsAppIcon />, path: '/whatsapp' },
 ];
 
 const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
@@ -93,7 +93,7 @@ const Sidebar = ({ open, onClose, variant, drawerWidth }) => {
                     // Feature-based filtering
                     if (item.text === 'Website Builder') return isFeatureAllowed('website');
                     if (item.text === 'API Keys') return isFeatureAllowed('api');
-                    if (item.text === 'WhatsApp') return isFeatureAllowed('whatsapp');
+                    // if (item.text === 'WhatsApp') return isFeatureAllowed('whatsapp');
 
 
                     if (item.text === 'Locations') {
