@@ -593,14 +593,6 @@ const Bookings = () => {
                 subtitle="All customer appointments. Bookings are created via the widget or portal."
                 extraActions={
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                        <Button
-                            variant="contained"
-                            startIcon={<AddIcon />}
-                            onClick={handleOpenNewBookingModal}
-                            sx={{ borderRadius: 2, fontWeight: 800, textTransform: 'none' }}
-                        >
-                            + New Booking
-                        </Button>
                         {usage && usage.limits.bookings !== -1 && (
                             <Box sx={{ minWidth: 140, display: { xs: 'none', lg: 'block' } }}>
                                 <Box sx={{ display: 'flex', justifyContent: 'space-between', mb: 0.5 }}>
