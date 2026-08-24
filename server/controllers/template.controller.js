@@ -522,8 +522,23 @@ const templateController = {
     // GET /mybookings/templates/active (Client / Business User Panel)
     getActiveTemplates: async (req, res) => {
         try {
+            const { Op } = require("sequelize");
+            const currentBusinessId = getBusinessId(req);
+
             const customTemplates = await TemplateProject.findAll({
-                where: { isActive: true }
+                where: {
+                    isActive: true,
+                    [Op.or]: [
+                        { isPrivate: false },
+                        { isPrivate: null },
+                        {
+                            [Op.and]: [
+                                { isPrivate: true },
+                                { businessId: currentBusinessId }
+                            ]
+                        }
+                    ]
+                }
             });
 
             // Format custom templates to match the client-side template structure expectation
@@ -534,7 +549,9 @@ const templateController = {
                 type: t.type || 'website',
                 icon: resolveTemplateIconUrl(t.icon),
                 isCustom: true,
-                isActive: t.isActive
+                isActive: t.isActive,
+                isPrivate: t.isPrivate,
+                businessId: t.businessId
             }));
 
             res.json({
@@ -550,7 +567,12 @@ const templateController = {
     // GET /mybookings/templates/portal (Super Admin Template Panel)
     portalGetTemplates: async (req, res) => {
         try {
-            const templates = await TemplateProject.findAll();
+            const Business = require("../models/business.model");
+            const templates = await TemplateProject.findAll({
+                include: [
+                    { model: Business, as: 'business', attributes: ['id', 'business_name'] }
+                ]
+            });
             const formatted = templates.map((t) => {
                 const row = t.toJSON ? t.toJSON() : t;
                 return { ...row, icon: resolveTemplateIconUrl(row.icon) };
@@ -631,6 +653,9 @@ const templateController = {
             const discoveredIcon = response.data.icon || null;
             const iconUrlPath = discoveredIcon ? `/Templates/${templateId}/${discoveredIcon}` : null;
 
+            const isPrivate = req.body.isPrivate === 'true' || req.body.isPrivate === true;
+            const businessId = isPrivate && req.body.businessId ? Number(req.body.businessId) : null;
+
             const template = await TemplateProject.create({
                 templateId: templateId,
                 displayName,
@@ -638,7 +663,9 @@ const templateController = {
                 type: type || 'website',
                 path: `Templates/${templateId}`,
                 icon: iconUrlPath,
-                isActive: true
+                isActive: true,
+                isPrivate,
+                businessId
             });
 
             res.status(201).json({
@@ -669,7 +696,7 @@ const templateController = {
     portalUpdateTemplate: async (req, res) => {
         try {
             const { id } = req.params;
-            const { displayName, category, type } = req.body;
+            const { displayName, category, type, isPrivate, businessId } = req.body;
 
             if (!displayName || !category || !type) {
                 return res.status(400).json({ success: false, message: "Display name, category, and type are required." });
@@ -687,6 +714,13 @@ const templateController = {
             template.displayName = displayName;
             template.category = category;
             template.type = type;
+
+            if (isPrivate !== undefined) {
+                const isPrivBool = isPrivate === true || isPrivate === 'true';
+                template.isPrivate = isPrivBool;
+                template.businessId = isPrivBool && businessId ? Number(businessId) : null;
+            }
+
             await template.save();
 
             res.json({

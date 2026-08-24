@@ -28,7 +28,8 @@ import {
     FormControlLabel,
     FormGroup,
     FormLabel,
-    FormControl
+    FormControl,
+    Switch
 } from "@mui/material";
 import {
     CloudUpload as UploadIcon,
@@ -40,7 +41,9 @@ import {
     CheckCircle as ActiveIcon,
     Folder as FolderIcon,
     Close as CloseIcon,
-    OpenInNew as OpenInNewIcon
+    OpenInNew as OpenInNewIcon,
+    Lock as LockIcon,
+    Public as PublicIcon
 } from "@mui/icons-material";
 import axiosInstance from "../../api/axiosInstance";
 import PageTransition from "../../components/PageTransition";
@@ -66,6 +69,7 @@ const TYPE_CONFIG = {
 
 const PortalTemplates = () => {
     const [templates, setTemplates] = useState([]);
+    const [businesses, setBusinesses] = useState([]);
     const [loading, setLoading] = useState(true);
     const [currentTab, setCurrentTab] = useState("All");
 
@@ -75,6 +79,8 @@ const PortalTemplates = () => {
     const [category, setCategory] = useState("Healthcare / Hospital");
     const [deployWebsite, setDeployWebsite] = useState(true);
     const [deployPortfolio, setDeployPortfolio] = useState(false);
+    const [isPrivate, setIsPrivate] = useState(false);
+    const [businessId, setBusinessId] = useState("");
     const [zipFile, setZipFile] = useState(null);
     const [fileName, setFileName] = useState("");
     const [deploying, setDeploying] = useState(false);
@@ -86,6 +92,8 @@ const PortalTemplates = () => {
     const [editCategory, setEditCategory] = useState("Healthcare / Hospital");
     const [editWebsite, setEditWebsite] = useState(true);
     const [editPortfolio, setEditPortfolio] = useState(false);
+    const [editIsPrivate, setEditIsPrivate] = useState(false);
+    const [editBusinessId, setEditBusinessId] = useState("");
     const [savingEdit, setSavingEdit] = useState(false);
 
     // Delete Modal State
@@ -107,8 +115,18 @@ const PortalTemplates = () => {
         }
     };
 
+    const fetchBusinesses = async () => {
+        try {
+            const response = await axiosInstance.get("/portal/businesses");
+            if (response.data?.success) {
+                setBusinesses(response.data.data || []);
+            }
+        } catch (_) {}
+    };
+
     useEffect(() => {
         fetchTemplates();
+        fetchBusinesses();
     }, []);
 
     const handleFileChange = (e) => {
@@ -128,6 +146,10 @@ const PortalTemplates = () => {
             toast.error("Please provide a template name");
             return;
         }
+        if (isPrivate && !businessId) {
+            toast.error("Please select a business to assign the private template to");
+            return;
+        }
         if (!zipFile) {
             toast.error("Please select a ZIP template file to upload");
             return;
@@ -137,6 +159,10 @@ const PortalTemplates = () => {
         const formData = new FormData();
         formData.append("displayName", displayName);
         formData.append("category", category);
+        formData.append("isPrivate", isPrivate);
+        if (isPrivate && businessId) {
+            formData.append("businessId", businessId);
+        }
 
         const selectedTypes = [];
         if (deployWebsite) selectedTypes.push("website");
@@ -155,6 +181,8 @@ const PortalTemplates = () => {
                 setCategory("Healthcare / Hospital");
                 setDeployWebsite(true);
                 setDeployPortfolio(false);
+                setIsPrivate(false);
+                setBusinessId("");
                 setZipFile(null);
                 setFileName("");
                 fetchTemplates();
@@ -217,12 +245,18 @@ const PortalTemplates = () => {
         const types = (template.type || "website").split(",");
         setEditWebsite(types.includes("website"));
         setEditPortfolio(types.includes("portfolio"));
+        setEditIsPrivate(!!template.isPrivate);
+        setEditBusinessId(template.businessId || template.business_id || "");
         setOpenEditDialog(true);
     };
 
     const handleEditSubmit = async () => {
         if (!editDisplayName.trim()) {
             toast.error("Please provide a template name");
+            return;
+        }
+        if (editIsPrivate && !editBusinessId) {
+            toast.error("Please select a business to assign the private template to");
             return;
         }
         setSavingEdit(true);
@@ -233,7 +267,9 @@ const PortalTemplates = () => {
             const response = await axiosInstance.put(`/templates/portal/${editingTemplateId}`, {
                 displayName: editDisplayName,
                 category: editCategory,
-                type: selectedTypes.length > 0 ? selectedTypes.join(",") : "website"
+                type: selectedTypes.length > 0 ? selectedTypes.join(",") : "website",
+                isPrivate: editIsPrivate,
+                businessId: editIsPrivate ? editBusinessId : null
             });
             if (response.data.success) {
                 toast.success("Template metadata updated successfully!");
@@ -584,6 +620,46 @@ const PortalTemplates = () => {
                                                     </Box>
                                                 );
                                             })}
+                                            {t.isPrivate ? (
+                                                <Box
+                                                    sx={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 0.4,
+                                                        px: 0.9,
+                                                        py: 0.25,
+                                                        borderRadius: "6px",
+                                                        bgcolor: "rgba(245, 158, 11, 0.15)",
+                                                        border: "1px solid rgba(245, 158, 11, 0.3)",
+                                                        color: "#FBBF24"
+                                                    }}
+                                                    title={`Assigned to: ${t.business?.business_name || `Business #${t.businessId}`}`}
+                                                >
+                                                    <LockIcon sx={{ fontSize: "0.72rem" }} />
+                                                    <Typography sx={{ fontWeight: 800, fontSize: "0.66rem", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+                                                        {t.business?.business_name || `Biz #${t.businessId}`}
+                                                    </Typography>
+                                                </Box>
+                                            ) : (
+                                                <Box
+                                                    sx={{
+                                                        display: "inline-flex",
+                                                        alignItems: "center",
+                                                        gap: 0.4,
+                                                        px: 0.9,
+                                                        py: 0.25,
+                                                        borderRadius: "6px",
+                                                        bgcolor: "rgba(59, 130, 246, 0.12)",
+                                                        border: "1px solid rgba(59, 130, 246, 0.25)",
+                                                        color: "#60A5FA"
+                                                    }}
+                                                >
+                                                    <PublicIcon sx={{ fontSize: "0.72rem" }} />
+                                                    <Typography sx={{ fontWeight: 800, fontSize: "0.66rem", letterSpacing: "0.02em", textTransform: "uppercase" }}>
+                                                        Public
+                                                    </Typography>
+                                                </Box>
+                                            )}
                                         </Box>
 
                                         {/* Name */}
@@ -764,6 +840,49 @@ const PortalTemplates = () => {
                             </Box>
                         </FormControl>
 
+                        <Box sx={{ mb: 2.5, p: 2, borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", bgcolor: "rgba(255,255,255,0.015)" }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        id="switch-deploy-is-private"
+                                        checked={isPrivate}
+                                        onChange={(e) => setIsPrivate(e.target.checked)}
+                                        disabled={deploying}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Is Private Template (Restrict visibility)
+                                    </Typography>
+                                }
+                            />
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5, fontStyle: "italic" }}>
+                                When enabled, this template will NOT be visible to all businesses. It will only be shown to the assigned business.
+                            </Typography>
+
+                            {isPrivate && (
+                                <TextField
+                                    id="select-deploy-business-id"
+                                    select
+                                    label="Assign to Business *"
+                                    fullWidth
+                                    variant="outlined"
+                                    value={businessId}
+                                    onChange={(e) => setBusinessId(e.target.value)}
+                                    disabled={deploying}
+                                    sx={{ mt: 2 }}
+                                    helperText="Select the specific business that can access this template"
+                                >
+                                    {businesses.map((b) => (
+                                        <MenuItem key={b.id} value={b.id}>
+                                            {b.business_name} (ID: {b.id})
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        </Box>
+
                         {/* ZIP upload zone */}
                         <Button
                             id="btn-select-zip-file"
@@ -892,6 +1011,49 @@ const PortalTemplates = () => {
                                 />
                             </Box>
                         </FormControl>
+
+                        <Box sx={{ mt: 2.5, p: 2, borderRadius: "12px", border: "1px solid rgba(255,255,255,0.08)", bgcolor: "rgba(255,255,255,0.015)" }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        id="switch-edit-is-private"
+                                        checked={editIsPrivate}
+                                        onChange={(e) => setEditIsPrivate(e.target.checked)}
+                                        disabled={savingEdit}
+                                        color="warning"
+                                    />
+                                }
+                                label={
+                                    <Typography variant="body2" fontWeight={700}>
+                                        Is Private Template (Restrict visibility)
+                                    </Typography>
+                                }
+                            />
+                            <Typography variant="caption" color="text.secondary" display="block" sx={{ mt: 0.5, fontStyle: "italic" }}>
+                                When enabled, this template will NOT be visible to all businesses. It will only be shown to the assigned business.
+                            </Typography>
+
+                            {editIsPrivate && (
+                                <TextField
+                                    id="select-edit-business-id"
+                                    select
+                                    label="Assign to Business *"
+                                    fullWidth
+                                    variant="outlined"
+                                    value={editBusinessId}
+                                    onChange={(e) => setEditBusinessId(e.target.value)}
+                                    disabled={savingEdit}
+                                    sx={{ mt: 2 }}
+                                    helperText="Select the specific business that can access this template"
+                                >
+                                    {businesses.map((b) => (
+                                        <MenuItem key={b.id} value={b.id}>
+                                            {b.business_name} (ID: {b.id})
+                                        </MenuItem>
+                                    ))}
+                                </TextField>
+                            )}
+                        </Box>
                     </DialogContent>
 
                     <DialogActions sx={{ p: 3, pt: 0, gap: 1.5 }}>

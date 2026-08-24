@@ -114,6 +114,10 @@ StaffLeave.belongsTo(Staff, { foreignKey: 'staff_id' });
 Business.hasMany(StaffLeave, { foreignKey: 'business_id', as: 'staffLeaves' });
 StaffLeave.belongsTo(Business, { foreignKey: 'business_id' });
 
+// TemplateProject <-> Business (Many-to-One)
+TemplateProject.belongsTo(Business, { foreignKey: 'business_id', as: 'business' });
+Business.hasMany(TemplateProject, { foreignKey: 'business_id', as: 'privateTemplates' });
+
 module.exports = { 
     Staff, Location, StaffLocation, StaffAvailability, 
     Business, Service, ServiceLocation, User, Booking, Payment, Customer, BookingService,

@@ -43,6 +43,17 @@ const TemplateProject = sequelize.define(
             defaultValue: true,
             field: 'is_active'
         },
+        isPrivate: {
+            type: DataTypes.BOOLEAN,
+            defaultValue: false,
+            field: 'is_private'
+        },
+        businessId: {
+            type: DataTypes.BIGINT,
+            allowNull: true,
+            defaultValue: null,
+            field: 'business_id'
+        },
         created_at: {
             type: DataTypes.DATE,
             defaultValue: DataTypes.NOW
