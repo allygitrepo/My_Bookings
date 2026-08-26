@@ -5,6 +5,13 @@ const axios = require("axios");
 const TemplateProject = require("../models/templateProject.model");
 const FormData = require('form-data');
 
+const getBusinessId = (req) => {
+    if (req.query?.business_id) return req.query.business_id;
+    if (req.body?.business_id) return req.body.business_id;
+    if (req.isWidget) return req.business_id ?? -1;
+    return req.user?.business_id ?? -1;
+};
+
 const BASE_TEMPLATES_DIR = process.env.CLIENT_DIST_PATH
     ? path.resolve(process.env.CLIENT_DIST_PATH, "Templates")
     : path.resolve(__dirname, "../../client/dist/Templates");
